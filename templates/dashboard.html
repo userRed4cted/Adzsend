@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Discord Server Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="dashboard">
+        <nav class="navbar">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 245 240" fill="currentColor">
+                    <path d="M104.14 0C46.97 0 0 46.97 0 104.14v131.72c0 57.165 46.97 104.14 104.14 104.14h131.72c57.165 0 104.14-46.97 104.14-104.14V104.14C340.04 46.97 293.07 0 235.86 0H104.14z"/>
+                </svg>
+                <span>Discord Panel</span>
+            </div>
+            <div class="nav-right">
+                <div class="user-info">
+                    {% if user.avatar %}
+                        <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" alt="{{ user.username }}" class="user-avatar">
+                    {% else %}
+                        <div class="user-avatar-placeholder">{{ user.username[0].upper() }}</div>
+                    {% endif %}
+                    <div class="user-details">
+                        <div class="username">{{ user.username }}</div>
+                        <div class="user-id">#{{ user.discriminator }}</div>
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+            </div>
+        </nav>
+
+        <div class="dashboard-container">
+            <div class="header">
+                <h1>Discord Message Sender</h1>
+                <p>Select channels and send messages to your Discord servers</p>
+            </div>
+
+            {% if guilds %}
+                <div class="main-layout">
+                    <!-- Left: Server and Channel Selection -->
+                    <div class="selection-panel">
+                        <!-- Server List -->
+                        <div class="servers-section">
+                            <div class="panel-header">Your Servers</div>
+                            <div id="servers-list" class="servers-list">
+                                <!-- Servers will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Channels List -->
+                        <div class="channels-section">
+                            <div class="panel-header">Channels</div>
+                            <div id="channels-list" class="channels-list">
+                                <div class="no-selection">Select a server to view channels</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Selected Channels and Message -->
+                    <div class="action-panel">
+                        <!-- Selected Channels -->
+                        <div class="selected-section">
+                            <div class="panel-header">Selected Channels</div>
+                            <div id="selected-channels-tags" class="selected-channels-tags">
+                                <div class="no-selection">No channels selected</div>
+                            </div>
+                        </div>
+
+                        <!-- Message Composer -->
+                        <div class="message-section">
+                            <div class="panel-header">Message</div>
+                            <textarea id="message-input" class="message-input" placeholder="Enter your message here..." maxlength="2000"></textarea>
+                            <div class="message-footer">
+                                <span class="char-count"><span id="char-count">0</span>/2000</span>
+                                <button id="send-btn" class="send-button" disabled>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </svg>
+                                    Send
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">🔍</div>
+                    <h2>No Servers Found</h2>
+                    <p>You don't have access to any Discord servers yet</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Wait for all elements to load before initializing
+        document.addEventListener('DOMContentLoaded', function() {
+            const serversList = document.getElementById('servers-list');
+            const channelsList = document.getElementById('channels-list');
+            const messageInput = document.getElementById('message-input');
+            const sendBtn = document.getElementById('send-btn');
+            const charCount = document.getElementById('char-count');
+            const selectedChannelsTags = document.getElementById('selected-channels-tags');
+            
+            let guilds = [];
+            let serverChannels = {}; // Cache for channels by guild ID
+            let selectedChannels = []; // Array for multiple channel selection
+            let selectedGuild = null; // Currently selected guild
+            
+            // Fetch all guilds and build UI
+            async function initializeUI() {
+                guilds = {{ guilds|tojson }};
+                console.log('Guilds loaded:', guilds);
+                
+                if (!guilds || guilds.length === 0) {
+                    serversList.innerHTML = '<div style="color: #949ba4; padding: 1rem;">No servers found</div>';
+                    return;
+                }
+                
+                // Render servers
+                guilds.forEach(guild => {
+                    const serverItem = document.createElement('div');
+                    serverItem.className = 'server-item';
+                    serverItem.dataset.guildId = guild.id;
+                    
+                    const iconHtml = guild.icon 
+                        ? `<img src="https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png" alt="${guild.name}" class="server-icon">`
+                        : `<div class="server-icon-placeholder">${guild.name.charAt(0).toUpperCase()}</div>`;
+                    
+                    serverItem.innerHTML = `
+                        ${iconHtml}
+                        <div class="server-info">
+                            <div class="server-name">${guild.name}</div>
+                            <div class="server-count" style="display: none;">0 selected</div>
+                        </div>
+                    `;
+                    
+                    serverItem.addEventListener('click', () => selectServer(guild));
+                    serversList.appendChild(serverItem);
+                });
+            }
+            
+            // Select a server and load its channels
+            async function selectServer(guild) {
+                selectedGuild = guild;
+                
+                // Update active state
+                document.querySelectorAll('.server-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                document.querySelector(`[data-guild-id="${guild.id}"]`).classList.add('active');
+                
+                // Load channels if not cached
+                if (!serverChannels[guild.id]) {
+                    channelsList.innerHTML = '<div class="no-selection">Loading channels...</div>';
+                    try {
+                        const response = await fetch(`/api/guild/${guild.id}/channels`);
+                        const data = await response.json();
+                        
+                        if (data.channels) {
+                            serverChannels[guild.id] = data.channels.filter(ch => ch.type === 0);
+                        } else {
+                            serverChannels[guild.id] = [];
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching channels:`, error);
+                        serverChannels[guild.id] = [];
+                    }
+                }
+                
+                renderChannels(guild);
+            }
+            
+            // Render channels for selected server
+            function renderChannels(guild) {
+                channelsList.innerHTML = '';
+                const channels = serverChannels[guild.id] || [];
+                
+                if (channels.length === 0) {
+                    channelsList.innerHTML = '<div class="no-selection">No channels found</div>';
+                    return;
+                }
+                
+                channels.forEach(channel => {
+                    const isSelected = selectedChannels.some(ch => 
+                        ch.id === channel.id && ch.guildId === guild.id
+                    );
+                    
+                    const channelItem = document.createElement('div');
+                    channelItem.className = `channel-item ${isSelected ? 'selected' : ''}`;
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'channel-checkbox';
+                    checkbox.checked = isSelected;
+                    
+                    const label = document.createElement('label');
+                    label.className = 'channel-label';
+                    label.innerHTML = `#${channel.name}`;
+                    
+                    channelItem.appendChild(checkbox);
+                    channelItem.appendChild(label);
+                    
+                    // Click anywhere on channel item to toggle checkbox
+                    channelItem.addEventListener('click', (e) => {
+                        if (e.target !== checkbox) {
+                            checkbox.checked = !checkbox.checked;
+                        }
+                        toggleChannel(channel, guild, checkbox.checked);
+                    });
+                    
+                    // Direct checkbox change handler
+                    checkbox.addEventListener('change', () => {
+                        toggleChannel(channel, guild, checkbox.checked);
+                    });
+                    
+                    channelsList.appendChild(channelItem);
+                });
+            }
+            
+            // Toggle channel selection
+            function toggleChannel(channel, guild, isChecked) {
+                const isCurrentlySelected = selectedChannels.some(ch => 
+                    ch.id === channel.id && ch.guildId === guild.id
+                );
+                
+                if (isChecked && !isCurrentlySelected) {
+                    selectedChannels.push({
+                        id: channel.id,
+                        name: channel.name,
+                        guildId: guild.id,
+                        guildName: guild.name,
+                        guildIcon: guild.icon || null
+                    });
+                } else if (!isChecked && isCurrentlySelected) {
+                    selectedChannels = selectedChannels.filter(ch => 
+                        !(ch.id === channel.id && ch.guildId === guild.id)
+                    );
+                }
+                
+                // Update UI
+                renderChannels(guild);
+                updateServerCount(guild.id);
+                updateSelectedDisplay();
+                updateSendButton();
+            }
+            
+            // Update count badge on server
+            function updateServerCount(guildId) {
+                const count = selectedChannels.filter(ch => ch.guildId === guildId).length;
+                const serverItem = document.querySelector(`[data-guild-id="${guildId}"]`);
+                if (serverItem) {
+                    const countEl = serverItem.querySelector('.server-count');
+                    if (countEl) {
+                        if (count > 0) {
+                            countEl.textContent = `${count} selected`;
+                            countEl.style.display = 'block';
+                            serverItem.classList.add('has-selection');
+                        } else {
+                            countEl.style.display = 'none';
+                            serverItem.classList.remove('has-selection');
+                        }
+                    }
+                }
+            }
+            
+            // Update selected channels display
+            function updateSelectedDisplay() {
+                if (selectedChannels.length > 0) {
+                    let tagsHtml = '';
+                    selectedChannels.forEach(channel => {
+                        const iconHtml = channel.guildIcon
+                            ? `<img src="https://cdn.discordapp.com/icons/${channel.guildId}/${channel.guildIcon}.png" alt="${channel.guildName}">`
+                            : `<span>${channel.guildName.charAt(0).toUpperCase()}</span>`;
+                        
+                        tagsHtml += `
+                            <div class="selected-tag">
+                                <div class="tag-icon">${iconHtml}</div>
+                                <div class="tag-text">#${channel.name}</div>
+                                <button class="tag-remove" data-channel-id="${channel.id}" data-guild-id="${channel.guildId}">✕</button>
+                            </div>
+                        `;
+                    });
+                    
+                    selectedChannelsTags.innerHTML = tagsHtml + `<button class="clear-all-btn">Clear All</button>`;
+                    
+                    // Add event listeners
+                    selectedChannelsTags.querySelectorAll('.tag-remove').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const channelId = btn.dataset.channelId;
+                            const guildId = btn.dataset.guildId;
+                            selectedChannels = selectedChannels.filter(ch => 
+                                !(ch.id === channelId && ch.guildId === guildId)
+                            );
+                            updateSelectedDisplay();
+                            if (selectedGuild && selectedGuild.id === guildId) {
+                                renderChannels(selectedGuild);
+                            }
+                            updateServerCount(guildId);
+                            updateSendButton();
+                        });
+                    });
+                    
+                    const clearAllBtn = selectedChannelsTags.querySelector('.clear-all-btn');
+                    if (clearAllBtn) {
+                        clearAllBtn.addEventListener('click', () => {
+                            selectedChannels = [];
+                            updateSelectedDisplay();
+                            if (selectedGuild) {
+                                renderChannels(selectedGuild);
+                            }
+                            guilds.forEach(g => updateServerCount(g.id));
+                            updateSendButton();
+                        });
+                    }
+                } else {
+                    selectedChannelsTags.innerHTML = '<div class="no-selection">No channels selected</div>';
+                }
+            }
+            
+            // Update send button state
+            function updateSendButton() {
+                if (sendBtn && messageInput) {
+                    sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                }
+            }
+            
+            // Message input listener
+            if (messageInput) {
+                messageInput.addEventListener('input', function() {
+                    if (charCount) {
+                        charCount.textContent = this.value.length;
+                    }
+                    updateSendButton();
+                });
+            }
+            
+            // Send button handler
+            if (sendBtn) {
+                sendBtn.addEventListener('click', async function() {
+                    if (selectedChannels.length > 0 && messageInput && messageInput.value.trim()) {
+                        sendBtn.disabled = true;
+                        const originalText = sendBtn.innerHTML;
+                        sendBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6" opacity="0.3"></circle></svg> Sending...';
+                        
+                        try {
+                            const response = await fetch('/api/send-message', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    channels: selectedChannels,
+                                    message: messageInput.value
+                                })
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (response.ok) {
+                                // Show success message
+                                let successMsg = `✅ Message sent to ${result.success.length} channel(s):\n${result.success.map(ch => `• #${ch}`).join('\n')}`;
+                                
+                                if (result.failed.length > 0) {
+                                    successMsg += `\n\n⚠️ Failed (${result.failed.length}):\n${result.failed.map(ch => `• ${ch}`).join('\n')}`;
+                                }
+                                
+                                alert(successMsg);
+                                
+                                // Clear message input and reset selections
+                                messageInput.value = '';
+                                charCount.textContent = '0';
+                                selectedChannels = [];
+                                updateSelectedDisplay();
+                                if (selectedGuild) {
+                                    renderChannels(selectedGuild);
+                                }
+                                guilds.forEach(g => updateServerCount(g.id));
+                            } else {
+                                alert(`❌ Error: ${result.error}`);
+                            }
+                        } catch (error) {
+                            console.error('Send error:', error);
+                            alert(`❌ Error sending message: ${error.message}`);
+                        } finally {
+                            sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                            sendBtn.innerHTML = originalText;
+                        }
+                    }
+                });
+            }
+            
+            // Initialize on load
+            initializeUI();
+        });
+    </script>
+</body>
+</html>

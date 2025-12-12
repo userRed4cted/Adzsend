@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logging Out - Borz Marketing Panel</title>
+    <script>
+        // Clear all storage except settings and usage data which persist
+        localStorage.removeItem('selectedChannels');
+        localStorage.removeItem('messageText');
+        // Keep messageDelay setting - it persists across sessions and logins
+        sessionStorage.clear();
+        window.location.href = '{{ url_for('login_page') }}';
+    </script>
+</head>
+<body>
+    <p>Logging out...</p>
+</body>
+</html>

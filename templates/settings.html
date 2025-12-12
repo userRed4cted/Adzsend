@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Borz Marketing Panel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="panel">
+        <nav class="navbar">
+            <div class="navbar-content">
+                <div class="navbar-text">
+                    <h1 class="navbar-title">Borz Marketing Panel</h1>
+                    <p class="navbar-subtitle">Manage your account settings and preferences</p>
+                </div>
+                <div class="nav-right">
+                    <div class="user-info" id="user-info-btn">
+                        {% if user.avatar %}
+                            <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" alt="{{ user.username }}" class="user-avatar">
+                        {% else %}
+                            <div class="user-avatar-placeholder">{{ user.username[0].upper() }}</div>
+                        {% endif %}
+                        <div class="user-details">
+                            <div class="username">{{ user.username }}</div>
+                            <div class="user-id">{{ user.id }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="panel-container">
+            <div class="settings-container">
+                <div class="settings-panels">
+                    <!-- Usage Panel -->
+                    <div class="settings-panel">
+                        <div class="settings-panel-header">Usage</div>
+                        <div class="settings-panel-content">
+                            <div class="usage-stat">
+                                <div class="usage-label">Allowance</div>
+                                <div class="usage-value">inf</div>
+                            </div>
+                            <div class="usage-stat">
+                                <div class="usage-label">Advertisements Sent</div>
+                                <div class="usage-value">{{ sent_count }}</div>
+                            </div>
+                            <div class="usage-stat">
+                                <div class="usage-label">Usage Percentage</div>
+                                <div class="usage-value">0%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- General Settings Panel -->
+                    <div class="settings-panel">
+                        <div class="settings-panel-header">General Settings</div>
+                        <div class="settings-panel-content">
+                            <div class="setting-group">
+                                <div class="setting-label">Message Send Delay</div>
+                                <div class="setting-description">Delay between each message send (improves users discord performance)</div>
+                                <div class="delay-options">
+                                    <label class="delay-option">
+                                        <input type="radio" name="messageDelay" value="0" class="delay-radio">
+                                        <span class="delay-option-label">No Delay</span>
+                                    </label>
+                                    <label class="delay-option">
+                                        <input type="radio" name="messageDelay" value="1000" class="delay-radio" checked>
+                                        <span class="delay-option-label">1 Second</span>
+                                    </label>
+                                    <label class="delay-option">
+                                        <input type="radio" name="messageDelay" value="2000" class="delay-radio">
+                                        <span class="delay-option-label">2 Seconds</span>
+                                    </label>
+                                    <label class="delay-option">
+                                        <input type="radio" name="messageDelay" value="5000" class="delay-radio">
+                                        <span class="delay-option-label">5 Seconds</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Billing Panel -->
+                    <div class="settings-panel">
+                        <div class="settings-panel-header">Billing</div>
+                        <div class="settings-panel-content">
+                            <div class="coming-soon">Coming soon</div>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="{{ url_for('logout') }}" class="logout-btn-settings">Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Prevent spam clicking on profile button
+        const userInfoBtn = document.getElementById('user-info-btn');
+        let isNavigating = false;
+
+        if (userInfoBtn) {
+            userInfoBtn.addEventListener('click', () => {
+                if (!isNavigating) {
+                    isNavigating = true;
+                    userInfoBtn.style.opacity = '0.5';
+                    userInfoBtn.style.pointerEvents = 'none';
+                    window.location.href = '{{ url_for("panel") }}';
+                }
+            });
+        }
+
+        // Load and save message delay setting
+        document.addEventListener('DOMContentLoaded', () => {
+            const delayRadios = document.querySelectorAll('.delay-radio');
+
+            // Load saved delay setting from localStorage (default to 1000ms)
+            const savedDelay = localStorage.getItem('messageDelay') || '1000';
+
+            // Set the correct radio button as checked
+            delayRadios.forEach(radio => {
+                if (radio.value === savedDelay) {
+                    radio.checked = true;
+                }
+
+                // Add change listener to save when user selects a new option
+                radio.addEventListener('change', () => {
+                    if (radio.checked) {
+                        localStorage.setItem('messageDelay', radio.value);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

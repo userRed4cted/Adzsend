@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div class="dashboard">
+    <div class="panel">
         <nav class="navbar">
             <div class="navbar-content">
                 <div class="navbar-text">
@@ -15,7 +15,7 @@
                     <p class="navbar-subtitle">Select in which servers and channels you would like to automate your marketing</p>
                 </div>
                 <div class="nav-right">
-                    <div class="user-info">
+                    <div class="user-info" id="user-info-btn">
                         {% if user.avatar %}
                             <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" alt="{{ user.username }}" class="user-avatar">
                         {% else %}
@@ -26,23 +26,28 @@
                             <div class="user-id">{{ user.id }}</div>
                         </div>
                     </div>
-                    <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
                 </div>
             </div>
         </nav>
 
-        <div class="dashboard-container">
+        <div class="panel-container">
 
             {% if guilds %}
                 <div class="main-layout">
                     <!-- Left: Server and Channel Selection -->
                     <div class="selection-panel">
+                        <!-- Unified Header for Left Panel -->
+                        <div class="unified-header">
+                            <div class="header-section">
+                                <div class="panel-header">Your Servers</div>
+                                <div class="server-search-container">
+                                    <input type="text" id="server-search" class="search-input" placeholder="Search servers...">
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Server List -->
                         <div class="servers-section">
-                            <div class="panel-header">Your Servers</div>
-                            <div class="server-search-container">
-                                <input type="text" id="server-search" class="search-input" placeholder="Search servers...">
-                            </div>
                             <div id="servers-list" class="servers-list">
                                 <!-- Servers will be populated by JavaScript -->
                             </div>
@@ -51,13 +56,13 @@
                         <!-- Channels List -->
                         <div class="channels-section">
                             <div class="panel-header">Channels</div>
-                            
+
                             <!-- Search Bar -->
                             <div class="channels-search">
                                 <input type="text" id="channel-search" class="search-input" placeholder="Search channels...">
                                 <div class="search-tags" id="search-tags"></div>
                             </div>
-                            
+
                             <div id="channels-list" class="channels-list">
                                 <div class="no-selection">Select a server to view channels</div>
                             </div>
@@ -69,21 +74,26 @@
 
                     <!-- Right: Selected Channels and Message -->
                     <div class="action-panel">
+                        <!-- Unified Header for Right Panel -->
+                        <div class="unified-header">
+                            <div class="header-section">
+                                <div class="panel-header">Selected Channels</div>
+                                <div class="selected-search-container">
+                                    <input type="text" id="selected-search" class="search-input" placeholder="Search selected channels...">
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Selected Channels -->
                         <div class="selected-section">
-                            <div class="panel-header">Selected Channels</div>
-                            <div class="selected-search-container">
-                                <input type="text" id="selected-search" class="search-input" placeholder="Search selected channels...">
-                            </div>
+                            <button class="clear-all-btn" id="clear-all-btn" style="display: none;">Clear all selected channels</button>
                             <div id="selected-channels-tags" class="selected-channels-tags">
                                 <div class="no-selection">No channels selected</div>
                             </div>
-                            <button class="clear-all-btn" id="clear-all-btn" style="display: none;">Clear All</button>
                         </div>
 
                         <!-- Message Composer -->
                         <div class="message-section">
-                            <div class="panel-header">Message</div>
                             <textarea id="message-input" class="message-input" placeholder="Enter your message here..." maxlength="2000"></textarea>
                             <div class="message-footer">
                                 <span class="char-count"><span id="char-count">0</span>/2000</span>
@@ -136,16 +146,60 @@
             let searchTags = []; // Search filter tags
             let serverSearchText = ''; // Server search filter
             let selectedSearchText = ''; // Selected channels search filter
+            let currentServerColor = 'rgba(51, 95, 255, 0.6)'; // Current server's dominant color
+            let isSending = false; // Track if messages are being sent
+            let failedChannels = new Map(); // Track channels that failed to send with failure type
+            let isConfirmState = false; // Track if send button is in confirmation state
+            let confirmTimeout = null; // Timeout for auto-reset confirmation
 
             // Check session on API error
             function handleSessionError(response) {
                 if (response.status === 401) {
-                    alert('Session expired. Please log in again.');
-                    window.location.href = '/';
+                    // Auto logout on session expiry
+                    window.location.href = '/logout';
                 }
             }
-            
-            // Load saved data from localStorage
+
+            // Warn user before leaving if messages are being sent
+            window.addEventListener('beforeunload', (e) => {
+                if (isSending) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                    return '';
+                }
+            });
+
+            // Prevent spam clicking on profile button
+            const userInfoBtn = document.getElementById('user-info-btn');
+            let isNavigating = false;
+
+            if (userInfoBtn) {
+                userInfoBtn.addEventListener('click', () => {
+                    if (isSending) {
+                        // Show confirmation dialog with options
+                        const userChoice = confirm('⚠️ Messages are currently being sent.\n\nNavigating away will stop the sending process.\n\nPress OK to stop sending and go to settings, or Cancel to continue sending.');
+
+                        if (userChoice) {
+                            // User chose to stop sending and navigate
+                            isSending = false;
+                            isNavigating = true;
+                            userInfoBtn.style.opacity = '0.5';
+                            userInfoBtn.style.pointerEvents = 'none';
+                            window.location.href = '{{ url_for("settings") }}';
+                        }
+                        // If user cancels, do nothing - continue sending
+                        return;
+                    }
+                    if (!isNavigating) {
+                        isNavigating = true;
+                        userInfoBtn.style.opacity = '0.5';
+                        userInfoBtn.style.pointerEvents = 'none';
+                        window.location.href = '{{ url_for("settings") }}';
+                    }
+                });
+            }
+
+            // Load saved data from localStorage (persists across sessions)
             function loadSelectedChannels() {
                 const saved = localStorage.getItem('selectedChannels');
                 if (saved) {
@@ -168,7 +222,7 @@
                 }
             }
 
-            // Save data to localStorage
+            // Save data to localStorage (persists across sessions)
             function saveSelectedChannels() {
                 localStorage.setItem('selectedChannels', JSON.stringify(selectedChannels));
             }
@@ -190,17 +244,17 @@
                     updateSearchTagsDisplay();
                     channelSearch.value = '';
                     if (selectedGuild) {
-                        renderChannels(selectedGuild);
+                        renderChannels();
                     }
                 }
             }
-            
+
             // Remove search tag
             function removeSearchTag(tag) {
                 searchTags = searchTags.filter(t => t !== tag);
                 updateSearchTagsDisplay();
                 if (selectedGuild) {
-                    renderChannels(selectedGuild);
+                    renderChannels();
                 }
             }
             
@@ -221,7 +275,7 @@
                 });
             }
             
-            // Handle search input
+            // Handle channel search input
             if (channelSearch) {
                 channelSearch.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter' && channelSearch.value.trim()) {
@@ -310,22 +364,93 @@
                 updateSelectedDisplay();
                 updateSendButton();
             }
-            
+
+            // Extract dominant color from image
+            function getDominantColor(imageUrl, callback) {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    let r = 0, g = 0, b = 0, count = 0;
+
+                    // Sample every 10th pixel for performance
+                    for (let i = 0; i < data.length; i += 40) {
+                        r += data[i];
+                        g += data[i + 1];
+                        b += data[i + 2];
+                        count++;
+                    }
+
+                    r = Math.floor(r / count);
+                    g = Math.floor(g / count);
+                    b = Math.floor(b / count);
+
+                    callback(`rgb(${r}, ${g}, ${b})`);
+                };
+                img.onerror = function() {
+                    callback('rgba(51, 95, 255, 0.6)'); // Fallback to default blue
+                };
+                img.src = imageUrl;
+            }
+
             // Select a server and load its channels
             async function selectServer(guild) {
+                // Set selected guild immediately
                 selectedGuild = guild;
-                
+                const guildId = guild.id;
+
                 // Update active state
                 document.querySelectorAll('.server-item').forEach(item => {
                     item.classList.remove('active');
+                    item.style.borderColor = '';
+                    item.style.boxShadow = '';
                 });
-                document.querySelector(`[data-guild-id="${guild.id}"]`).classList.add('active');
-                
+
+                const activeItem = document.querySelector(`[data-guild-id="${guildId}"]`);
+                if (activeItem) {
+                    activeItem.classList.add('active');
+                }
+
+                // Apply dominant color from server icon
+                if (guild.icon) {
+                    const iconUrl = `https://cdn.discordapp.com/icons/${guildId}/${guild.icon}.png`;
+                    getDominantColor(iconUrl, (color) => {
+                        // Only update if this guild is still selected
+                        if (selectedGuild && selectedGuild.id === guildId) {
+                            currentServerColor = color;
+                            if (activeItem) {
+                                activeItem.style.borderColor = color;
+                                activeItem.style.boxShadow = `0 0 15px ${color.replace('rgb', 'rgba').replace(')', ', 0.4)')}`;
+                            }
+                        }
+                    });
+                } else {
+                    // Use default blue for servers without icons
+                    currentServerColor = 'rgba(51, 95, 255, 0.6)';
+                    if (activeItem) {
+                        activeItem.style.borderColor = 'rgba(51, 95, 255, 0.6)';
+                        activeItem.style.boxShadow = '0 0 15px rgba(51, 95, 255, 0.4)';
+                    }
+                }
+
                 // Load channels if not cached
-                if (!serverChannels[guild.id]) {
-                    channelsList.innerHTML = '<div class="no-selection">Loading channels...</div>';
+                if (!serverChannels[guildId]) {
+                    channelsList.innerHTML = '<div class="loading-container"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"></path></svg> Loading channels...</div>';
+
                     try {
-                        const response = await fetch(`/api/guild/${guild.id}/channels`);
+                        const response = await fetch(`/api/guild/${guildId}/channels`);
+
+                        // Check if this guild is still selected
+                        if (!selectedGuild || selectedGuild.id !== guildId) {
+                            return;
+                        }
 
                         if (!response.ok) {
                             handleSessionError(response);
@@ -335,23 +460,31 @@
                         const data = await response.json();
 
                         if (data.channels) {
-                            serverChannels[guild.id] = data.channels.filter(ch => ch.type === 0);
+                            serverChannels[guildId] = data.channels.filter(ch => ch.type === 0);
                         } else {
-                            serverChannels[guild.id] = [];
+                            serverChannels[guildId] = [];
                         }
                     } catch (error) {
                         console.error(`Error fetching channels:`, error);
-                        serverChannels[guild.id] = [];
+                        serverChannels[guildId] = [];
                     }
                 }
-                
-                renderChannels(guild);
+
+                // Only render if this guild is still selected
+                if (selectedGuild && selectedGuild.id === guildId) {
+                    renderChannels();
+                }
             }
             
             // Render channels for selected server
-            function renderChannels(guild) {
+            function renderChannels() {
+                if (!selectedGuild) {
+                    channelsList.innerHTML = '<div class="no-selection">Select a server to view channels</div>';
+                    return;
+                }
+
                 channelsList.innerHTML = '';
-                const channels = serverChannels[guild.id] || [];
+                const channels = serverChannels[selectedGuild.id] || [];
 
                 if (channels.length === 0) {
                     channelsList.innerHTML = '<div class="no-selection">No channels found</div>';
@@ -370,70 +503,79 @@
                     channelsList.innerHTML = '<div class="no-selection">No channels match search</div>';
                     return;
                 }
-                
+
                 filteredChannels.forEach(channel => {
-                    const isSelected = selectedChannels.some(ch => 
-                        ch.id === channel.id && ch.guildId === guild.id
+                    const isSelected = selectedChannels.some(ch =>
+                        ch.id === channel.id && ch.guildId === selectedGuild.id
                     );
-                    
+
                     const channelItem = document.createElement('div');
                     channelItem.className = `channel-item ${isSelected ? 'selected' : ''}`;
-                    
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.className = 'channel-checkbox';
-                    checkbox.checked = isSelected;
-                    
+                    channelItem.dataset.channelId = channel.id;
+
+                    // Create tick icon (only visible when selected)
+                    const tickIcon = document.createElement('span');
+                    tickIcon.className = 'channel-tick';
+                    tickIcon.innerHTML = '✓';
+                    tickIcon.style.display = isSelected ? 'inline-block' : 'none';
+
                     const label = document.createElement('label');
                     label.className = 'channel-label';
                     label.innerHTML = `#${channel.name}`;
-                    
-                    channelItem.appendChild(checkbox);
+
+                    channelItem.appendChild(tickIcon);
                     channelItem.appendChild(label);
-                    
-                    // Click anywhere on channel item to toggle checkbox
-                    channelItem.addEventListener('click', (e) => {
-                        if (e.target !== checkbox) {
-                            checkbox.checked = !checkbox.checked;
-                        }
-                        toggleChannel(channel, guild, checkbox.checked);
+
+                    // Apply server color to selected channel
+                    if (isSelected) {
+                        channelItem.style.borderColor = currentServerColor;
+                        channelItem.style.boxShadow = `0 0 15px ${currentServerColor.replace('rgb', 'rgba').replace(')', ', 0.4)')}`;
+                    }
+
+                    // Click anywhere on channel item to toggle selection
+                    channelItem.addEventListener('click', () => {
+                        // Check current selection state at click time, not render time
+                        const currentlySelected = selectedChannels.some(ch =>
+                            ch.id === channel.id && ch.guildId === selectedGuild.id
+                        );
+                        toggleChannel(channel, !currentlySelected);
                     });
-                    
-                    // Direct checkbox change handler
-                    checkbox.addEventListener('change', () => {
-                        toggleChannel(channel, guild, checkbox.checked);
-                    });
-                    
+
                     channelsList.appendChild(channelItem);
                 });
             }
             
             // Toggle channel selection
-            function toggleChannel(channel, guild, isChecked) {
-                const isCurrentlySelected = selectedChannels.some(ch => 
-                    ch.id === channel.id && ch.guildId === guild.id
+            function toggleChannel(channel, isChecked) {
+                if (!selectedGuild) return;
+
+                const isCurrentlySelected = selectedChannels.some(ch =>
+                    ch.id === channel.id && ch.guildId === selectedGuild.id
                 );
-                
+
                 if (isChecked && !isCurrentlySelected) {
                     selectedChannels.push({
                         id: channel.id,
                         name: channel.name,
-                        guildId: guild.id,
-                        guildName: guild.name,
-                        guildIcon: guild.icon || null
+                        guildId: selectedGuild.id,
+                        guildName: selectedGuild.name,
+                        guildIcon: selectedGuild.icon || null
                     });
+                    // Clear any failed status when re-selecting
+                    const channelKey = `${selectedGuild.id}-${channel.id}`;
+                    failedChannels.delete(channelKey);
                 } else if (!isChecked && isCurrentlySelected) {
-                    selectedChannels = selectedChannels.filter(ch => 
-                        !(ch.id === channel.id && ch.guildId === guild.id)
+                    selectedChannels = selectedChannels.filter(ch =>
+                        !(ch.id === channel.id && ch.guildId === selectedGuild.id)
                     );
                 }
-                
+
                 // Save to localStorage
                 saveSelectedChannels();
-                
+
                 // Update UI
-                renderChannels(guild);
-                updateServerCount(guild.id);
+                renderChannels();
+                updateServerCount(selectedGuild.id);
                 updateSelectedDisplay();
                 updateSendButton();
             }
@@ -478,10 +620,27 @@
                                 ? `<img src="https://cdn.discordapp.com/icons/${channel.guildId}/${channel.guildIcon}.png" alt="${channel.guildName}">`
                                 : `<span>${channel.guildName.charAt(0).toUpperCase()}</span>`;
 
+                            const channelKey = `${channel.guildId}-${channel.id}`;
+                            const failureInfo = failedChannels.get(channelKey);
+
+                            let failedClass = '';
+                            let labelHtml = '';
+
+                            if (failureInfo) {
+                                if (failureInfo.type === 'ratelimit') {
+                                    failedClass = ' rate-limited';
+                                    labelHtml = '<span class="failure-label ratelimit">Rate Limited</span>';
+                                } else {
+                                    failedClass = ' failed-channel';
+                                    labelHtml = '<span class="failure-label permission">Missing Permission</span>';
+                                }
+                            }
+
                             tagsHtml += `
-                                <div class="selected-tag">
+                                <div class="selected-tag${failedClass}" data-channel-key="${channelKey}">
                                     <div class="tag-icon">${iconHtml}</div>
                                     <div class="tag-text">#${channel.name}</div>
+                                    ${labelHtml}
                                     <button class="tag-remove" data-channel-id="${channel.id}" data-guild-id="${channel.guildId}">✕</button>
                                 </div>
                             `;
@@ -499,7 +658,7 @@
                                 saveSelectedChannels();
                                 updateSelectedDisplay();
                                 if (selectedGuild && selectedGuild.id === guildId) {
-                                    renderChannels(selectedGuild);
+                                    renderChannels();
                                 }
                                 updateServerCount(guildId);
                                 updateSendButton();
@@ -515,7 +674,7 @@
                         saveSelectedChannels();
                         updateSelectedDisplay();
                         if (selectedGuild) {
-                            renderChannels(selectedGuild);
+                            renderChannels();
                         }
                         guilds.forEach(g => updateServerCount(g.id));
                         updateSendButton();
@@ -531,6 +690,23 @@
             function updateSendButton() {
                 if (sendBtn && messageInput) {
                     sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                    // Reset confirmation state when channels or message changes
+                    resetConfirmState();
+                }
+            }
+
+            // Reset confirmation state
+            function resetConfirmState() {
+                if (isConfirmState) {
+                    isConfirmState = false;
+                    if (confirmTimeout) {
+                        clearTimeout(confirmTimeout);
+                        confirmTimeout = null;
+                    }
+                    // Restore original send button text
+                    if (sendBtn) {
+                        sendBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg> Send';
+                    }
                 }
             }
             
@@ -549,64 +725,110 @@
             if (sendBtn) {
                 sendBtn.addEventListener('click', async function() {
                     if (selectedChannels.length > 0 && messageInput && messageInput.value.trim()) {
-                        // Create confirmation message
-                        let confirmMsg = `You are about to send a message to ${selectedChannels.length} channel(s):\n${selectedChannels.map(ch => `• #${ch.name} (${ch.guildName})`).join('\n')}\n\nDo you want to proceed?`;
+                        // First click: change to confirmation state
+                        if (!isConfirmState) {
+                            isConfirmState = true;
+                            const channelCount = selectedChannels.length;
+                            sendBtn.innerHTML = `Confirm sending ${channelCount} message${channelCount !== 1 ? 's' : ''}?`;
 
-                        // Show confirmation prompt
-                        if (!confirm(confirmMsg)) {
-                            return; // User cancelled
+                            // Auto-reset after 3 seconds
+                            confirmTimeout = setTimeout(() => {
+                                resetConfirmState();
+                            }, 3000);
+
+                            return; // Don't send yet, wait for second click
                         }
 
+                        // Second click: proceed with sending
+                        // Clear the confirmation timeout since user confirmed
+                        if (confirmTimeout) {
+                            clearTimeout(confirmTimeout);
+                            confirmTimeout = null;
+                        }
+                        isConfirmState = false;
+
+                        // Clear previous failed channels
+                        failedChannels.clear();
+
+                        isSending = true;
                         sendBtn.disabled = true;
-                        const originalText = sendBtn.innerHTML;
                         sendBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"></path></svg> Sending...';
 
+                        // Send messages one by one for real-time usage tracking
+                        let successCount = 0;
+                        let failedList = [];
+
+                        // Helper function to wait/delay
+                        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+                        // Get custom delay setting from localStorage (default to 1000ms)
+                        const customDelay = parseInt(localStorage.getItem('messageDelay') || '1000');
+
                         try {
-                            const response = await fetch('/api/send-message', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    channels: selectedChannels,
-                                    message: messageInput.value
-                                })
-                            });
+                            for (let i = 0; i < selectedChannels.length; i++) {
+                                const channel = selectedChannels[i];
 
-                            if (!response.ok) {
-                                handleSessionError(response);
-                                sendBtn.disabled = false;
-                                sendBtn.innerHTML = originalText;
-                                return;
-                            }
+                                // Update progress in button
+                                sendBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"></path></svg> Sending ${i + 1}/${selectedChannels.length}...`;
 
-                            const result = await response.json();
+                                // Send message (no retry for rate limits)
+                                const response = await fetch('/api/send-message-single', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        channel: channel,
+                                        message: messageInput.value
+                                    })
+                                });
 
-                            if (response.ok) {
-                                // Show success message
-                                let successMsg = `✅ Message sent to ${result.success.length} channel(s):\n${result.success.map(ch => `• #${ch}`).join('\n')}`;
+                                const result = await response.json();
 
-                                if (result.failed.length > 0) {
-                                    successMsg += `\n\n⚠️ Failed (${result.failed.length}):\n${result.failed.map(ch => `• ${ch}`).join('\n')}`;
+                                if (result.success) {
+                                    successCount++;
+                                } else if (response.status === 429) {
+                                    // Rate limited - mark and skip (don't retry)
+                                    const channelKey = `${channel.guildId}-${channel.id}`;
+                                    failedChannels.set(channelKey, { type: 'ratelimit' });
+                                    failedList.push(`${channel.name} (Rate limited)`);
+                                } else {
+                                    // Other error
+                                    const channelKey = `${channel.guildId}-${channel.id}`;
+                                    failedChannels.set(channelKey, { type: 'permission' });
+                                    failedList.push(`${channel.name} (${result.error})`);
                                 }
 
-                                alert(successMsg);
+                                // Update display after each message
+                                updateSelectedDisplay();
 
-                                // Keep message input - don't clear
-                            } else {
-                                alert(`❌ Error: ${result.error}`);
+                                // Add delay between messages based on user setting
+                                // Only delay if there are more messages to send
+                                if (i < selectedChannels.length - 1 && customDelay > 0) {
+                                    await delay(customDelay);
+                                }
                             }
+
+                            // Show final summary
+                            let successMsg = `✅ Message sent to ${successCount} channel(s)`;
+
+                            if (failedList.length > 0) {
+                                successMsg += `\n\n⚠️ Failed (${failedList.length}):\n${failedList.map(f => `• ${f}`).join('\n')}`;
+                            }
+
+                            alert(successMsg);
                         } catch (error) {
                             console.error('Send error:', error);
                             alert(`❌ Error sending message: ${error.message}`);
                         } finally {
+                            isSending = false;
                             sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
-                            sendBtn.innerHTML = originalText;
+                            sendBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg> Send';
                         }
                     }
                 });
             }
-            
+
             // Initialize on load
             initializeUI();
         });

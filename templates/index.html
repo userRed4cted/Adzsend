@@ -79,8 +79,6 @@
         .token-input:focus {
             outline: none;
             background: #212227;
-            border-color: #335FFF;
-            box-shadow: 0 0 10px rgba(51, 95, 255, 0.3);
         }
 
         .token-input::placeholder {
@@ -93,7 +91,7 @@
             border: none;
             border-radius: 8px;
             color: #ffffff;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 1rem;
             letter-spacing: 0.5px;
             cursor: pointer;
@@ -102,12 +100,11 @@
         }
 
         .submit-btn:hover {
-            background: #4575FF;
-            transform: translateY(-2px);
+            transform: scale(1.015);
         }
 
         .submit-btn:active {
-            transform: translateY(0);
+            transform: scale(1.01);
         }
 
         .error-message {
@@ -134,6 +131,8 @@
             text-align: center;
             padding: 0.5rem;
             transition: color 0.3s ease;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         .help-btn:hover {
@@ -166,9 +165,9 @@
 <body>
     <div class="login-container">
         <div class="token-form">
-            <h2 class="form-title">Log In</h2>
+            <h2 class="form-title">Borz Marketing Login</h2>
             
-            <form method="POST" action="{{ url_for('login') }}">
+            <form method="POST" action="{{ url_for('login_page') }}">
                 <div class="form-group-login">
                     <input type="password" name="user_token" class="token-input" placeholder="Insert Discord User Token" required>
                     <button type="submit" class="submit-btn">Log In</button>

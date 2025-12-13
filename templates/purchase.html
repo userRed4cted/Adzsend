@@ -61,6 +61,9 @@
                     <a href="{{ url_for('business_panel') }}" class="dropdown-item">Business Panel</a>
                     {% endif %}
                     <a href="{{ url_for('settings') }}" class="dropdown-item">Settings</a>
+                    {% if is_admin_user %}
+                    <a href="{{ url_for('admin_panel') }}" class="dropdown-item">Admin</a>
+                    {% endif %}
                 {% endif %}
                 <div class="dropdown-divider"></div>
                 <a href="https://discord.gg/KWt6rvCukp" target="_blank" class="dropdown-item discord-item">Discord Server</a>

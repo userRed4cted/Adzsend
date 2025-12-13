@@ -24,9 +24,16 @@ def init_db():
             signup_ip TEXT NOT NULL,
             signup_date TEXT NOT NULL,
             banned INTEGER DEFAULT 0,
+            flagged INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+
+    # Add flagged column if it doesn't exist (migration)
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN flagged INTEGER DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
 
     # Subscriptions table
     cursor.execute('''
@@ -164,6 +171,15 @@ def get_user_by_discord_id(discord_id):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM users WHERE discord_id = ?', (discord_id,))
+    user = cursor.fetchone()
+    conn.close()
+    return dict(user) if user else None
+
+def get_user_by_id(user_id):
+    """Get user by internal user ID (for admin panel)."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
     user = cursor.fetchone()
     conn.close()
     return dict(user) if user else None
@@ -707,6 +723,18 @@ def update_team_member_info(team_id, discord_id, username, avatar):
     conn.commit()
     conn.close()
 
+def update_user_profile(user_id, username, avatar):
+    """Update username and avatar for a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE users
+        SET username = ?, avatar = ?
+        WHERE id = ?
+    ''', (username, avatar, user_id))
+    conn.commit()
+    conn.close()
+
 def get_team_members(team_id):
     """Get all members of a business team."""
     conn = get_db()
@@ -796,6 +824,177 @@ def get_team_member_stats(team_id):
 
     conn.close()
     return stats
+
+
+# Admin Functions
+
+def get_all_users_for_admin(filters=None):
+    """Get all users with optional filters for admin panel."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    query = '''
+        SELECT u.*,
+               (SELECT COUNT(*) FROM subscriptions WHERE user_id = u.id AND is_active = 1) as has_plan
+        FROM users u
+        WHERE 1=1
+    '''
+
+    params = []
+
+    if filters:
+        conditions = []
+        if 'non_plan' in filters:
+            conditions.append('(SELECT COUNT(*) FROM subscriptions WHERE user_id = u.id AND is_active = 1) = 0')
+        if 'plan' in filters:
+            conditions.append('(SELECT COUNT(*) FROM subscriptions WHERE user_id = u.id AND is_active = 1) > 0')
+        if 'banned' in filters:
+            conditions.append('u.banned = 1')
+        if 'flagged' in filters:
+            conditions.append('u.flagged = 1')
+
+        if conditions:
+            query += ' AND (' + ' OR '.join(conditions) + ')'
+
+    query += ' ORDER BY u.created_at DESC'
+
+    cursor.execute(query, params)
+    users = [dict(row) for row in cursor.fetchall()]
+
+    # Add is_admin flag for each user
+    from admin_config import is_admin
+    for user in users:
+        user['is_admin'] = is_admin(user['discord_id'])
+
+    conn.close()
+    return users
+
+
+def get_user_admin_details(user_id):
+    """Get detailed user information for admin panel."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Get user basic info
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    user = dict(cursor.fetchone()) if cursor.fetchone() else None
+
+    if not user:
+        conn.close()
+        return None
+
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    user = dict(cursor.fetchone())
+
+    # Check if user is admin
+    from admin_config import is_admin
+    user['is_admin'] = is_admin(user['discord_id'])
+
+    # Get active subscriptions
+    cursor.execute('''
+        SELECT * FROM subscriptions
+        WHERE user_id = ? AND is_active = 1
+    ''', (user_id,))
+    user['subscriptions'] = [dict(row) for row in cursor.fetchall()]
+
+    # Check if user is business team owner
+    cursor.execute('''
+        SELECT * FROM business_teams
+        WHERE owner_user_id = ?
+    ''', (user_id,))
+    team = cursor.fetchone()
+    user['is_business_owner'] = team is not None
+    if team:
+        user['business_team'] = dict(team)
+
+    # Check if user is business team member
+    cursor.execute('''
+        SELECT bt.*, btm.member_discord_id
+        FROM business_team_members btm
+        JOIN business_teams bt ON btm.team_id = bt.id
+        WHERE btm.user_id = ?
+    ''', (user_id,))
+    team_member = cursor.fetchone()
+    user['is_business_member'] = team_member is not None
+    if team_member:
+        user['business_team_member_of'] = dict(team_member)
+        # Get team owner info
+        cursor.execute('SELECT * FROM users WHERE id = ?', (dict(team_member)['owner_user_id'],))
+        owner = cursor.fetchone()
+        if owner:
+            user['business_team_owner'] = dict(owner)
+
+    conn.close()
+    return user
+
+
+def ban_user(user_id):
+    """Ban a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE users SET banned = 1 WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def unban_user(user_id):
+    """Unban a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE users SET banned = 0 WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def flag_user(user_id):
+    """Flag a user for inappropriate content."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE users SET flagged = 1 WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def unflag_user(user_id):
+    """Remove flag from a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE users SET flagged = 0 WHERE id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def delete_user_account_admin(user_id):
+    """Delete a user account (admin function)."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Delete user's subscriptions
+    cursor.execute('DELETE FROM subscriptions WHERE user_id = ?', (user_id,))
+
+    # Delete user's business team if they own one
+    cursor.execute('SELECT id FROM business_teams WHERE owner_user_id = ?', (user_id,))
+    team = cursor.fetchone()
+    if team:
+        team_id = team[0]
+        cursor.execute('DELETE FROM business_team_members WHERE team_id = ?', (team_id,))
+        cursor.execute('DELETE FROM business_teams WHERE id = ?', (team_id,))
+
+    # Remove from business teams they're a member of
+    cursor.execute('DELETE FROM business_team_members WHERE user_id = ?', (user_id,))
+
+    # Delete user's saved data
+    cursor.execute('DELETE FROM user_data WHERE user_id = ?', (user_id,))
+
+    # Delete usage tracking
+    cursor.execute('DELETE FROM usage_tracking WHERE user_id = ?', (user_id,))
+
+    # Finally delete the user
+    cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+
+    conn.commit()
+    conn.close()
+
 
 # Initialize database on import
 init_db()

@@ -26,10 +26,11 @@ WHITELIST = [
 ]
 
 
-def check_message_content(message):
+def check_message_content(message, user_id=None):
     """
     Check if message contains any blacklisted content.
     Returns (is_valid, reason) tuple.
+    If user_id is provided and blacklisted content is found, flags the user.
     """
     if not message or not message.strip():
         return False, "Message cannot be empty"
@@ -44,6 +45,14 @@ def check_message_content(message):
     # Check blacklist
     for word in BLACKLISTED_WORDS:
         if word.lower() in message_lower:
+            # Flag the user if user_id is provided
+            if user_id:
+                try:
+                    from database import flag_user
+                    flag_user(user_id)
+                except Exception as e:
+                    print(f"[WARNING] Failed to flag user {user_id}: {e}")
+
             return False, f"Message contains prohibited content: '{word}'"
 
     return True, None

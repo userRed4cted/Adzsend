@@ -5,13 +5,16 @@ import requests
 import uuid
 from datetime import timedelta
 from database import (
-    init_db, create_user, get_user_by_discord_id, update_user_token,
+    init_db, create_user, get_user_by_discord_id, get_user_by_id, update_user_token,
     set_subscription, get_active_subscription, can_send_message,
     record_successful_send, get_plan_status, update_user_session,
-    validate_user_session, save_user_data, get_user_data
+    validate_user_session, save_user_data, get_user_data,
+    get_all_users_for_admin, get_user_admin_details, ban_user, unban_user,
+    flag_user, unflag_user, delete_user_account_admin
 )
 from homepage_config import SLIDESHOW_MESSAGES, SLIDESHOW_INTERVAL, SLIDESHOW_FADE_DURATION
 from content_filter import check_message_content, BLACKLISTED_WORDS
+from admin_config import is_admin
 
 load_dotenv()
 
@@ -124,6 +127,7 @@ def home():
     # Get plan status if user is logged in
     plan_status = None
     has_business = False
+    is_admin_user = False
     if 'user' in session:
         user = get_user_by_discord_id(session['user']['id'])
         if user:
@@ -131,13 +135,16 @@ def home():
             # Check if user has business access (owner or member)
             from database import is_business_plan_owner, is_business_team_member
             has_business = is_business_plan_owner(user['id']) or is_business_team_member(session['user']['id'])
+            # Check if user is admin
+            is_admin_user = is_admin(session['user']['id'])
 
     return render_template('home.html',
                          slideshow_messages=SLIDESHOW_MESSAGES,
                          slideshow_interval=SLIDESHOW_INTERVAL,
                          slideshow_fade_duration=SLIDESHOW_FADE_DURATION,
                          plan_status=plan_status,
-                         has_business=has_business)
+                         has_business=has_business,
+                         is_admin_user=is_admin_user)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
@@ -389,11 +396,13 @@ def purchase():
     # Get plan status if user is logged in
     plan_status = None
     has_business = False
+    is_admin_user = False
     if 'user' in session:
         user = get_user_by_discord_id(session['user']['id'])
         if user:
             plan_status = get_plan_status(user['id'])
             has_business = has_business_access(user['id'], session['user']['id'])
+            is_admin_user = is_admin(session['user']['id'])
 
     return render_template('purchase.html',
                          subscription_plans=SUBSCRIPTION_PLANS,
@@ -401,7 +410,8 @@ def purchase():
                          business_plans=BUSINESS_PLANS,
                          yearly_discount=YEARLY_DISCOUNT_PERCENT,
                          plan_status=plan_status,
-                         has_business=has_business)
+                         has_business=has_business,
+                         is_admin_user=is_admin_user)
 
 @app.route('/api/set-plan', methods=['POST'])
 def set_plan():
@@ -491,6 +501,11 @@ def panel():
         # Redirect to purchase page if no active plan
         return redirect(url_for('purchase'))
 
+    # Block business plan holders from accessing personal panel
+    if plan_status.get('plan_id', '').startswith('business_'):
+        # Redirect business plan holders to business panel instead
+        return redirect(url_for('business_panel'))
+
     user_token = session.get('user_token')
     headers = {'Authorization': user_token}
 
@@ -509,7 +524,10 @@ def panel():
     # Check if user has business access
     has_business = has_business_access(user['id'], session['user']['id'])
 
-    response = app.make_response(render_template('dashboard.html', user=session['user'], guilds=guilds, plan_status=plan_status, user_data=user_data, has_business=has_business, BLACKLISTED_WORDS=BLACKLISTED_WORDS))
+    # Check if user is admin
+    is_admin_user = is_admin(session['user']['id'])
+
+    response = app.make_response(render_template('dashboard.html', user=session['user'], guilds=guilds, plan_status=plan_status, user_data=user_data, has_business=has_business, is_admin_user=is_admin_user, BLACKLISTED_WORDS=BLACKLISTED_WORDS))
     # Prevent caching of dashboard page
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
@@ -569,8 +587,8 @@ def send_message_single():
     channel = data.get('channel', {})
     message_content = data.get('message', '').strip()
 
-    # Check content filter
-    is_valid, filter_reason = check_message_content(message_content)
+    # Check content filter and flag user if needed
+    is_valid, filter_reason = check_message_content(message_content, user['id'])
     if not is_valid:
         return {'error': filter_reason}, 400
 
@@ -630,18 +648,18 @@ def send_message():
     channels = data.get('channels', [])
     message_content = data.get('message', '').strip()
 
-    # Check content filter
-    is_valid, filter_reason = check_message_content(message_content)
+    # Get user for limit checking and flagging
+    user = get_user_by_discord_id(session['user']['id'])
+    if not user:
+        return {'error': 'User not found'}, 404
+
+    # Check content filter and flag user if needed
+    is_valid, filter_reason = check_message_content(message_content, user['id'])
     if not is_valid:
         return {'error': filter_reason}, 400
 
     if not channels:
         return {'error': 'No channels selected'}, 400
-
-    # Get user for limit checking
-    user = get_user_by_discord_id(session['user']['id'])
-    if not user:
-        return {'error': 'User not found'}, 404
 
     results = {'success': [], 'failed': []}
 
@@ -727,6 +745,9 @@ def business_management():
     # User has business access (they're on this page)
     has_business = True
 
+    # Check if user is admin
+    is_admin_user = is_admin(session['user']['id'])
+
     return render_template('business.html',
                          user=session['user'],
                          team=team,
@@ -734,6 +755,7 @@ def business_management():
                          member_stats=member_stats,
                          plan_status=plan_status,
                          has_business=has_business,
+                         is_admin_user=is_admin_user,
                          BLACKLISTED_WORDS=BLACKLISTED_WORDS)
 
 @app.route('/business-panel')
@@ -781,6 +803,9 @@ def business_panel():
     # User has business access (they're on this page)
     has_business = True
 
+    # Check if user is admin
+    is_admin_user = is_admin(session['user']['id'])
+
     response = app.make_response(render_template('business-panel.html',
                                                 user=session['user'],
                                                 guilds=guilds,
@@ -788,6 +813,7 @@ def business_panel():
                                                 plan_status=plan_status,
                                                 user_data=user_data,
                                                 has_business=has_business,
+                                                is_admin_user=is_admin_user,
                                                 BLACKLISTED_WORDS=BLACKLISTED_WORDS))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
@@ -835,12 +861,16 @@ def settings():
             if team:
                 business_plan_status = get_business_plan_status(team['id'], team['owner_user_id'])
 
+    # Check if user is admin
+    is_admin_user = is_admin(session['user']['id'])
+
     response = app.make_response(render_template('settings.html',
                                                 user=session['user'],
                                                 sent_count=sent_count,
                                                 plan_status=plan_status,
                                                 user_data=user_data,
                                                 has_business=has_business,
+                                                is_admin_user=is_admin_user,
                                                 business_plan_status=business_plan_status))
     # Prevent caching of settings page
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -889,9 +919,9 @@ def api_save_user_data():
         draft_message = data.get('draft_message')
         message_delay = data.get('message_delay')
 
-        # Check content filter for draft message
+        # Check content filter for draft message and flag user if needed
         if draft_message and draft_message.strip():
-            is_valid, filter_reason = check_message_content(draft_message)
+            is_valid, filter_reason = check_message_content(draft_message, user['id'])
             if not is_valid:
                 return jsonify({'success': False, 'error': filter_reason}), 400
 
@@ -986,6 +1016,12 @@ def add_business_member():
         if member_discord_id == owner_discord_id:
             return {'success': False, 'error': 'Cannot add yourself as a team member'}, 400
 
+        # Check if the user being added is banned
+        from database import get_user_by_discord_id as get_user_check
+        member_user = get_user_check(member_discord_id)
+        if member_user and member_user.get('banned', 0) == 1:
+            return {'success': False, 'error': 'This user is banned and cannot be added to teams'}, 403
+
         # Check if team is full
         current_count = get_team_member_count(team['id'])
         if current_count >= team['max_members']:
@@ -1063,9 +1099,9 @@ def set_team_message():
         data = request.get_json()
         message = data.get('message', '')
 
-        # Check content filter (only if message is not empty)
+        # Check content filter and flag user if needed (only if message is not empty)
         if message and message.strip():
-            is_valid, filter_reason = check_message_content(message)
+            is_valid, filter_reason = check_message_content(message, user['id'])
             if not is_valid:
                 return {'success': False, 'error': filter_reason}, 400
 
@@ -1074,6 +1110,290 @@ def set_team_message():
 
     except Exception as e:
         print(f"[ERROR] Set team message error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+@app.route('/admin')
+def admin_panel():
+    """Admin panel page."""
+    if 'user' not in session:
+        return redirect(url_for('login_page'))
+
+    # Check if IP has changed
+    client_ip = get_client_ip()
+    if 'login_ip' in session and session['login_ip'] != client_ip:
+        session.clear()
+        return redirect(url_for('login_page'))
+
+    # Check if user is admin
+    if not is_admin(session['user']['id']):
+        return redirect(url_for('home'))
+
+    # Get user from database
+    user = get_user_by_discord_id(session['user']['id'])
+    if not user:
+        session.clear()
+        return redirect(url_for('login_page'))
+
+    plan_status = get_plan_status(user['id'])
+    has_business = has_business_access(user['id'], session['user']['id'])
+    is_admin_user = True  # They're already on the admin page
+
+    response = app.make_response(render_template('admin.html',
+                                                user=session['user'],
+                                                plan_status=plan_status,
+                                                has_business=has_business,
+                                                is_admin_user=is_admin_user))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+@app.route('/api/admin/users', methods=['GET'])
+def admin_get_users():
+    """Get all users with optional filters."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Check if user is admin
+    if not is_admin(session['user']['id']):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        # Get filters from query params
+        filters = []
+        if request.args.get('non_plan') == 'true':
+            filters.append('non_plan')
+        if request.args.get('plan') == 'true':
+            filters.append('plan')
+        if request.args.get('banned') == 'true':
+            filters.append('banned')
+        if request.args.get('flagged') == 'true':
+            filters.append('flagged')
+
+        users = get_all_users_for_admin(filters if filters else None)
+        return {'success': True, 'users': users}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin get users error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+@app.route('/api/admin/search-user', methods=['GET'])
+def admin_search_user():
+    """Search for a user by Discord ID."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Check if user is admin
+    if not is_admin(session['user']['id']):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        discord_id = request.args.get('discord_id')
+        if not discord_id:
+            return {'success': False, 'error': 'Discord ID required'}, 400
+
+        # Search for user by discord_id
+        user = get_user_by_discord_id(discord_id)
+        if not user:
+            return {'success': False, 'error': 'User not found'}, 404
+
+        # Get has_plan status
+        from database import get_active_subscription
+        subscription = get_active_subscription(user['id'])
+        user['has_plan'] = 1 if subscription else 0
+
+        # Check if user is admin
+        user['is_admin'] = is_admin(discord_id)
+
+        # Fetch fresh Discord profile info
+        username, avatar = fetch_discord_user_info(discord_id)
+        if username:
+            # Update user info in database
+            from database import update_user_profile
+            update_user_profile(user['id'], username, avatar)
+            user['username'] = username
+            user['avatar'] = avatar
+
+        return {'success': True, 'user': user}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin search user error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+@app.route('/api/admin/user/<int:user_id>', methods=['GET'])
+def admin_get_user_details(user_id):
+    """Get detailed user information."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Check if user is admin
+    if not is_admin(session['user']['id']):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        user_details = get_user_admin_details(user_id)
+        if not user_details:
+            return {'success': False, 'error': 'User not found'}, 404
+
+        # Fetch fresh Discord profile info
+        username, avatar = fetch_discord_user_info(user_details['discord_id'])
+        if username:
+            # Update user info in database
+            from database import update_user_profile
+            update_user_profile(user_id, username, avatar)
+            user_details['username'] = username
+            user_details['avatar'] = avatar
+
+        return {'success': True, 'user': user_details}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin get user details error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+@app.route('/api/admin/ban/<int:user_id>', methods=['POST'])
+def admin_ban_user(user_id):
+    """Ban a user."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Check if user is admin
+    if not is_admin(session['user']['id']):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        ban_user(user_id)
+        return {'success': True, 'message': 'User banned successfully'}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin ban user error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+@app.route('/api/admin/unban/<int:user_id>', methods=['POST'])
+def admin_unban_user(user_id):
+    """Unban a user."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Check if user is admin
+    if not is_admin(session['user']['id']):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        unban_user(user_id)
+        return {'success': True, 'message': 'User unbanned successfully'}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin unban user error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+@app.route('/api/admin/flag/<int:user_id>', methods=['POST'])
+def admin_flag_user(user_id):
+    """Flag a user."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Check if user is admin
+    if not is_admin(session['user']['id']):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        flag_user(user_id)
+        return {'success': True, 'message': 'User flagged successfully'}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin flag user error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+@app.route('/api/admin/unflag/<int:user_id>', methods=['POST'])
+def admin_unflag_user(user_id):
+    """Unflag a user."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Check if user is admin
+    if not is_admin(session['user']['id']):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        unflag_user(user_id)
+        return {'success': True, 'message': 'User unflagged successfully'}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin unflag user error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+@app.route('/api/admin/delete/<int:user_id>', methods=['POST'])
+def admin_delete_user(user_id):
+    """Delete a user account."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Check if user is admin
+    if not is_admin(session['user']['id']):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        delete_user_account_admin(user_id)
+        return {'success': True, 'message': 'User deleted successfully'}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin delete user error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+@app.route('/api/admin/user/<int:user_id>/message', methods=['GET'])
+def admin_get_user_message(user_id):
+    """Get user's saved draft message from their panel."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Check if user is admin
+    if not is_admin(session['user']['id']):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        # Get user_data which contains draft_message
+        user_data = get_user_data(user_id)
+        if not user_data:
+            return {'success': True, 'message': 'No message saved'}, 200
+
+        draft_message = user_data.get('draft_message', '')
+        return {'success': True, 'message': draft_message or 'No message saved'}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin get user message error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+@app.route('/api/admin/user/<int:user_id>/team-message', methods=['GET'])
+def admin_get_team_message(user_id):
+    """Get business team message if user is owner or member."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Check if user is admin
+    if not is_admin(session['user']['id']):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        from database import get_business_team_by_owner, get_user_by_id
+        user_data = get_user_by_id(user_id)
+        if not user_data:
+            return {'success': False, 'error': 'User not found'}, 404
+
+        # Check if user owns a business team
+        team = get_business_team_by_owner(user_id)
+        if not team:
+            # Check if user is a member
+            from database import get_business_team_by_member
+            team = get_business_team_by_member(user_data['discord_id'])
+
+        if not team:
+            return {'success': False, 'error': 'User is not part of any business team'}, 404
+
+        team_message = team.get('team_message', '')
+        return {'success': True, 'message': team_message or 'No team message set'}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin get team message error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/logout')

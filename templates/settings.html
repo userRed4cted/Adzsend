@@ -51,6 +51,9 @@
                 <a href="{{ url_for('business_panel') }}" class="dropdown-item">Business Panel</a>
                 {% endif %}
                 <a href="{{ url_for('settings') }}" class="dropdown-item">Settings</a>
+                {% if is_admin_user %}
+                <a href="{{ url_for('admin_panel') }}" class="dropdown-item">Admin</a>
+                {% endif %}
                 <div class="dropdown-divider"></div>
                 <a href="https://discord.gg/KWt6rvCukp" target="_blank" class="dropdown-item discord-item">Discord Server</a>
                 <a href="{{ url_for('logout') }}" class="dropdown-item logout-item">Logout</a>
@@ -66,18 +69,17 @@
                         <div class="settings-panel-header">Usage</div>
 
                         <!-- Personal/Business Toggle -->
-                        {% if has_business %}
+                        {% set is_business_plan = plan_status.has_plan and plan_status.plan_id and plan_status.plan_id.startswith('business_') %}
                         <div style="display: flex; gap: 1.5rem; margin: 1rem 0; padding-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                <input type="radio" name="usage-view" value="personal" checked style="cursor: pointer;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: {% if not plan_status.has_plan or is_business_plan %}not-allowed{% else %}pointer{% endif %}; opacity: {% if not plan_status.has_plan or is_business_plan %}0.5{% else %}1{% endif %};">
+                                <input type="radio" name="usage-view" value="personal" {% if not is_business_plan %}checked{% endif %} {% if not plan_status.has_plan or is_business_plan %}disabled{% endif %} style="cursor: {% if not plan_status.has_plan or is_business_plan %}not-allowed{% else %}pointer{% endif %};">
                                 <span style="color: #dcddde; font-weight: 500;">Personal</span>
                             </label>
-                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                <input type="radio" name="usage-view" value="business" style="cursor: pointer;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: {% if not has_business %}not-allowed{% else %}pointer{% endif %}; opacity: {% if not has_business %}0.5{% else %}1{% endif %};">
+                                <input type="radio" name="usage-view" value="business" {% if is_business_plan %}checked{% endif %} {% if not has_business %}disabled{% endif %} style="cursor: {% if not has_business %}not-allowed{% else %}pointer{% endif %};">
                                 <span style="color: #dcddde; font-weight: 500;">Business</span>
                             </label>
                         </div>
-                        {% endif %}
 
                         <div class="settings-panel-content" id="personal-usage" {% if has_business %}style="display: block;"{% endif %}>
                             <div class="usage-stat">

@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Discord Server Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
+    <style>
+        .admin-layout {
+            display: grid;
+            grid-template-columns: 450px 1fr;
+            gap: 20px;
+            height: calc(100vh - 70px);
+            padding: 20px;
+            background: #121215;
+        }
+
+        .admin-left-panel {
+            background: #191A1F;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .admin-filters {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-title {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 4px;
+            cursor: pointer;
+        }
+
+        .filter-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .filter-checkbox label {
+            color: #e0e0e0;
+            cursor: pointer;
+            flex: 1;
+            user-select: none;
+        }
+
+        .users-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #212227;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            border: 2px solid transparent;
+        }
+
+        .user-item:hover {
+            background: #2a2a30;
+            transform: scale(1.015);
+        }
+
+        .user-item.selected {
+            background: #212227;
+            transform: scale(1.02);
+            /* Border color and box-shadow are applied dynamically via JavaScript */
+        }
+
+        .user-item-tags {
+            position: absolute;
+            right: 12px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .user-tag {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .user-tag.flagged {
+            background: #ffa500;
+            color: #000;
+        }
+
+        .user-tag.banned {
+            background: #ff4444;
+            color: #fff;
+        }
+
+        .user-tag.admin {
+            background: #fff;
+            color: #000;
+        }
+
+        .user-item-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #335FFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .user-item-info {
+            flex: 1;
+        }
+
+        .user-item-name {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .user-item-id {
+            color: #888;
+            font-size: 12px;
+        }
+
+        .admin-right-panel {
+            background: #191A1F;
+            border-radius: 8px;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .admin-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            font-size: 16px;
+        }
+
+        .user-details-header {
+            color: #fff;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #282930;
+        }
+
+        .user-details-section {
+            margin-bottom: 25px;
+        }
+
+        .detail-row {
+            display: flex;
+            padding: 12px 0;
+            border-bottom: 1px solid #282930;
+        }
+
+        .detail-label {
+            color: #888;
+            font-size: 14px;
+            width: 200px;
+            flex-shrink: 0;
+        }
+
+        .detail-value {
+            color: #fff;
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .detail-value.banned {
+            color: #ff4444;
+            font-weight: 600;
+        }
+
+        .detail-value.flagged {
+            color: #ffaa00;
+            font-weight: 600;
+        }
+
+        .admin-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 30px;
+        }
+
+        .admin-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #fff;
+        }
+
+        .admin-btn:hover {
+            opacity: 0.8;
+            transform: translateY(-2px);
+        }
+
+        .admin-btn.view-message {
+            background: #335FFF;
+        }
+
+        .admin-btn.clear-flag {
+            background: #ffa500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .admin-btn.delete {
+            background: #e74c3c;
+        }
+
+        .admin-btn.ban {
+            background: #c0392b;
+        }
+
+        .admin-btn.unban {
+            background: #27ae60;
+        }
+
+        .admin-btn.view-team-message {
+            background: #9b59b6;
+        }
+
+        .admin-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Dialog styles */
+        .dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dialog-overlay.active {
+            display: flex;
+        }
+
+        .dialog-box {
+            background: #191A1F;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .dialog-header {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .dialog-content {
+            color: #e0e0e0;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #121215;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .dialog-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .dialog-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dialog-btn.primary {
+            background: #335FFF;
+            color: #fff;
+        }
+
+        .dialog-btn.secondary {
+            background: #555;
+            color: #fff;
+        }
+
+        .dialog-btn:hover {
+            opacity: 0.8;
+        }
+
+        .no-users {
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .search-section {
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: #212227;
+            border: 1px solid #335FFF;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #4575FF;
+        }
+
+        .search-input:active {
+            transform: none;
+        }
+
+        .search-input::placeholder {
+            color: #888;
+        }
+
+        /* Scrollbar styling */
+        .admin-left-panel::-webkit-scrollbar,
+        .admin-right-panel::-webkit-scrollbar,
+        .users-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .admin-left-panel::-webkit-scrollbar-track,
+        .admin-right-panel::-webkit-scrollbar-track,
+        .users-list::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        .admin-left-panel::-webkit-scrollbar-thumb,
+        .admin-right-panel::-webkit-scrollbar-thumb,
+        .users-list::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <nav class="navbar">
+            <div class="navbar-content">
+                <div class="navbar-left">
+                    <div class="menu-icon" id="menu-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </div>
+                    <div class="navbar-text">
+                        <h1 class="navbar-title">Admin Panel</h1>
+                        <p class="navbar-subtitle">Manage users and monitor platform activity</p>
+                    </div>
+                </div>
+                <div class="nav-right">
+                    <div class="user-info">
+                        {% if user.avatar %}
+                            <img src="https://cdn.discordapp.com/avatars/{{ user.id }}/{{ user.avatar }}.png" alt="{{ user.username }}" class="user-avatar">
+                        {% else %}
+                            <div class="user-avatar-placeholder">{{ user.username[0].upper() }}</div>
+                        {% endif %}
+                        <div class="user-details">
+                            <div class="username">{{ user.username }}</div>
+                            <div class="user-id">{{ user.id }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dropdown Menu -->
+            <div class="dropdown-menu" id="dropdown-menu">
+                <a href="{{ url_for('home') }}" class="dropdown-item">Home</a>
+                <a href="{{ url_for('purchase') }}" class="dropdown-item">Purchase</a>
+                <a href="{{ url_for('panel') }}" class="dropdown-item">Panel</a>
+                {% if has_business %}
+                <a href="{{ url_for('business_management') }}" class="dropdown-item">Business Management</a>
+                <a href="{{ url_for('business_panel') }}" class="dropdown-item">Business Panel</a>
+                {% endif %}
+                <a href="{{ url_for('settings') }}" class="dropdown-item">Settings</a>
+                <a href="{{ url_for('admin_panel') }}" class="dropdown-item">Admin</a>
+                <div class="dropdown-divider"></div>
+                <a href="https://discord.gg/KWt6rvCukp" target="_blank" class="dropdown-item discord-item">Discord Server</a>
+                <a href="{{ url_for('logout') }}" class="dropdown-item logout-item">Logout</a>
+            </div>
+        </nav>
+
+        <div class="admin-layout">
+            <!-- Left Panel: Filters and User List -->
+            <div class="admin-left-panel">
+                <div class="search-section">
+                    <input type="text" id="user-search" class="search-input" placeholder="Search by Discord User ID...">
+                </div>
+
+                <div class="admin-filters">
+                    <div class="filter-title">Filter Users</div>
+                    <div class="filter-checkbox">
+                        <input type="checkbox" id="filter-non-plan" value="non_plan">
+                        <label for="filter-non-plan">Non Plan Members</label>
+                    </div>
+                    <div class="filter-checkbox">
+                        <input type="checkbox" id="filter-plan" value="plan">
+                        <label for="filter-plan">Plan Members</label>
+                    </div>
+                    <div class="filter-checkbox">
+                        <input type="checkbox" id="filter-banned" value="banned">
+                        <label for="filter-banned">Banned Users</label>
+                    </div>
+                    <div class="filter-checkbox">
+                        <input type="checkbox" id="filter-flagged" value="flagged">
+                        <label for="filter-flagged">Flagged Users</label>
+                    </div>
+                </div>
+
+                <div class="users-list" id="users-list">
+                    <div class="no-users">Select filters to view users</div>
+                </div>
+            </div>
+
+            <!-- Right Panel: User Details -->
+            <div class="admin-right-panel" id="user-details-panel">
+                <div class="admin-placeholder">Select a user to view details</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Dialog -->
+    <div class="dialog-overlay" id="message-dialog">
+        <div class="dialog-box">
+            <div class="dialog-header" id="dialog-title">User Message</div>
+            <div class="dialog-content" id="dialog-message"></div>
+            <div class="dialog-actions">
+                <button class="dialog-btn primary" onclick="copyMessage()">Copy to Clipboard</button>
+                <button class="dialog-btn secondary" onclick="closeDialog()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Dialog -->
+    <div class="dialog-overlay" id="confirm-dialog">
+        <div class="dialog-box">
+            <div class="dialog-header" id="confirm-title">Confirm Action</div>
+            <div class="dialog-content" id="confirm-message"></div>
+            <div class="dialog-actions">
+                <button class="dialog-btn primary" id="confirm-yes">Yes</button>
+                <button class="dialog-btn secondary" onclick="closeConfirmDialog()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let allUsers = [];
+        let currentMessageContent = '';
+
+        // Extract dominant color from avatar image
+        function getDominantColor(imgElement) {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = imgElement.width || 40;
+                canvas.height = imgElement.height || 40;
+
+                ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+
+                let r = 0, g = 0, b = 0, count = 0;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const alpha = data[i + 3];
+                    if (alpha > 128) {
+                        r += data[i];
+                        g += data[i + 1];
+                        b += data[i + 2];
+                        count++;
+                    }
+                }
+
+                if (count === 0) return '#335FFF';
+
+                r = Math.floor(r / count);
+                g = Math.floor(g / count);
+                b = Math.floor(b / count);
+
+                return `rgb(${r}, ${g}, ${b})`;
+            } catch (e) {
+                console.error('Error extracting color:', e);
+                return '#335FFF';
+            }
+        }
+
+        // Hamburger menu toggle
+        document.getElementById('menu-icon').addEventListener('click', function(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('dropdown-menu');
+            dropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('dropdown-menu');
+            const menuIcon = document.getElementById('menu-icon');
+            if (!menuIcon.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        // Load users when filters change
+        document.querySelectorAll('.filter-checkbox input').forEach(checkbox => {
+            checkbox.addEventListener('change', loadUsers);
+        });
+
+        // Search functionality
+        const searchInput = document.getElementById('user-search');
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const searchTerm = this.value.trim();
+                if (searchTerm) {
+                    searchUserById(searchTerm);
+                } else {
+                    loadUsers();
+                }
+            }, 300);
+        });
+
+        async function loadUsers() {
+            const filters = Array.from(document.querySelectorAll('.filter-checkbox input:checked'))
+                .map(cb => cb.value);
+
+            const params = new URLSearchParams();
+
+            if (filters.length > 0) {
+                filters.forEach(filter => params.append(filter, 'true'));
+            } else {
+                // Show all users when no filter is selected
+                params.append('non_plan', 'true');
+                params.append('plan', 'true');
+            }
+
+            try {
+                const response = await fetch(`/api/admin/users?${params}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    allUsers = data.users;
+                    renderUsersList(data.users);
+                } else {
+                    console.error('Failed to load users:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        async function searchUserById(discordId) {
+            const usersList = document.getElementById('users-list');
+
+            try {
+                const response = await fetch(`/api/admin/search-user?discord_id=${encodeURIComponent(discordId)}`);
+                const data = await response.json();
+
+                if (data.success && data.user) {
+                    allUsers = [data.user];
+                    renderUsersList([data.user]);
+                } else {
+                    usersList.innerHTML = '<div class="no-users">No user found with that Discord ID</div>';
+                }
+            } catch (error) {
+                console.error('Error searching user:', error);
+                usersList.innerHTML = '<div class="no-users">Error searching user</div>';
+            }
+        }
+
+        function renderUsersList(users) {
+            const usersList = document.getElementById('users-list');
+
+            if (users.length === 0) {
+                usersList.innerHTML = '<div class="no-users">No users found</div>';
+                return;
+            }
+
+            usersList.innerHTML = users.map(user => {
+                const avatarUrl = user.avatar
+                    ? `https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`
+                    : null;
+
+                const tags = [];
+                if (user.banned) tags.push('<span class="user-tag banned">Banned</span>');
+                if (user.flagged) tags.push('<span class="user-tag flagged">Flagged</span>');
+                if (user.is_admin) tags.push('<span class="user-tag admin">Admin</span>');
+
+                return `
+                <div class="user-item" onclick="selectUser(${user.id}, event)" data-avatar-url="${avatarUrl || ''}">
+                    ${avatarUrl
+                        ? `<img src="${avatarUrl}" class="user-item-avatar" style="border-radius: 50%; object-fit: cover;" crossorigin="anonymous">`
+                        : `<div class="user-item-avatar">${user.username ? user.username[0].toUpperCase() : 'U'}</div>`
+                    }
+                    <div class="user-item-info">
+                        <div class="user-item-name">${user.username || 'Unknown User'}</div>
+                        <div class="user-item-id">${user.discord_id}</div>
+                    </div>
+                    ${tags.length > 0 ? `<div class="user-item-tags">${tags.join('')}</div>` : ''}
+                </div>
+            `;
+            }).join('');
+        }
+
+        async function selectUser(userId, event) {
+            // Highlight selected user
+            document.querySelectorAll('.user-item').forEach(item => {
+                item.classList.remove('selected');
+                item.style.borderColor = 'transparent';
+                item.style.boxShadow = 'none';
+            });
+
+            const selectedItem = event.currentTarget;
+            selectedItem.classList.add('selected');
+
+            // Extract color from avatar if it exists
+            const avatarUrl = selectedItem.dataset.avatarUrl;
+            if (avatarUrl) {
+                const avatarImg = selectedItem.querySelector('.user-item-avatar');
+                if (avatarImg && avatarImg.tagName === 'IMG') {
+                    const dominantColor = getDominantColor(avatarImg);
+                    // Convert RGB to RGBA for glow effect
+                    const rgbaColor = dominantColor.replace('rgb', 'rgba').replace(')', ', 0.4)');
+                    const rgbaBorder = dominantColor.replace('rgb', 'rgba').replace(')', ', 0.6)');
+                    selectedItem.style.borderColor = rgbaBorder;
+                    selectedItem.style.boxShadow = `0 0 15px ${rgbaColor}`;
+                }
+            } else {
+                // Use default blue color for users without avatars
+                selectedItem.style.borderColor = 'rgba(51, 95, 255, 0.6)';
+                selectedItem.style.boxShadow = '0 0 15px rgba(51, 95, 255, 0.4)';
+            }
+
+            try {
+                const response = await fetch(`/api/admin/user/${userId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    currentUser = data.user;
+                    renderUserDetails(data.user);
+                } else {
+                    console.error('Failed to load user details:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading user details:', error);
+            }
+        }
+
+        function renderUserDetails(user) {
+            const panel = document.getElementById('user-details-panel');
+            const hasBusinessTeam = user.is_business_owner || user.is_business_member;
+            const businessInfo = user.is_business_owner
+                ? `Owner of business team`
+                : user.is_business_member
+                    ? `Member of business team (Owner: ${user.business_team_owner?.username || 'Unknown'})`
+                    : 'Not part of any business team';
+
+            panel.innerHTML = `
+                <div class="user-details-header">${user.username}</div>
+                <div class="user-details-section">
+                    <div class="detail-row">
+                        <div class="detail-label">Account Created</div>
+                        <div class="detail-value">${new Date(user.signup_date).toLocaleString()}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Signup IP</div>
+                        <div class="detail-value">${user.signup_ip}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Discord ID</div>
+                        <div class="detail-value">${user.discord_id}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Active Plan</div>
+                        <div class="detail-value">${user.subscriptions.length > 0 ? user.subscriptions.map(s => s.plan_name).join(', ') : 'No active plan'}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Business Team</div>
+                        <div class="detail-value">${businessInfo}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Banned</div>
+                        <div class="detail-value ${user.banned ? 'banned' : ''}">${user.banned ? 'Yes' : 'No'}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Flagged</div>
+                        <div class="detail-value ${user.flagged ? 'flagged' : ''}">${user.flagged ? 'Yes' : 'No'}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Admin</div>
+                        <div class="detail-value" style="color: ${user.is_admin ? '#335FFF' : '#fff'}; font-weight: ${user.is_admin ? '600' : 'normal'};">${user.is_admin ? 'Yes 👑' : 'No'}</div>
+                    </div>
+                </div>
+
+                <div class="admin-actions">
+                    <button class="admin-btn view-message" onclick="viewMessage()">View Saved Message</button>
+                    ${user.flagged ? `<button class="admin-btn clear-flag" onclick="unflagUser()"><span>⚠</span> Clear Flag</button>` : `<button class="admin-btn clear-flag" onclick="flagUser()" style="background: #ffa500;">Flag User</button>`}
+                    <button class="admin-btn delete" onclick="confirmDelete()">Delete Account</button>
+                    ${user.banned ?
+                        `<button class="admin-btn unban" onclick="unbanUser()">Unban User</button>` :
+                        `<button class="admin-btn ban" onclick="banUser()">Ban User</button>`
+                    }
+                    ${hasBusinessTeam ? `<button class="admin-btn view-team-message" onclick="viewTeamMessage()">View Business Team Message</button>` : ''}
+                </div>
+            `;
+        }
+
+        async function viewMessage() {
+            if (!currentUser) return;
+
+            try {
+                const response = await fetch(`/api/admin/user/${currentUser.id}/message`);
+                const data = await response.json();
+
+                if (data.success) {
+                    currentMessageContent = data.message;
+                    document.getElementById('dialog-title').textContent = 'User Saved Message';
+                    document.getElementById('dialog-message').textContent = data.message;
+                    document.getElementById('message-dialog').classList.add('active');
+                }
+            } catch (error) {
+                console.error('Error loading message:', error);
+            }
+        }
+
+        async function viewTeamMessage() {
+            if (!currentUser) return;
+
+            try {
+                const response = await fetch(`/api/admin/user/${currentUser.id}/team-message`);
+                const data = await response.json();
+
+                if (data.success) {
+                    currentMessageContent = data.message;
+                    document.getElementById('dialog-title').textContent = 'Business Team Message';
+                    document.getElementById('dialog-message').textContent = data.message;
+                    document.getElementById('message-dialog').classList.add('active');
+                }
+            } catch (error) {
+                console.error('Error loading team message:', error);
+            }
+        }
+
+        function copyMessage() {
+            navigator.clipboard.writeText(currentMessageContent).then(() => {
+                alert('Message copied to clipboard!');
+            });
+        }
+
+        function closeDialog() {
+            document.getElementById('message-dialog').classList.remove('active');
+        }
+
+        async function banUser() {
+            if (!currentUser) return;
+            showConfirmDialog('Ban User', 'Are you sure you want to ban this user? They will not be able to use any panels or be added to business teams.', async () => {
+                try {
+                    const response = await fetch(`/api/admin/ban/${currentUser.id}`, { method: 'POST' });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert('User banned successfully');
+                        selectUser(currentUser.id);
+                        loadUsers();
+                    }
+                } catch (error) {
+                    console.error('Error banning user:', error);
+                }
+            });
+        }
+
+        async function unbanUser() {
+            if (!currentUser) return;
+            showConfirmDialog('Unban User', 'Are you sure you want to unban this user?', async () => {
+                try {
+                    const response = await fetch(`/api/admin/unban/${currentUser.id}`, { method: 'POST' });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert('User unbanned successfully');
+                        selectUser(currentUser.id);
+                        loadUsers();
+                    }
+                } catch (error) {
+                    console.error('Error unbanning user:', error);
+                }
+            });
+        }
+
+        async function flagUser() {
+            if (!currentUser) return;
+            try {
+                const response = await fetch(`/api/admin/flag/${currentUser.id}`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('User flagged successfully');
+                    selectUser(currentUser.id);
+                    loadUsers();
+                }
+            } catch (error) {
+                console.error('Error flagging user:', error);
+            }
+        }
+
+        async function unflagUser() {
+            if (!currentUser) return;
+            try {
+                const response = await fetch(`/api/admin/unflag/${currentUser.id}`, { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('User unflagged successfully');
+                    selectUser(currentUser.id);
+                    loadUsers();
+                }
+            } catch (error) {
+                console.error('Error unflagging user:', error);
+            }
+        }
+
+        function confirmDelete() {
+            if (!currentUser) return;
+            showConfirmDialog('Delete Account', 'Are you sure you want to permanently delete this account? This action cannot be undone and will remove all user data.', async () => {
+                try {
+                    const response = await fetch(`/api/admin/delete/${currentUser.id}`, { method: 'POST' });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert('User deleted successfully');
+                        document.getElementById('user-details-panel').innerHTML = '<div class="admin-placeholder">Select a user to view details</div>';
+                        currentUser = null;
+                        loadUsers();
+                    }
+                } catch (error) {
+                    console.error('Error deleting user:', error);
+                }
+            });
+        }
+
+        function showConfirmDialog(title, message, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            document.getElementById('confirm-dialog').classList.add('active');
+
+            const yesBtn = document.getElementById('confirm-yes');
+            const newYesBtn = yesBtn.cloneNode(true);
+            yesBtn.parentNode.replaceChild(newYesBtn, yesBtn);
+
+            newYesBtn.addEventListener('click', () => {
+                closeConfirmDialog();
+                onConfirm();
+            });
+        }
+
+        function closeConfirmDialog() {
+            document.getElementById('confirm-dialog').classList.remove('active');
+        }
+
+        // Load users on page load (no filters = all users)
+        window.addEventListener('load', () => {
+            loadUsers();
+        });
+    </script>
+</body>
+</html>

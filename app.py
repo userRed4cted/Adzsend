@@ -1063,10 +1063,11 @@ def set_team_message():
         data = request.get_json()
         message = data.get('message', '')
 
-        # Check content filter
-        is_valid, filter_reason = check_message_content(message)
-        if not is_valid:
-            return {'success': False, 'error': filter_reason}, 400
+        # Check content filter (only if message is not empty)
+        if message and message.strip():
+            is_valid, filter_reason = check_message_content(message)
+            if not is_valid:
+                return {'success': False, 'error': filter_reason}, 400
 
         update_team_message(team['id'], message)
         return {'success': True, 'message': 'Team message updated successfully'}, 200

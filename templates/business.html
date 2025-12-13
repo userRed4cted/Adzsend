@@ -174,16 +174,14 @@
             align-items: center;
             gap: 0.75rem;
             padding: 0.75rem;
-            background: rgba(47, 49, 54, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #212227;
             border-radius: 8px;
             margin-bottom: 0.5rem;
             transition: all 0.2s ease;
         }
 
         .team-member-item:hover {
-            background: rgba(47, 49, 54, 0.8);
-            border-color: rgba(255, 255, 255, 0.2);
+            background: #2a2b32;
         }
 
         .member-avatar {
@@ -307,15 +305,13 @@
             align-items: center;
             gap: 0.75rem;
             padding: 0.75rem;
-            background: rgba(47, 49, 54, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #212227;
             border-radius: 8px;
             transition: all 0.2s ease;
         }
 
         .member-stat-item:hover {
-            background: rgba(47, 49, 54, 0.8);
-            border-color: rgba(255, 255, 255, 0.2);
+            background: #2a2b32;
         }
 
         .member-stat-avatar {
@@ -519,26 +515,23 @@
                 setMessageBtn.addEventListener('click', async function() {
                     const message = teamMessageInput.value.trim();
 
-                    if (!message) {
-                        alert('Please enter a team message');
-                        return;
-                    }
+                    // Check for filtered content before saving (only if message is not empty)
+                    if (message) {
+                        const filteredWords = {{ BLACKLISTED_WORDS|tojson }};
+                        const messageLower = message.toLowerCase();
+                        let foundWord = null;
 
-                    // Check for filtered content before saving
-                    const filteredWords = {{ BLACKLISTED_WORDS|tojson }};
-                    const messageLower = message.toLowerCase();
-                    let foundWord = null;
-
-                    for (const word of filteredWords) {
-                        if (messageLower.includes(word.toLowerCase())) {
-                            foundWord = word;
-                            break;
+                        for (const word of filteredWords) {
+                            if (messageLower.includes(word.toLowerCase())) {
+                                foundWord = word;
+                                break;
+                            }
                         }
-                    }
 
-                    if (foundWord) {
-                        alert(`⚠️ Message contains prohibited content: "${foundWord}"\n\nPlease remove this content from your message before saving.`);
-                        return; // Stop execution
+                        if (foundWord) {
+                            alert(`⚠️ Message contains prohibited content: "${foundWord}"\n\nPlease remove this content from your message before saving.`);
+                            return; // Stop execution
+                        }
                     }
 
                     setMessageBtn.disabled = true;
@@ -559,7 +552,7 @@
                         const data = await response.json();
 
                         if (response.ok && data.success) {
-                            alert('Team message updated successfully!\n\nAll team members will now use this message.');
+                            // Success - no alert needed
                         } else {
                             alert(data.error || 'Failed to update team message');
                         }

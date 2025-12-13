@@ -1,8 +1,45 @@
 import sqlite3
 import json
+import os
+import base64
+import hashlib
 from datetime import datetime, timedelta
+from cryptography.fernet import Fernet
 
 DATABASE = 'marketing_panel.db'
+
+# Token Encryption Functions
+def _get_encryption_key():
+    """Derive a Fernet key from SECRET_KEY."""
+    secret_key = os.getenv('SECRET_KEY', 'fallback-secret-key')
+    # Fernet requires a 32-byte base64-encoded key
+    # We use SHA256 to get a consistent 32-byte hash from SECRET_KEY
+    key_hash = hashlib.sha256(secret_key.encode()).digest()
+    return base64.urlsafe_b64encode(key_hash)
+
+def encrypt_token(plain_token):
+    """Encrypt a Discord token for secure storage."""
+    if not plain_token:
+        return None
+    try:
+        fernet = Fernet(_get_encryption_key())
+        encrypted = fernet.encrypt(plain_token.encode())
+        return encrypted.decode()  # Store as string in database
+    except Exception as e:
+        print(f"[ENCRYPTION ERROR] Failed to encrypt token: {e}")
+        return None
+
+def decrypt_token(encrypted_token):
+    """Decrypt a Discord token when needed for API calls."""
+    if not encrypted_token:
+        return None
+    try:
+        fernet = Fernet(_get_encryption_key())
+        decrypted = fernet.decrypt(encrypted_token.encode())
+        return decrypted.decode()
+    except Exception as e:
+        print(f"[DECRYPTION ERROR] Failed to decrypt token: {e}")
+        return None
 
 def get_db():
     conn = sqlite3.connect(DATABASE)
@@ -44,6 +81,12 @@ def init_db():
     # Add flagged_at column if it doesn't exist (migration)
     try:
         cursor.execute('ALTER TABLE users ADD COLUMN flagged_at TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Add session_id column if it doesn't exist (migration for session management)
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN session_id TEXT')
     except sqlite3.OperationalError:
         pass  # Column already exists
 
@@ -170,11 +213,17 @@ def create_user(discord_id, username, avatar, discord_token, signup_ip):
 
     signup_date = datetime.now().isoformat()
 
+    # Encrypt the token before storing
+    encrypted_token = encrypt_token(discord_token)
+    if not encrypted_token:
+        print(f"[ERROR] Failed to encrypt token for user {discord_id}")
+        return None
+
     try:
         cursor.execute('''
             INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date)
             VALUES (?, ?, ?, ?, ?, ?)
-        ''', (discord_id, username, avatar, discord_token, signup_ip, signup_date))
+        ''', (discord_id, username, avatar, encrypted_token, signup_ip, signup_date))
 
         user_id = cursor.lastrowid
 
@@ -199,6 +248,15 @@ def get_user_by_discord_id(discord_id):
     conn.close()
     return dict(user) if user else None
 
+def get_decrypted_token(discord_id):
+    """Get and decrypt the user's Discord token for API calls.
+    This should only be called when actually sending messages."""
+    user = get_user_by_discord_id(discord_id)
+    if not user:
+        return None
+    encrypted_token = user.get('discord_token')
+    return decrypt_token(encrypted_token)
+
 def get_user_by_id(user_id):
     """Get user by internal user ID (for admin panel)."""
     conn = get_db()
@@ -211,9 +269,16 @@ def get_user_by_id(user_id):
 def update_user_token(discord_id, discord_token):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('UPDATE users SET discord_token = ? WHERE discord_id = ?', (discord_token, discord_id))
+    # Encrypt the token before storing
+    encrypted_token = encrypt_token(discord_token)
+    if not encrypted_token:
+        print(f"[ERROR] Failed to encrypt token for user {discord_id}")
+        conn.close()
+        return False
+    cursor.execute('UPDATE users SET discord_token = ? WHERE discord_id = ?', (encrypted_token, discord_id))
     conn.commit()
     conn.close()
+    return True
 
 def update_user_session(discord_id, session_id):
     """Update the session ID for a user when they log in."""

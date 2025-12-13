@@ -84,7 +84,49 @@
                 <div class="hero-section">
                     <h2 class="hero-title" id="hero-title">{{ slideshow_messages[0] }}</h2>
                     <a href="{{ url_for('purchase') }}" class="view-pricing-btn">View Pricing</a>
+                    <div class="scroll-indicator" id="scroll-indicator">
+                        <span class="scroll-text">Scroll down to view more</span>
+                        <div class="scroll-arrow">&#8595;</div>
+                    </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Gallery Section -->
+        <section class="gallery-section">
+            <h2 class="gallery-title">Panel Images</h2>
+            <div class="gallery-grid">
+                <div class="gallery-item" onclick="openLightbox(0)">
+                    <img src="{{ url_for('static', filename='image.png') }}" alt="Panel Screenshot 1">
+                </div>
+                <div class="gallery-item" onclick="openLightbox(1)">
+                    <img src="{{ url_for('static', filename='image.png') }}" alt="Panel Screenshot 2">
+                </div>
+                <div class="gallery-item" onclick="openLightbox(2)">
+                    <img src="{{ url_for('static', filename='image.png') }}" alt="Panel Screenshot 3">
+                </div>
+                <div class="gallery-item" onclick="openLightbox(3)">
+                    <img src="{{ url_for('static', filename='image.png') }}" alt="Panel Screenshot 4">
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section class="about-section">
+            <h2 class="about-title">Who are we?</h2>
+            <p class="about-description">Introducing the first marketing tool that lets you launch ads across multiple Discord servers at once, saving time, cutting costs, and giving you total control. No more waiting on marketing teams or wasting money on marketing services. Send ads instantly, track results in real time, and remove underperformers from your workflow. Do it yourself with a single click, or upgrade to our Business Plan to manage a team using our panel, assign ads, and gain detailed insights on each members performance. Marketing, simplified, powerful, and designed to deliver results.</p>
+        </section>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox" onclick="closeLightboxOnBackground(event)">
+        <div class="lightbox-content">
+            <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+            <button class="lightbox-nav lightbox-prev" onclick="prevImage(event)">&larr;</button>
+            <img id="lightbox-img" src="" alt="Panel Screenshot">
+            <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">&rarr;</button>
+            <div class="lightbox-counter">
+                <span id="current-index">1</span> / <span id="total-images">4</span>
             </div>
         </div>
     </div>
@@ -136,6 +178,71 @@
 
         // Start slideshow
         setInterval(changeSlide, interval);
+
+        // Gallery Lightbox
+        const images = [
+            '{{ url_for('static', filename='image.png') }}',
+            '{{ url_for('static', filename='image.png') }}',
+            '{{ url_for('static', filename='image.png') }}',
+            '{{ url_for('static', filename='image.png') }}'
+        ];
+        let currentImageIndex = 0;
+
+        function openLightbox(index) {
+            currentImageIndex = index;
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+            lightboxImg.src = images[currentImageIndex];
+            document.getElementById('current-index').textContent = currentImageIndex + 1;
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function closeLightboxOnBackground(event) {
+            if (event.target.id === 'lightbox') {
+                closeLightbox();
+            }
+        }
+
+        function prevImage(event) {
+            event.stopPropagation();
+            currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+            document.getElementById('lightbox-img').src = images[currentImageIndex];
+            document.getElementById('current-index').textContent = currentImageIndex + 1;
+        }
+
+        function nextImage(event) {
+            event.stopPropagation();
+            currentImageIndex = (currentImageIndex + 1) % images.length;
+            document.getElementById('lightbox-img').src = images[currentImageIndex];
+            document.getElementById('current-index').textContent = currentImageIndex + 1;
+        }
+
+        // Keyboard navigation for lightbox
+        document.addEventListener('keydown', function(event) {
+            const lightbox = document.getElementById('lightbox');
+            if (!lightbox.classList.contains('active')) return;
+
+            if (event.key === 'Escape') closeLightbox();
+            if (event.key === 'ArrowLeft') prevImage(event);
+            if (event.key === 'ArrowRight') nextImage(event);
+        });
+
+        // Scroll indicator visibility
+        const scrollIndicator = document.getElementById('scroll-indicator');
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 50) {
+                scrollIndicator.classList.add('hidden');
+            } else {
+                scrollIndicator.classList.remove('hidden');
+            }
+        });
     </script>
 </body>
 </html>

@@ -35,7 +35,175 @@ body {
 .panel {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
+}
+
+/* Gallery Section */
+.gallery-section {
+    padding: 4rem 2rem;
+    background: linear-gradient(to bottom, #754075, #3E2B40);
+}
+
+.gallery-title {
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 2.5rem;
+    color: #ffffff;
+}
+
+/* About Section */
+.about-section {
+    padding: 4rem 2rem;
+    background: #121215;
+}
+
+.about-title {
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #ffffff;
+}
+
+.about-description {
+    max-width: 900px;
+    margin: 0 auto;
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #a0a0b0;
+    text-align: center;
+}
+
+.gallery-grid {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.gallery-item {
+    width: 250px;
+    height: 160px;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: #191A1F;
+}
+
+.gallery-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 24px rgba(118, 64, 118, 0.6);
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Lightbox */
+.lightbox {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.lightbox.active {
+    display: flex;
+}
+
+.lightbox-content {
+    position: relative;
+    max-width: 90%;
+    max-height: 90%;
+}
+
+.lightbox-content img {
+    max-width: 100%;
+    max-height: 85vh;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.lightbox-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: color 0.3s ease;
+}
+
+.lightbox-close:hover {
+    color: #335FFF;
+}
+
+.lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(51, 95, 255, 0.8);
+    border: none;
+    color: #ffffff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 1rem 1.25rem;
+    border-radius: 50%;
+    transition: background 0.3s ease;
+}
+
+.lightbox-nav:hover {
+    background: #335FFF;
+}
+
+.lightbox-prev {
+    left: -60px;
+}
+
+.lightbox-next {
+    right: -60px;
+}
+
+.lightbox-counter {
+    text-align: center;
+    margin-top: 1rem;
+    color: #72767d;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .gallery-item {
+        width: calc(50% - 0.75rem);
+        height: 120px;
+    }
+
+    .lightbox-prev {
+        left: 10px;
+    }
+
+    .lightbox-next {
+        right: 10px;
+    }
+
+    .lightbox-nav {
+        padding: 0.75rem 1rem;
+        font-size: 1.2rem;
+    }
 }
 
 .panel-container {
@@ -365,6 +533,46 @@ body {
 
 .view-pricing-btn:active {
     transform: scale(1.01);
+}
+
+/* Scroll Indicator */
+.scroll-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.scroll-indicator.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.scroll-text {
+    font-size: 0.9rem;
+    color: #949BA4;
+    font-weight: 400;
+}
+
+.scroll-arrow {
+    font-size: 1.5rem;
+    color: #949BA4;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(10px);
+    }
+    60% {
+        transform: translateY(5px);
+    }
 }
 
 .logout-btn {
@@ -1797,4 +2005,17 @@ input:checked + .toggle-slider:before {
 .help-btn:hover {
     color: #335FFF;
     text-decoration: underline;
+}
+
+.security-warning {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 6px;
+    color: #FFC107;
+    font-size: 0.85rem;
+    text-align: center;
+    line-height: 1.5;
 }

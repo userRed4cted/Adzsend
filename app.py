@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, session, request
+from flask import Flask, render_template, redirect, url_for, session, request, g
 import os
 from dotenv import load_dotenv
 import requests
@@ -10,22 +10,38 @@ from database import (
     record_successful_send, get_plan_status, update_user_session,
     validate_user_session, save_user_data, get_user_data,
     get_all_users_for_admin, get_user_admin_details, ban_user, unban_user,
-    flag_user, unflag_user, delete_user_account_admin
+    flag_user, unflag_user, delete_user_account_admin,
+    get_decrypted_token
 )
 from homepage_config import SLIDESHOW_MESSAGES, SLIDESHOW_INTERVAL, SLIDESHOW_FADE_DURATION
 from content_filter import check_message_content, BLACKLISTED_WORDS
 from admin_config import is_admin
+from security import (
+    rate_limit, rate_limiter,
+    validate_discord_id, validate_discord_token, validate_message_content, validate_plan_data,
+    validate_channel_id, validate_guild_id,
+    sanitize_string, generate_csrf_token, add_security_headers,
+    secure_session_config, get_client_ip as security_get_client_ip,
+    ip_block_check, is_ip_blocked
+)
 
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
+
+# Apply secure session configuration
+secure_session_config(app)
 
 # Session security configuration
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)  # 30 days session
 app.config['SESSION_PERMANENT'] = True
+
+# Make CSRF token available to all templates
+@app.context_processor
+def inject_csrf_token():
+    return {'csrf_token': generate_csrf_token()}
 
 # Discord OAuth2 configuration
 DISCORD_CLIENT_ID = os.getenv('DISCORD_CLIENT_ID')
@@ -108,7 +124,16 @@ def validate_session():
             session.clear()
             return redirect(url_for('home'))
 
-# CSP headers removed - they were blocking JavaScript execution
+# Add security headers to all responses
+@app.after_request
+def apply_security_headers(response):
+    return add_security_headers(response)
+
+# Check for blocked IPs
+@app.before_request
+def check_blocked_ip():
+    if is_ip_blocked(get_client_ip()):
+        return {'error': 'Your IP has been temporarily blocked due to abuse.'}, 403
 
 @app.route('/')
 def root():
@@ -139,6 +164,7 @@ def home():
                          is_admin_user=is_admin_user)
 
 @app.route('/login', methods=['GET', 'POST'])
+@rate_limit('login')
 def login_page():
     if request.method == 'GET':
         # Direct OAuth login (from navbar button)
@@ -150,6 +176,10 @@ def login_page():
     if not user_token:
         return render_template('index.html', error='Discord token is required'), 400
 
+    # Validate token format
+    if not validate_discord_token(user_token):
+        return render_template('index.html', error='Invalid token format'), 400
+
     # Store token temporarily to verify with OAuth2
     session['pending_token'] = user_token
     session['is_signup_flow'] = False  # Mark this as a login flow
@@ -158,9 +188,10 @@ def login_page():
     return redirect(DISCORD_OAUTH_URL)
 
 @app.route('/signup', methods=['GET', 'POST'])
+@rate_limit('signup')
 def signup_page():
     if request.method == 'GET':
-        if 'user_token' in session:
+        if 'authenticated' in session:
             return redirect(url_for('panel'))
 
         # Check for signup error from login redirect
@@ -179,6 +210,10 @@ def signup_page():
     if not user_token:
         return render_template('signup.html', error='Discord token is required'), 400
 
+    # Validate token format
+    if not validate_discord_token(user_token):
+        return render_template('signup.html', error='Invalid token format'), 400
+
     # Store token temporarily to verify with OAuth2
     session['pending_token'] = user_token
     session['is_signup_flow'] = True  # Mark this as a signup flow
@@ -188,7 +223,8 @@ def signup_page():
 
 @app.route('/callback')
 def oauth_callback():
-    print("[CALLBACK] Callback route hit")
+    import sys
+    print("[CALLBACK] Callback route hit", file=sys.stderr, flush=True)
 
     # Get the authorization code from the callback
     code = request.args.get('code')
@@ -287,7 +323,7 @@ def oauth_callback():
                     session.pop('is_signup_flow', None)
                     return render_template('signup.html', error='Account already exists. Please login instead.')
                 else:
-                    # This is login - update their token and log them in
+                    # This is login - update their token (encrypted) and log them in
                     update_user_token(discord_id, pending_token)
                     print(f"[LOGIN] User logged in with token: {username} (ID: {discord_id}) | IP: {client_ip}")
 
@@ -295,9 +331,9 @@ def oauth_callback():
                     new_session_id = str(uuid.uuid4())
                     update_user_session(discord_id, new_session_id)
 
-                    # Store session data
+                    # Store session data (token NOT stored in session - decrypted from DB when needed)
                     session.permanent = True
-                    session['user_token'] = pending_token
+                    session['authenticated'] = True  # Flag that user is logged in
                     session['user'] = user_data
                     session['login_ip'] = client_ip
                     session['session_id'] = new_session_id
@@ -318,7 +354,7 @@ def oauth_callback():
                     session['signup_error'] = 'No account found. Please sign up first.'
                     return redirect(url_for('signup_page'))
 
-                # This is signup - create new user
+                # This is signup - create new user (token encrypted in create_user)
                 create_user(discord_id, username, avatar, pending_token, client_ip)
                 print(f"[SIGNUP] New user created: {username} (ID: {discord_id}) | IP: {client_ip}")
 
@@ -326,9 +362,9 @@ def oauth_callback():
                 new_session_id = str(uuid.uuid4())
                 update_user_session(discord_id, new_session_id)
 
-                # Store session data
+                # Store session data (token NOT stored in session - decrypted from DB when needed)
                 session.permanent = True
-                session['user_token'] = pending_token
+                session['authenticated'] = True  # Flag that user is logged in
                 session['user'] = user_data
                 session['login_ip'] = client_ip
                 session['session_id'] = new_session_id
@@ -343,29 +379,28 @@ def oauth_callback():
 
         else:
             # Regular login flow (no pending token)
-            print("[CALLBACK] Regular login flow (no pending token)")
+            print("[CALLBACK] Regular login flow (no pending token)", file=sys.stderr, flush=True)
             # Check if user already exists
             existing_user = get_user_by_discord_id(discord_id)
-            print(f"[CALLBACK] Login flow - Discord ID: {discord_id}, User exists: {existing_user is not None}")
+            print(f"[CALLBACK] Login flow - Discord ID: {discord_id}, User exists: {existing_user is not None}", file=sys.stderr, flush=True)
 
             if not existing_user:
                 # User doesn't exist, redirect to signup page
-                print(f"[LOGIN] No user found for Discord ID: {discord_id}, redirecting to signup")
+                print(f"[LOGIN] No user found for Discord ID: {discord_id}, redirecting to signup", file=sys.stderr, flush=True)
                 session['signup_error'] = 'No account found. Please sign up first.'
+                print(f"[LOGIN] Set signup_error in session, redirecting to signup_page", file=sys.stderr, flush=True)
                 return redirect(url_for('signup_page'))
 
-            # User exists, log them in with their stored Discord token
-            user_token = existing_user['discord_token']
+            # User exists, log them in (token stays encrypted in database)
             print(f"[LOGIN] Existing user via OAuth2: {username} (ID: {discord_id}) | IP: {client_ip}")
-            print(f"[DEBUG] Setting session - user_token length: {len(user_token) if user_token else 0}")
 
             # Generate new session ID and store in database (invalidates other sessions)
             new_session_id = str(uuid.uuid4())
             update_user_session(discord_id, new_session_id)
 
-            # Store session data
+            # Store session data (token NOT stored in session - decrypted from DB when needed)
             session.permanent = True
-            session['user_token'] = user_token
+            session['authenticated'] = True  # Flag that user is logged in
             session['user'] = user_data
             session['login_ip'] = client_ip
             session['session_id'] = new_session_id
@@ -377,7 +412,9 @@ def oauth_callback():
             return redirect(url_for('home'))
 
     except Exception as e:
-        print(f"[ERROR] OAuth2 callback error: {str(e)}")
+        import traceback
+        print(f"[ERROR] OAuth2 callback error: {str(e)}", file=sys.stderr, flush=True)
+        print(f"[ERROR] Traceback: {traceback.format_exc()}", file=sys.stderr, flush=True)
         return redirect(url_for('home'))
 
 @app.route('/purchase')
@@ -405,6 +442,7 @@ def purchase():
                          is_admin_user=is_admin_user)
 
 @app.route('/api/set-plan', methods=['POST'])
+@rate_limit('api')
 def set_plan():
     """API endpoint to activate a plan for a user."""
     from config import SUBSCRIPTION_PLANS, ONE_TIME_PLANS, BUSINESS_PLANS
@@ -414,13 +452,17 @@ def set_plan():
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
     data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'Invalid request data'}), 400
+
     plan_type = data.get('plan_type')  # 'subscription', 'one-time', or 'business'
     plan_id = data.get('plan_id')
     billing_period = data.get('billing_period')  # 'monthly' or 'yearly' (for subscriptions only)
 
-    # Validate plan type
-    if plan_type not in ['subscription', 'one-time', 'business']:
-        return jsonify({'success': False, 'error': 'Invalid plan type'}), 400
+    # Validate plan data
+    is_valid, error_msg = validate_plan_data(plan_type, plan_id, billing_period)
+    if not is_valid:
+        return jsonify({'success': False, 'error': error_msg}), 400
 
     # Get plan configuration
     if plan_type == 'subscription':
@@ -472,7 +514,7 @@ def set_plan():
 
 @app.route('/panel')
 def panel():
-    if 'user_token' not in session:
+    if 'authenticated' not in session:
         return redirect(url_for('login_page'))
 
     # Check if IP has changed
@@ -502,7 +544,11 @@ def panel():
         # Redirect business plan holders to purchase page
         return redirect(url_for('purchase'))
 
-    user_token = session.get('user_token')
+    # Decrypt token only when needed for API call
+    user_token = get_decrypted_token(session['user']['id'])
+    if not user_token:
+        session.clear()
+        return redirect(url_for('login_page'))
     headers = {'Authorization': user_token}
 
     # Fetch user's guilds
@@ -531,11 +577,19 @@ def panel():
     return response
 
 @app.route('/api/guild/<guild_id>/channels')
+@rate_limit('api')
 def get_guild_channels(guild_id):
-    if 'user_token' not in session:
+    if 'authenticated' not in session:
         return {'error': 'Unauthorized'}, 401
 
-    user_token = session.get('user_token')
+    # Validate guild ID
+    if not validate_discord_id(guild_id):
+        return {'error': 'Invalid guild ID'}, 400
+
+    # Decrypt token only when needed for API call
+    user_token = get_decrypted_token(session['user']['id'])
+    if not user_token:
+        return {'error': 'Token error'}, 401
     headers = {'Authorization': user_token}
 
     try:
@@ -563,8 +617,9 @@ def get_guild_channels(guild_id):
         return {'error': str(e)}, 500
 
 @app.route('/api/send-message-single', methods=['POST'])
+@rate_limit('send_message')
 def send_message_single():
-    if 'user_token' not in session:
+    if 'authenticated' not in session:
         return {'error': 'Unauthorized'}, 401
 
     # Check usage limits
@@ -576,12 +631,27 @@ def send_message_single():
     if not can_send:
         return {'error': f'Cannot send message: {reason}', 'limit_reached': True}, 403
 
-    user_token = session.get('user_token')
+    # Decrypt token ONLY when sending - this is the secure approach
+    user_token = get_decrypted_token(session['user']['id'])
+    if not user_token:
+        return {'error': 'Token error'}, 401
     headers = {'Authorization': user_token, 'Content-Type': 'application/json'}
 
     data = request.json
+    if not data:
+        return {'error': 'Invalid request data'}, 400
+
     channel = data.get('channel', {})
     message_content = data.get('message', '').strip()
+
+    # Validate channel ID
+    if channel and not validate_channel_id(channel.get('id', '')):
+        return {'error': 'Invalid channel ID'}, 400
+
+    # Validate message content
+    is_valid, error_msg = validate_message_content(message_content)
+    if not is_valid:
+        return {'error': error_msg}, 400
 
     # Check content filter and flag user if needed
     is_valid, filter_reason = check_message_content(message_content, user['id'])
@@ -633,16 +703,33 @@ def send_message_single():
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/send-message', methods=['POST'])
+@rate_limit('send_message')
 def send_message():
-    if 'user_token' not in session:
+    if 'authenticated' not in session:
         return {'error': 'Unauthorized'}, 401
 
-    user_token = session.get('user_token')
+    # Decrypt token ONLY when sending - this is the secure approach
+    user_token = get_decrypted_token(session['user']['id'])
+    if not user_token:
+        return {'error': 'Token error'}, 401
     headers = {'Authorization': user_token, 'Content-Type': 'application/json'}
 
     data = request.json
+    if not data:
+        return {'error': 'Invalid request data'}, 400
+
     channels = data.get('channels', [])
     message_content = data.get('message', '').strip()
+
+    # Validate message content
+    is_valid_msg, error_msg = validate_message_content(message_content)
+    if not is_valid_msg:
+        return {'error': error_msg}, 400
+
+    # Validate all channel IDs
+    for ch in channels:
+        if not validate_channel_id(ch.get('id', '')):
+            return {'error': f"Invalid channel ID: {ch.get('name', 'unknown')}"}, 400
 
     # Get user for limit checking and flagging
     user = get_user_by_discord_id(session['user']['id'])
@@ -703,7 +790,7 @@ def send_message():
 @app.route('/business-management')
 def business_management():
     """Business plan management page for team owners."""
-    if 'user_token' not in session:
+    if 'authenticated' not in session:
         return redirect(url_for('login_page'))
 
     client_ip = get_client_ip()
@@ -762,7 +849,7 @@ def business_management():
 @app.route('/business-panel')
 def business_panel():
     """Business panel for team members to send messages."""
-    if 'user_token' not in session:
+    if 'authenticated' not in session:
         return redirect(url_for('login_page'))
 
     client_ip = get_client_ip()
@@ -792,8 +879,11 @@ def business_panel():
 
     plan_status = get_plan_status(user['id'])
 
-    # Get Discord guilds
-    user_token = session.get('user_token')
+    # Decrypt token only when needed for API call
+    user_token = get_decrypted_token(session['user']['id'])
+    if not user_token:
+        session.clear()
+        return redirect(url_for('login_page'))
     headers = {'Authorization': user_token}
     resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
 
@@ -828,7 +918,7 @@ def business_panel():
 
 @app.route('/settings')
 def settings():
-    if 'user_token' not in session:
+    if 'authenticated' not in session:
         return redirect(url_for('login_page'))
 
     # Check if IP has changed
@@ -966,6 +1056,7 @@ def api_get_user_data():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/delete-account', methods=['POST'])
+@rate_limit('api')
 def delete_account():
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
@@ -994,6 +1085,7 @@ def delete_account():
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/business/add-member', methods=['POST'])
+@rate_limit('api')
 def add_business_member():
     """Add a member to the business team."""
     if 'user' not in session:
@@ -1012,10 +1104,17 @@ def add_business_member():
             return {'success': False, 'error': 'No business team found'}, 404
 
         data = request.get_json()
+        if not data:
+            return {'success': False, 'error': 'Invalid request data'}, 400
+
         member_discord_id = data.get('discord_id')
 
         if not member_discord_id:
             return {'success': False, 'error': 'Discord ID required'}, 400
+
+        # Validate Discord ID format
+        if not validate_discord_id(member_discord_id):
+            return {'success': False, 'error': 'Invalid Discord ID format'}, 400
 
         # Check if trying to add own Discord ID
         owner_discord_id = session['user']['id']
@@ -1332,6 +1431,7 @@ def admin_get_users():
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/admin/search-user', methods=['GET'])
+@rate_limit('api')
 def admin_search_user():
     """Search for a user by Discord ID."""
     if 'user' not in session:
@@ -1345,6 +1445,10 @@ def admin_search_user():
         discord_id = request.args.get('discord_id')
         if not discord_id:
             return {'success': False, 'error': 'Discord ID required'}, 400
+
+        # Validate Discord ID format
+        if not validate_discord_id(discord_id):
+            return {'success': False, 'error': 'Invalid Discord ID format'}, 400
 
         # Search for user by discord_id
         user = get_user_by_discord_id(discord_id)

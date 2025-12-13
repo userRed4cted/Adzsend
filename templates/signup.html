@@ -71,13 +71,15 @@
 
                     <form method="POST" action="{{ url_for('signup_page') }}">
                         <div class="form-group-login">
-                            <input type="password" name="user_token" class="token-input" placeholder="Insert Discord User Token" required>
+                            <input type="password" name="user_token" class="token-input" placeholder="Paste account token here..." required>
                             <button type="submit" class="submit-btn">Sign Up</button>
                         </div>
                     </form>
 
-                    <button type="button" class="help-btn" onclick="showTokenHelp()">Need help obtaining your token?</button>
-                    <button type="button" class="help-btn" onclick="showTokenInfo()">Why do we use your token?</button>
+                    <p class="security-warning">Use an alternate account token, never give your own account token to anyone. We take security measures to protect your token but we can't guarantee safety. Data wipes may happen for security and account deletion is made easy.</p>
+
+                    <button type="button" class="help-btn" onclick="showTokenHelp()">How to obtain account token</button>
+                    <button type="button" class="help-btn" onclick="showTokenInfo()">Why we use account tokens</button>
                 </div>
             </div>
         </div>
@@ -115,10 +117,7 @@
 
         function showTokenInfo() {
             alert('Why do we use your token?\n\n' +
-                  'We only use discord token to allow the user to advertise in every server they are in and not just in some servers which contain our discord app, it also allows the user to select specific channels to advertise in, etc. The tokens are only stored for user login and for the panel to work and send messages on your behalf.\n\n' +
-                  'The token is also used to check if the user is being rate limited in a channel or if they don\'t have permission to send messages there.\n\n' +
-                  'Essentially, the token allows the program to access Discord just like you can - view channels, send messages, check permissions, etc.\n\n' +
-                  'You can delete your account at any time which wipes all stored information. The token is only stored so the user can login and use the panel without inputting the token for every login, their token is used securely along side OAuth2 from Discord to ensure if somehow someone obtains their token, only the discord account holder can log in.');
+                  'To send messages on your behalf, check if you have send permission for specific channels and to check if your being rate limited, and to send to any server your in, etc. These features aren\'t accessable through regular Discord app permissions.');
         }
     </script>
 </body>

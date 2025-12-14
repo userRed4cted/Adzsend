@@ -20,7 +20,7 @@ from security import (
     rate_limit, rate_limiter,
     validate_discord_id, validate_discord_token, validate_message_content, validate_plan_data,
     validate_channel_id, validate_guild_id,
-    sanitize_string, generate_csrf_token, add_security_headers,
+    sanitize_string, generate_csrf_token, validate_csrf_token, add_security_headers,
     secure_session_config, get_client_ip as security_get_client_ip,
     ip_block_check, is_ip_blocked
 )
@@ -31,6 +31,11 @@ app = Flask(__name__)
 
 # Apply secure session configuration
 secure_session_config(app)
+
+# Make CSRF token available in all templates
+@app.context_processor
+def inject_csrf_token():
+    return dict(csrf_token=generate_csrf_token())
 
 # Session security configuration
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -57,6 +62,18 @@ init_db()
 
 # Use the security module's get_client_ip function
 get_client_ip = security_get_client_ip
+
+# CSRF validation helper for API endpoints
+def check_csrf():
+    """Check CSRF token from request headers or JSON body. Returns error response if invalid."""
+    token = request.headers.get('X-CSRF-Token')
+    if not token and request.is_json:
+        data = request.get_json(silent=True)
+        if data:
+            token = data.get('csrf_token')
+    if not validate_csrf_token(token):
+        return {'error': 'Invalid or missing CSRF token'}, 403
+    return None
 
 # Helper function to check business access
 def has_business_access(user_id, discord_id):
@@ -445,6 +462,11 @@ def set_plan():
     from config import SUBSCRIPTION_PLANS, ONE_TIME_PLANS, BUSINESS_PLANS
     from flask import jsonify
 
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
@@ -616,6 +638,11 @@ def get_guild_channels(guild_id):
 @app.route('/api/send-message-single', methods=['POST'])
 @rate_limit('send_message')
 def send_message_single():
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'authenticated' not in session:
         return {'error': 'Unauthorized'}, 401
 
@@ -702,6 +729,11 @@ def send_message_single():
 @app.route('/api/send-message', methods=['POST'])
 @rate_limit('send_message')
 def send_message():
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'authenticated' not in session:
         return {'error': 'Unauthorized'}, 401
 
@@ -976,6 +1008,11 @@ def cancel_plan():
     from flask import jsonify
     from database import cancel_subscription
 
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
@@ -998,6 +1035,11 @@ def cancel_plan():
 def api_save_user_data():
     """Save user's selected channels, draft message, and/or message delay."""
     from flask import jsonify
+
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
 
     if 'user' not in session:
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
@@ -1055,6 +1097,11 @@ def api_get_user_data():
 @app.route('/api/delete-account', methods=['POST'])
 @rate_limit('api')
 def delete_account():
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1085,6 +1132,11 @@ def delete_account():
 @rate_limit('api')
 def add_business_member():
     """Add a member to the business team."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1153,6 +1205,11 @@ def add_business_member():
 @rate_limit('api')
 def remove_business_member():
     """Remove a member from the business team."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1184,6 +1241,11 @@ def remove_business_member():
 @app.route('/api/business/set-team-message', methods=['POST'])
 def set_team_message():
     """Set the team message for business panel."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1237,6 +1299,11 @@ def get_invitations():
 @app.route('/api/team/invitation/accept/<int:member_id>', methods=['POST'])
 def accept_invitation(member_id):
     """Accept a team invitation."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1269,6 +1336,11 @@ def accept_invitation(member_id):
 @app.route('/api/team/invitation/deny/<int:member_id>', methods=['POST'])
 def deny_invitation(member_id):
     """Deny a team invitation."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1292,6 +1364,11 @@ def deny_invitation(member_id):
 @app.route('/api/team/invitations/clear', methods=['POST'])
 def clear_invitations():
     """Clear all pending invitations for the current user."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1308,6 +1385,11 @@ def clear_invitations():
 @app.route('/api/team/leave', methods=['POST'])
 def leave_team_route():
     """Leave the current team."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1330,6 +1412,11 @@ def leave_team_route():
 @app.route('/api/team/member/remove/<int:member_id>', methods=['POST'])
 def remove_member_from_list(member_id):
     """Remove a team member from the list (owner only, for denied/left members)."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1510,6 +1597,11 @@ def admin_get_user_details(user_id):
 @rate_limit('api')
 def admin_ban_user(user_id):
     """Ban a user."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1534,6 +1626,11 @@ def admin_ban_user(user_id):
 @rate_limit('api')
 def admin_unban_user(user_id):
     """Unban a user."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1553,6 +1650,11 @@ def admin_unban_user(user_id):
 @rate_limit('api')
 def admin_flag_user(user_id):
     """Flag a user."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1572,6 +1674,11 @@ def admin_flag_user(user_id):
 @rate_limit('api')
 def admin_unflag_user(user_id):
     """Unflag a user."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -1591,6 +1698,11 @@ def admin_unflag_user(user_id):
 @rate_limit('api')
 def admin_delete_user(user_id):
     """Delete a user account."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 

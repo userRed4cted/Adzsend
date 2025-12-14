@@ -814,7 +814,7 @@
                 </div>
 
                 <div class="admin-actions">
-                    <button class="admin-btn" onclick="viewMessage()">View Saved Message</button>
+                    ${user.subscriptions.length > 0 ? `<button class="admin-btn" onclick="viewMessage()">View Saved Message</button>` : `<button class="admin-btn" onclick="viewMessage()" disabled style="opacity: 0.5; cursor: not-allowed;">View Saved Message</button>`}
                     ${hasBusinessTeam ? `<button class="admin-btn" onclick="viewTeamMessage()">View Business Team Message</button>` : `<button class="admin-btn" onclick="viewTeamMessage()" disabled style="opacity: 0.5; cursor: not-allowed;">View Business Team Message</button>`}
                     <button class="admin-btn" onclick="viewFlagging()" ${!user.flagged ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>View Flagging</button>
                     ${user.banned ?
@@ -908,7 +908,7 @@
             if (isBanned) {
                 // Unban action - no confirmation needed
                 try {
-                    const response = await fetch(`/api/admin/unban/${currentUser.id}`, { method: 'POST' });
+                    const response = await fetch(`/api/admin/unban/${currentUser.id}`, { method: 'POST', headers: { 'X-CSRF-Token': '{{ csrf_token }}' } });
                     const data = await response.json();
 
                     if (data.success) {
@@ -934,7 +934,7 @@
                     banBtn.disabled = true;
 
                     try {
-                        const response = await fetch(`/api/admin/ban/${currentUser.id}`, { method: 'POST' });
+                        const response = await fetch(`/api/admin/ban/${currentUser.id}`, { method: 'POST', headers: { 'X-CSRF-Token': '{{ csrf_token }}' } });
                         const data = await response.json();
 
                         if (data.success) {
@@ -971,7 +971,7 @@
                 deleteBtn.disabled = true;
 
                 try {
-                    const response = await fetch(`/api/admin/delete/${currentUser.id}`, { method: 'POST' });
+                    const response = await fetch(`/api/admin/delete/${currentUser.id}`, { method: 'POST', headers: { 'X-CSRF-Token': '{{ csrf_token }}' } });
                     const data = await response.json();
 
                     if (data.success) {
@@ -1044,7 +1044,7 @@
             if (!currentUser) return;
 
             try {
-                const response = await fetch(`/api/admin/unflag/${currentUser.id}`, { method: 'POST' });
+                const response = await fetch(`/api/admin/unflag/${currentUser.id}`, { method: 'POST', headers: { 'X-CSRF-Token': '{{ csrf_token }}' } });
                 const data = await response.json();
 
                 if (data.success) {

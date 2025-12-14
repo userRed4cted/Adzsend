@@ -282,6 +282,7 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ csrf_token }}'
                         },
                         body: JSON.stringify({
                             selected_channels: selectedChannels,
@@ -884,6 +885,7 @@
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
+                                        'X-CSRF-Token': '{{ csrf_token }}'
                                     },
                                     body: JSON.stringify({
                                         channel: channel,

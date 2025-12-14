@@ -391,7 +391,8 @@
                         fetch('/api/save-user-data', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
                             },
                             body: JSON.stringify({
                                 message_delay: parseInt(radio.value)
@@ -489,7 +490,8 @@
                         fetch('/api/delete-account', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
                             }
                         })
                         .then(response => response.json())
@@ -560,7 +562,8 @@
                         fetch('/api/cancel-plan', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
                             }
                         })
                         .then(response => response.json())
@@ -678,7 +681,7 @@
 
         function acceptInvitation(memberId) {
             if (confirm('Accept this team invitation? All other pending invitations will be denied.')) {
-                fetch(`/api/team/invitation/accept/${memberId}`, { method: 'POST' })
+                fetch(`/api/team/invitation/accept/${memberId}`, { method: 'POST', headers: { 'X-CSRF-Token': '{{ csrf_token }}' } })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
@@ -695,7 +698,7 @@
         }
 
         function denyInvitation(memberId) {
-            fetch(`/api/team/invitation/deny/${memberId}`, { method: 'POST' })
+            fetch(`/api/team/invitation/deny/${memberId}`, { method: 'POST', headers: { 'X-CSRF-Token': '{{ csrf_token }}' } })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -730,7 +733,7 @@
         // Clear all invitations
         document.getElementById('clearAllInvitationsBtn').addEventListener('click', () => {
             if (confirm('Clear all pending team invitations?')) {
-                fetch('/api/team/invitations/clear', { method: 'POST' })
+                fetch('/api/team/invitations/clear', { method: 'POST', headers: { 'X-CSRF-Token': '{{ csrf_token }}' } })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
@@ -753,7 +756,7 @@
                     document.getElementById('leaveTeamBtn').style.background = '#c0392b';
                 }
             } else {
-                fetch('/api/team/leave', { method: 'POST' })
+                fetch('/api/team/leave', { method: 'POST', headers: { 'X-CSRF-Token': '{{ csrf_token }}' } })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {

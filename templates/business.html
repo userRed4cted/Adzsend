@@ -489,6 +489,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
                             },
                             body: JSON.stringify({
                                 discord_id: discordId
@@ -545,6 +546,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
                             },
                             body: JSON.stringify(bodyData)
                         });
@@ -598,6 +600,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
                             },
                             body: JSON.stringify({
                                 message: message

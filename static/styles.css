@@ -513,8 +513,8 @@ body {
 
 .view-pricing-btn {
     padding: 0.75rem 2rem;
-    background: #335FFF;
-    border: none;
+    background: linear-gradient(to bottom, #754075, #3E2B40);
+    border: 2px solid #7C437D;
     border-radius: 8px;
     color: #ffffff;
     font-weight: 700;

@@ -13,7 +13,7 @@ from database import (
     flag_user, unflag_user, delete_user_account_admin,
     get_decrypted_token
 )
-from homepage_config import SLIDESHOW_MESSAGES, SLIDESHOW_INTERVAL, SLIDESHOW_FADE_DURATION
+from homepage_config import SLIDESHOW_MESSAGES, SLIDESHOW_INTERVAL, SLIDESHOW_FADE_DURATION, GALLERY_IMAGES, ABOUT_DESCRIPTION
 from content_filter import check_message_content, BLACKLISTED_WORDS
 from admin_config import is_admin
 from security import (
@@ -173,6 +173,8 @@ def home():
                          slideshow_messages=SLIDESHOW_MESSAGES,
                          slideshow_interval=SLIDESHOW_INTERVAL,
                          slideshow_fade_duration=SLIDESHOW_FADE_DURATION,
+                         gallery_images=GALLERY_IMAGES,
+                         about_description=ABOUT_DESCRIPTION,
                          plan_status=plan_status,
                          has_business=has_business,
                          is_admin_user=is_admin_user)

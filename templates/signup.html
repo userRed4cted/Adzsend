@@ -69,7 +69,7 @@
                         </div>
                     </form>
 
-                    <p class="security-warning">Use an alternate account token, never give your own account token to anyone. We take security measures to protect your token but we can't guarantee safety. Data wipes may happen for security and account deletion is made easy.</p>
+                    <p class="security-warning">We strongly reccomend using an alternate account token, we take security very seriously, but we cant guarantee safety, there are always idiots who will try ruin people.</p>
 
                     <button type="button" class="help-btn" onclick="showTokenHelp()">How to obtain account token</button>
                     <button type="button" class="help-btn" onclick="showTokenInfo()">Why we use account tokens</button>
@@ -98,8 +98,7 @@
         });
 
         function showTokenHelp() {
-            alert('How to obtain your Discord token:\n\n' +
-                  '1. Open Discord in your browser (discord.com)\n' +
+            alert('1. Open Discord in your browser (discord.com)\n' +
                   '2. Press F12 to open Developer Tools\n' +
                   '3. Go to the "Application" tab (Chrome) or "Storage" tab (Firefox)\n' +
                   '4. In the left sidebar, expand "Local Storage"\n' +
@@ -109,8 +108,7 @@
         }
 
         function showTokenInfo() {
-            alert('Why do we use your token?\n\n' +
-                  'To send messages on your behalf, check if you have send permission for specific channels and to check if your being rate limited, and to send to any server your in, etc. These features aren\'t accessable through regular Discord app permissions.');
+            alert('So the panel can send messages on your behlaf, check if you have send permission in channels, check if your being rate limited, and so that you can post in every single server you are in. (Not doable with just Discord apps / bots)');
         }
     </script>
 </body>

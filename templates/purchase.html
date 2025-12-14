@@ -6,6 +6,7 @@
     <title>Purchase - Borz Marketing Panel</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
+    {% include 'partials/config_styles.html' %}
     {% if session.get('user') %}
     <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
     {% endif %}
@@ -115,7 +116,7 @@
                                     </div>
                                     <span class="period monthly-period">PER MONTH</span>
                                     <span class="period yearly-period" style="display: none;">PER YEAR</span>
-                                    <div class="yearly-savings" style="display: none; {% if plan.get('savings_color') %}color: {{ plan.savings_color }};{% endif %}">
+                                    <div class="yearly-savings" style="display: none; {% if plan.savings_color %}color: {{ plan.savings_color }};{% endif %}">
                                         {% if plan.get('savings_text') %}
                                             {{ plan.savings_text }}
                                         {% else %}
@@ -142,7 +143,7 @@
                                         Change Plan
                                     {% endif %}
                                 {% else %}
-                                    {{ plan.get('button_text', 'Join with Card') }}
+                                    {{ plan.button_text }}
                                 {% endif %}
                             </button>
                         </div>
@@ -181,7 +182,7 @@
                                         Change Plan
                                     {% endif %}
                                 {% else %}
-                                    {{ plan.get('button_text', 'Join with Card') }}
+                                    {{ plan.button_text }}
                                 {% endif %}
                             </button>
                         </div>
@@ -216,7 +217,7 @@
                                     </div>
                                     <span class="period business-monthly-period">PER MONTH</span>
                                     <span class="period business-yearly-period" style="display: none;">PER YEAR</span>
-                                    <div class="yearly-savings business-yearly-savings" style="display: none; {% if plan.get('savings_color') %}color: {{ plan.savings_color }};{% endif %}">
+                                    <div class="yearly-savings business-yearly-savings" style="display: none; {% if plan.savings_color %}color: {{ plan.savings_color }};{% endif %}">
                                         {% if plan.get('savings_text') %}
                                             {{ plan.savings_text }}
                                         {% else %}
@@ -243,7 +244,7 @@
                                         Change Plan
                                     {% endif %}
                                 {% else %}
-                                    {{ plan.get('button_text', 'Join with Card') }}
+                                    {{ plan.button_text }}
                                 {% endif %}
                             </button>
                         </div>

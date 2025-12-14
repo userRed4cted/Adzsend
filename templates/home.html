@@ -6,6 +6,7 @@
     <title>{{ site_config.page_titles.home }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
+    {% include 'partials/config_styles.html' %}
     {% if session.get('user') %}
     <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
     {% endif %}

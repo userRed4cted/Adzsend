@@ -1,31 +1,101 @@
-# Configuration file for Borz Marketing Panel
-# Edit this file to customize your pricing plans and features
+# =============================================================================
+# PRICING PLANS CONFIGURATION
+# =============================================================================
+# This file controls all pricing plans displayed on the Purchase page.
+# Each setting is documented with what it does and which UI element it affects.
+#
+# COLOR FORMATS:
+#   - Hex: '#7C437D', '#ffffff', '#335FFF'
+#   - RGBA: 'rgba(124, 67, 125, 0.6)' - last value is transparency (0-1)
+#
+# PRICE FORMATS:
+#   - Whole numbers: 7, 15, 30 (displays as $7, $15, $30)
+#   - Decimals: 2.50, 7.99 (displays as $2.50, $7.99)
+# =============================================================================
 
-# Yearly Discount Percentage (applies to all subscription plans)
-YEARLY_DISCOUNT_PERCENT = 17  # This means 17% off when paying yearly
 
-# Usage Types:
-# 'allowance' - Resets after a specified time period (e.g., daily, weekly, monthly)
-# 'amount' - Fixed total amount for the entire plan duration, no reset
+# -----------------------------------------------------------------------------
+# YEARLY DISCOUNT
+# -----------------------------------------------------------------------------
+# This percentage is used in the auto-calculated savings text when yearly is selected.
+# Only used if 'savings_text' is not provided for a plan.
+# Element: Savings text on plan cards (e.g., "SAVING $XX (17% OFF) YEARLY")
 
-# Subscription Plans
+YEARLY_DISCOUNT_PERCENT = 17
+
+
+# =============================================================================
+# SUBSCRIPTION PLANS (Monthly/Yearly recurring)
+# =============================================================================
+# Displayed in the "Personal" section of the Purchase page.
+# Users pay monthly or yearly and get recurring access.
+
 SUBSCRIPTION_PLANS = {
+
+    # -------------------------------------------------------------------------
+    # REGULAR PLAN
+    # -------------------------------------------------------------------------
     'regular': {
+        # PLAN NAME
+        # Element: Title text at top of plan card
         'name': 'Regular',
-        'price_monthly': 7,  # Monthly price in dollars
-        'price_yearly': 75,  # Yearly total price in dollars (should show savings)
+
+        # PRICING
+        # Element: Large price number on plan card
+        # price_monthly: Shown when "Monthly" toggle is selected
+        # price_yearly: Shown when "Yearly" toggle is selected (total per year)
+        'price_monthly': 7,
+        'price_yearly': 75,
+
+        # FEATURES LIST
+        # Element: Bullet points with checkmarks on plan card
+        # Each string is one feature line
         'features': [
             '500 message posts per week limit',
             'Personal use'
         ],
-        'message_limit': 500,  # -1 for unlimited
-        'usage_type': 'allowance',  # 'allowance' or 'amount'
-        'allowance_period': 'weekly',  # 'daily', 'weekly', 'monthly' (only used if usage_type is 'allowance')
-        'glow_color': 'rgba(255, 255, 255, 0.6)',  # Glow effect color
-        'savings_text': '$6.25 per month',  # Optional: Custom savings text (leave empty to auto-calculate)
-        'savings_color': '#7C437D',  # Optional: Custom color for savings text (default: green)
-        'button_text': 'Subscribe'  # Button text (default: 'Join with Card')
+
+        # MESSAGE LIMIT
+        # How many messages user can send
+        # -1 = unlimited, any positive number = that limit
+        'message_limit': 500,
+
+        # USAGE TYPE
+        # 'allowance' = limit resets after period (daily/weekly/monthly)
+        # 'amount' = fixed total, never resets
+        'usage_type': 'allowance',
+
+        # ALLOWANCE PERIOD (only used if usage_type is 'allowance')
+        # 'daily' = resets every day
+        # 'weekly' = resets every week
+        # 'monthly' = resets every month
+        # None = not applicable (for 'amount' type)
+        'allowance_period': 'weekly',
+
+        # GLOW COLOR
+        # Element: Glowing border effect around plan card on hover
+        # Format: 'rgba(R, G, B, opacity)' where opacity is 0-1
+        'glow_color': 'rgba(255, 255, 255, 0.6)',
+
+        # SAVINGS TEXT (shown when Yearly is selected)
+        # Element: Text below price showing savings info
+        # If empty/not set: auto-calculates "SAVING $XX (17% OFF) YEARLY"
+        # If set: shows your custom text instead
+        'savings_text': '$6.25 per month',
+
+        # SAVINGS TEXT COLOR
+        # Element: Color of the savings text
+        # If empty/not set: uses default CSS color
+        'savings_color': '#7C437D',
+
+        # BUTTON TEXT
+        # Element: Text on the purchase button at bottom of card
+        'button_text': 'Subscribe',
     },
+
+    # -------------------------------------------------------------------------
+    # PRO PLAN
+    # -------------------------------------------------------------------------
     'pro': {
         'name': 'Pro',
         'price_monthly': 15,
@@ -34,32 +104,74 @@ SUBSCRIPTION_PLANS = {
             'Unlimited message posts',
             'Personal use'
         ],
-        'message_limit': -1,  # -1 means unlimited
-        'usage_type': 'amount',  # 'allowance' or 'amount'
-        'allowance_period': 'monthly',  # Only used if usage_type is 'allowance'
+        'message_limit': -1,  # -1 = unlimited
+        'usage_type': 'amount',
+        'allowance_period': 'monthly',
         'glow_color': 'rgba(124, 67, 125, 0.6)',
-        'savings_text': '$12.50 per month',  # Optional: Custom savings text
-        'savings_color': '#7C437D',  # Optional: Custom color for savings text
-        'button_text': 'Subscribe'  # Button text (default: 'Join with Card')
-    }
+        'savings_text': '$12.50 per month',
+        'savings_color': '#7C437D',
+        'button_text': 'Subscribe',
+    },
 }
 
-# One-Time Purchase Plans
+
+# =============================================================================
+# ONE-TIME PURCHASE PLANS (Single payment, limited duration)
+# =============================================================================
+# Displayed below subscription plans in the "Personal" section.
+# Users pay once and get access for a set number of days.
+
 ONE_TIME_PLANS = {
+
+    # -------------------------------------------------------------------------
+    # 1 DAY PASS
+    # -------------------------------------------------------------------------
     '1day': {
+        # PLAN NAME
+        # Element: Title text at top of plan card
         'name': '1 Day',
-        'price': 2.50,  # One-time price in dollars
+
+        # PRICE (one-time payment)
+        # Element: Large price number on plan card
+        'price': 2.50,
+
+        # FEATURES LIST
+        # Element: Bullet points with checkmarks on plan card
         'features': [
             '50 message posts limit',
             'Personal use'
         ],
+
+        # MESSAGE LIMIT
+        # How many messages user can send total
         'message_limit': 50,
-        'usage_type': 'amount',  # 'allowance' or 'amount'
-        'allowance_period': None,  # Not used for 'amount' type
+
+        # USAGE TYPE
+        # 'allowance' = limit resets after period
+        # 'amount' = fixed total, never resets
+        'usage_type': 'amount',
+
+        # ALLOWANCE PERIOD
+        # Set to None for 'amount' type
+        # Or 'daily'/'weekly'/'monthly' for 'allowance' type
+        'allowance_period': None,
+
+        # DURATION DAYS
+        # How many days the plan lasts after purchase
         'duration_days': 1,
+
+        # GLOW COLOR
+        # Element: Glowing border effect around plan card on hover
         'glow_color': 'rgba(255, 255, 255, 0.6)',
-        'button_text': 'Purchase'  # Button text (default: 'Join with Card')
+
+        # BUTTON TEXT
+        # Element: Text on the purchase button
+        'button_text': 'Purchase',
     },
+
+    # -------------------------------------------------------------------------
+    # 3 DAY PASS
+    # -------------------------------------------------------------------------
     '3day': {
         'name': '3 Days',
         'price': 5,
@@ -69,12 +181,16 @@ ONE_TIME_PLANS = {
             'Personal use'
         ],
         'message_limit': 50,
-        'usage_type': 'allowance',  # 'allowance' or 'amount'
-        'allowance_period': 'daily',  # Resets daily
+        'usage_type': 'allowance',
+        'allowance_period': 'daily',  # Resets every day
         'duration_days': 3,
         'glow_color': 'rgba(255, 255, 255, 0.6)',
-        'button_text': 'Purchase'  # Button text (default: 'Join with Card')
+        'button_text': 'Purchase',
     },
+
+    # -------------------------------------------------------------------------
+    # 7 DAY PASS
+    # -------------------------------------------------------------------------
     '7day': {
         'name': '7 Days',
         'price': 7.50,
@@ -84,33 +200,71 @@ ONE_TIME_PLANS = {
             'Personal use'
         ],
         'message_limit': 70,
-        'usage_type': 'allowance',  # 'allowance' or 'amount'
-        'allowance_period': 'daily',  # Resets daily
+        'usage_type': 'allowance',
+        'allowance_period': 'daily',
         'duration_days': 7,
         'glow_color': 'rgba(124, 67, 125, 0.6)',
-        'button_text': 'Purchase'  # Button text (default: 'Join with Card')
-    }
+        'button_text': 'Purchase',
+    },
 }
 
-# Business Plans (Subscription-based with business features)
+
+# =============================================================================
+# BUSINESS PLANS (Team subscriptions)
+# =============================================================================
+# Displayed in the "Business" section of the Purchase page.
+# Includes team management features with multiple members sharing a limit.
+
 BUSINESS_PLANS = {
+
+    # -------------------------------------------------------------------------
+    # BUSINESS STARTER
+    # -------------------------------------------------------------------------
     'business_starter': {
+        # PLAN NAME
+        # Element: Title text at top of plan card
         'name': 'Business Starter',
-        'price_monthly': 20,  # Monthly price in dollars
-        'price_yearly': 195,  # Yearly total price in dollars
+
+        # PRICING
+        # Element: Large price number on plan card
+        'price_monthly': 20,
+        'price_yearly': 195,
+
+        # FEATURES LIST
+        # Element: Bullet points with checkmarks on plan card
         'features': [
             '5000 message posts per week across all members',
             'Up to 15 team members'
         ],
+
+        # MESSAGE LIMIT
+        # Total messages shared across ALL team members
         'message_limit': 5000,
-        'usage_type': 'allowance',  # 'allowance' or 'amount'
-        'allowance_period': 'weekly',  # 'daily', 'weekly', 'monthly'
-        'max_members': 15,  # Maximum number of team members
-        'glow_color': 'rgba(255, 255, 255, 0.6)',  # Gold glow effect
-        'savings_text': '$16.25 per month',  # Optional: Custom savings text
-        'savings_color': '#7C437D',  # Optional: Custom color for savings text
-        'button_text': 'Subscribe'  # Button text
+
+        # USAGE TYPE & PERIOD
+        'usage_type': 'allowance',
+        'allowance_period': 'weekly',
+
+        # MAX TEAM MEMBERS
+        # Maximum number of people who can join this business team
+        'max_members': 15,
+
+        # GLOW COLOR
+        # Element: Glowing border effect around plan card on hover
+        'glow_color': 'rgba(255, 255, 255, 0.6)',
+
+        # SAVINGS TEXT & COLOR (shown when Yearly selected)
+        'savings_text': '$16.25 per month',
+        'savings_color': '#7C437D',
+
+        # BUTTON TEXT
+        # Element: Text on the purchase button
+        'button_text': 'Subscribe',
     },
+
+    # -------------------------------------------------------------------------
+    # ENTERPRISE PLAN
+    # -------------------------------------------------------------------------
     'business_pro': {
         'name': 'Enterprise',
         'price_monthly': 30,
@@ -119,15 +273,13 @@ BUSINESS_PLANS = {
             'Unlimited message posts',
             'Up to 40 team members'
         ],
-        'message_limit': -1,  # -1 means unlimited
+        'message_limit': -1,  # -1 = unlimited
         'usage_type': 'amount',
         'allowance_period': 'monthly',
-        'max_members': 40,  # Maximum number of team members
+        'max_members': 40,
         'glow_color': 'rgba(255, 165, 0, 0.8)',  # Orange-gold glow
         'savings_text': '$25 per month',
-        'savings_color': '#7C437D',  # Optional: Custom color for savings text
-        'button_text': 'Subscribe'
-    }
+        'savings_color': '#7C437D',
+        'button_text': 'Subscribe',
+    },
 }
-
-# Note: Admin user IDs are configured in admin_config.py

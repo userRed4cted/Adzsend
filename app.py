@@ -17,7 +17,10 @@ from database import (
 )
 
 # Config imports
-from config import BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, TEXT, get_all_config, is_admin, DATABASE_VERSION, DATABASE_WIPE_MESSAGE
+from config import (
+    BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, TEXT, get_all_config, is_admin,
+    DATABASE_VERSION, DATABASE_WIPE_MESSAGE, SITE
+)
 
 # Security imports
 from security import (
@@ -69,6 +72,8 @@ def inject_site_config():
         'text': TEXT,
         'db_version': DATABASE_VERSION,
         'db_wipe_message': DATABASE_WIPE_MESSAGE,
+        # Site-wide settings (font, layout, etc.)
+        'site': SITE,
     }
 
 # Discord OAuth2 configuration

@@ -1,0 +1,38 @@
+{#
+    Config Styles Partial
+    Include this in the <head> of every template to inject CSS variables from config.
+
+    Usage: {% include 'partials/config_styles.html' %}
+#}
+<style>
+    :root {
+        /* Site-wide settings from config/site.py */
+        --site-font: {{ site.font }};
+        --heading-font: {{ site.heading_font }};
+        --code-font: {{ site.code_font }};
+        --base-font-size: {{ site.base_font_size }}px;
+        --line-height: {{ site.line_height }};
+        --max-content-width: {{ site.max_width }}px;
+        --border-radius: {{ site.border_radius }}px;
+        --spacing: {{ site.spacing }}px;
+        --transition-duration: {{ site.transition_duration }}ms;
+        --transition-easing: {{ site.transition_easing }};
+    }
+
+    /* Apply site font to body */
+    body {
+        font-family: var(--site-font);
+        font-size: var(--base-font-size);
+        line-height: var(--line-height);
+    }
+
+    /* Apply heading font */
+    h1, h2, h3, h4, h5, h6 {
+        font-family: var(--heading-font);
+    }
+
+    /* Apply code font */
+    code, pre, .code {
+        font-family: var(--code-font);
+    }
+</style>

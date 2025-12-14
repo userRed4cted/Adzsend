@@ -19,20 +19,13 @@
         --transition-easing: {{ site.transition_easing }};
     }
 
-    /* Apply site font to body */
-    body {
-        font-family: var(--site-font);
-        font-size: var(--base-font-size);
-        line-height: var(--line-height);
+    /* Apply site font to ALL elements */
+    *, *::before, *::after {
+        font-family: {{ site.font }} !important;
     }
 
-    /* Apply heading font */
-    h1, h2, h3, h4, h5, h6 {
-        font-family: var(--heading-font);
-    }
-
-    /* Apply code font */
+    /* Apply code font to code elements */
     code, pre, .code {
-        font-family: var(--code-font);
+        font-family: {{ site.code_font }} !important;
     }
 </style>

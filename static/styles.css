@@ -4,6 +4,12 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-family: 'Roboto', sans-serif !important;
+}
+
+/* Ensure ALL form elements use Roboto */
+input, button, select, textarea, label, a, span, p, h1, h2, h3, h4, h5, h6, div {
+    font-family: 'Roboto', sans-serif !important;
 }
 
 :root {

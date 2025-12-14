@@ -72,7 +72,6 @@ TEXT = {
         # Billing toggle
         'monthly': 'Monthly',
         'yearly': 'Yearly',
-        'save_badge': 'Save 20%',
 
         # Plan card
         'per_month': '/month',

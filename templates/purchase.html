@@ -9,6 +9,11 @@
     {% if session.get('user') %}
     <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
     {% endif %}
+    <script>
+        window.DB_VERSION = {{ db_version }};
+        window.DB_WIPE_MESSAGE = "{{ db_wipe_message }}";
+    </script>
+    <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
 </head>
 <body>
     <div class="panel">
@@ -91,7 +96,7 @@
                             <input type="checkbox" id="billingToggle">
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="billing-label">Yearly <span class="save-badge">Save 17%</span></span>
+                        <span class="billing-label">Yearly</span>
                     </div>
 
                     <div class="plans-grid">
@@ -192,7 +197,7 @@
                             <input type="checkbox" id="businessBillingToggle">
                             <span class="toggle-slider"></span>
                         </label>
-                        <span class="billing-label">Yearly <span class="save-badge">Save 17%</span></span>
+                        <span class="billing-label">Yearly</span>
                     </div>
 
                     <div class="plans-grid">

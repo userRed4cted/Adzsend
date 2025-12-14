@@ -9,6 +9,11 @@
     {% if session.get('user') %}
     <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
     {% endif %}
+    <script>
+        window.DB_VERSION = {{ db_version }};
+        window.DB_WIPE_MESSAGE = "{{ db_wipe_message }}";
+    </script>
+    <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <style>
         /* Dynamic fade duration from config */
         .hero-title {
@@ -292,9 +297,13 @@
             let mouseX = -1000;
             let mouseY = -1000;
             let particles = [];
-            const particleCount = 600; // Increased for full page coverage
-            const pushRadius = 80;
+
+            // Detect mobile and reduce particle count for performance
+            const isMobile = window.innerWidth <= 768;
+            const particleCount = isMobile ? 200 : 600;
+            const pushRadius = isMobile ? 60 : 80;
             const pushStrength = 0.15;
+            const connectionDistance = isMobile ? 40 : 60;
 
             // Resize canvas to viewport size (fixed positioning)
             function resizeCanvas() {
@@ -321,12 +330,12 @@
                 }
 
                 update() {
-                    // Calculate distance from mouse
+                    // Calculate distance from mouse/touch
                     const dx = this.x - mouseX;
                     const dy = this.y - mouseY;
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
-                    // Push particles away from cursor
+                    // Push particles away from cursor/touch
                     if (distance < pushRadius && distance > 0) {
                         const force = (pushRadius - distance) / pushRadius;
                         const angle = Math.atan2(dy, dx);
@@ -361,22 +370,24 @@
                     ctx.fillStyle = `rgba(255, 255, 255, ${glowOpacity})`;
                     ctx.fill();
 
-                    // Draw connection lines between nearby particles
-                    particles.forEach(other => {
-                        if (other === this) return;
-                        const dx = other.x - this.x;
-                        const dy = other.y - this.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
+                    // Draw connection lines between nearby particles (skip on mobile for performance)
+                    if (!isMobile) {
+                        particles.forEach(other => {
+                            if (other === this) return;
+                            const dx = other.x - this.x;
+                            const dy = other.y - this.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
 
-                        if (dist < 60) {
-                            ctx.beginPath();
-                            ctx.moveTo(this.x, this.y);
-                            ctx.lineTo(other.x, other.y);
-                            ctx.strokeStyle = `rgba(255, 255, 255, ${0.05 * (1 - dist / 60)})`;
-                            ctx.lineWidth = 0.5;
-                            ctx.stroke();
-                        }
-                    });
+                            if (dist < connectionDistance) {
+                                ctx.beginPath();
+                                ctx.moveTo(this.x, this.y);
+                                ctx.lineTo(other.x, other.y);
+                                ctx.strokeStyle = `rgba(255, 255, 255, ${0.05 * (1 - dist / connectionDistance)})`;
+                                ctx.lineWidth = 0.5;
+                                ctx.stroke();
+                            }
+                        });
+                    }
                 }
             }
 
@@ -389,7 +400,6 @@
 
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
-            // Recalculate after page fully loads to get correct document height
             window.addEventListener('load', resizeCanvas);
 
             // Track mouse movement (only below navbar)
@@ -401,6 +411,28 @@
                     mouseX = -1000;
                     mouseY = -1000;
                 }
+            });
+
+            // Track touch movement for mobile
+            document.addEventListener('touchmove', function(e) {
+                const touch = e.touches[0];
+                if (touch.clientY > navbarHeight) {
+                    mouseX = touch.clientX;
+                    mouseY = touch.clientY - navbarHeight;
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchstart', function(e) {
+                const touch = e.touches[0];
+                if (touch.clientY > navbarHeight) {
+                    mouseX = touch.clientX;
+                    mouseY = touch.clientY - navbarHeight;
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchend', function() {
+                mouseX = -1000;
+                mouseY = -1000;
             });
 
             // Mouse leaves window

@@ -78,6 +78,7 @@ RATE_LIMITS = {
     'signup': (3, 60),        # 3 attempts per minute
     'api': (60, 60),          # 60 requests per minute for API
     'send_message': (30, 60), # 30 messages per minute
+    'token_update': (3, 300), # 3 token updates per 5 minutes
     'general': (100, 60),     # 100 requests per minute general
 }
 

@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Log In</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+        window.DB_VERSION = {{ db_version }};
+        window.DB_WIPE_MESSAGE = "{{ db_wipe_message }}";
+    </script>
+    <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <style>
         * {
             margin: 0;

@@ -1384,14 +1384,6 @@ body {
     transition: width 0.3s ease;
 }
 
-.coming-soon {
-    font-size: 1rem;
-    color: #949BA4;
-    text-align: center;
-    padding: 3rem 0;
-    font-weight: 500;
-}
-
 /* General Settings Styles */
 .setting-group {
     display: flex;
@@ -1522,31 +1514,6 @@ body {
     cursor: pointer;
 }
 
-.logout-btn-settings {
-    padding: 1rem 2rem;
-    background: #335FFF;
-    border: none;
-    border-radius: 8px;
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 1rem;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    display: inline-block;
-    text-align: center;
-    width: 100%;
-}
-
-.logout-btn-settings:hover {
-    transform: scale(1.015);
-}
-
-.logout-btn-settings:active {
-    transform: scale(1.01);
-}
-
 @media (max-width: 1024px) {
     .settings-panels {
         grid-template-columns: 1fr;
@@ -1594,11 +1561,7 @@ body {
         gap: 1rem;
         padding: 1rem 1.5rem;
     }
-    
-    .logo {
-        font-size: 1.2rem;
-    }
-    
+
     .nav-right {
         gap: 1rem;
         flex-wrap: wrap;
@@ -1682,10 +1645,6 @@ body {
     font-weight: 500;
 }
 
-.save-badge {
-    display: none;
-}
-
 .toggle-switch {
     position: relative;
     display: inline-block;
@@ -1699,6 +1658,7 @@ body {
     height: 0;
 }
 
+/* Monthly state (unchecked): transparent background, gradient circle */
 .toggle-slider {
     position: absolute;
     cursor: pointer;
@@ -1706,7 +1666,8 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #ccc;
+    background-color: transparent;
+    border: 2px solid #7C437D;
     transition: 0.4s;
     border-radius: 34px;
 }
@@ -1716,19 +1677,21 @@ body {
     content: "";
     height: 18px;
     width: 18px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
+    left: 2px;
+    bottom: 2px;
+    background: linear-gradient(to bottom, #754075, #3E2B40);
     transition: 0.4s;
     border-radius: 50%;
 }
 
+/* Yearly state (checked): gradient background, dark circle */
 input:checked + .toggle-slider {
-    background-color: #335FFF;
+    background: linear-gradient(to bottom, #754075, #3E2B40);
 }
 
 input:checked + .toggle-slider:before {
     transform: translateX(24px);
+    background: #121215;
 }
 
 .plans-grid {

@@ -9,6 +9,7 @@ from .pages import PAGES
 from .text import TEXT
 from .plans import SUBSCRIPTION_PLANS, ONE_TIME_PLANS, BUSINESS_PLANS, YEARLY_DISCOUNT_PERCENT
 from .admin import ADMIN_USER_IDS, is_admin
+from .database_version import DATABASE_VERSION, DATABASE_WIPE_MESSAGE
 
 
 def get_all_config():

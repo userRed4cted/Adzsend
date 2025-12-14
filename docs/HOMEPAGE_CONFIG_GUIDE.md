@@ -1,141 +1,88 @@
-# Homepage Slideshow Configuration Guide
+# Homepage Configuration Guide
 
 ## Config File Location
-**File to edit:** `homepage_config.py`
+**File to edit:** `config/homepage.py`
 
-This file controls the hero section slideshow on the homepage.
+This file controls all text and settings for the homepage.
 
-## Configuration Options
+## Configuration Structure
 
-### 1. Slideshow Interval
+The homepage config is organized into sections:
+
 ```python
-SLIDESHOW_INTERVAL = 4000  # Time between slides in milliseconds
+HOMEPAGE = {
+    'hero': { ... },      # Main landing section
+    'gallery': { ... },   # Panel images showcase
+    'about': { ... },     # Who are we section
+}
 ```
 
-**How it works:**
-- The value is in milliseconds (1000ms = 1 second)
-- Default: `4000` (4 seconds between each slide)
-- Recommended range: 3000-6000 (3-6 seconds)
+## Hero Section
 
-**Examples:**
-- `SLIDESHOW_INTERVAL = 3000` - Changes every 3 seconds (fast)
-- `SLIDESHOW_INTERVAL = 5000` - Changes every 5 seconds (comfortable)
-- `SLIDESHOW_INTERVAL = 8000` - Changes every 8 seconds (slow)
+The hero section is the first thing visitors see.
 
-### 2. Fade Duration
 ```python
-SLIDESHOW_FADE_DURATION = 300  # Fade in/out duration in milliseconds
+'hero': {
+    # Slideshow messages that rotate automatically
+    'slideshow_messages': [
+        "Message 1",
+        "Message 2",
+        "Message 3"
+    ],
+
+    # Time between slides in milliseconds (5000 = 5 seconds)
+    'slideshow_interval': 5000,
+
+    # Fade animation duration in milliseconds (600 = 0.6 seconds)
+    'slideshow_fade_duration': 600,
+
+    # Call-to-action button text
+    'cta_button_text': "View Pricing",
+
+    # Scroll indicator text (shown at bottom of hero)
+    'scroll_indicator_text': "Scroll down to view more",
+}
 ```
 
-**How it works:**
-- Controls how long the fade-out and fade-in animations take
-- The value is in milliseconds (1000ms = 1 second)
-- Default: `300` (0.3 seconds)
-- Recommended range: 200-500 (0.2-0.5 seconds)
+### Slideshow Settings
 
-**Examples:**
-- `SLIDESHOW_FADE_DURATION = 200` - Quick fade (0.2 seconds)
-- `SLIDESHOW_FADE_DURATION = 300` - Standard fade (0.3 seconds)
-- `SLIDESHOW_FADE_DURATION = 500` - Slow fade (0.5 seconds)
+| Setting | Description | Recommended |
+|---------|-------------|-------------|
+| `slideshow_interval` | Time between slides (ms) | 4000-6000 |
+| `slideshow_fade_duration` | Fade animation length (ms) | 300-600 |
+| `slideshow_messages` | Array of text strings | 2-5 messages |
 
-**Important:**
-- Total transition time = `SLIDESHOW_FADE_DURATION * 2` (fade out + fade in)
-- Faster fades (200-300ms) feel snappier
-- Slower fades (400-500ms) feel more elegant
+## Gallery Section
 
-### 3. Slideshow Messages
+Shows screenshots/images of the panel.
+
 ```python
-SLIDESHOW_MESSAGES = [
-    "First message to display",
-    "Second message to display",
-    "Third message to display"
-]
+'gallery': {
+    'title': "Panel Images",
+    'images': [
+        "PanelImage1.png",
+        "PanelImage2.png",
+        "PanelImage3.png"
+    ],
+}
 ```
 
-**How it works:**
-- Add as many messages as you want to the list
-- Messages are displayed in order, then loop back to the first
-- Each message fades out and the next fades in smoothly
-- Messages are displayed exactly as written
+**Note:** Images should be placed in the `static/` folder.
 
-**Rules:**
-- Each message must be in quotes (single `'` or double `"` quotes)
-- Separate messages with commas
-- At least 1 message is required
-- No maximum limit on messages
+## About Section
 
-## Examples
+Describes your service to visitors.
 
-### Example 1: Fast Slideshow with 3 Messages
 ```python
-SLIDESHOW_INTERVAL = 3000  # 3 seconds
-
-SLIDESHOW_MESSAGES = [
-    "The fastest Discord marketing tool",
-    "Reach thousands instantly",
-    "One click, unlimited potential"
-]
+'about': {
+    'title': "Who are we?",
+    'description': "Your description text here...",
+}
 ```
-
-### Example 2: Slow Slideshow with Many Messages
-```python
-SLIDESHOW_INTERVAL = 6000  # 6 seconds
-
-SLIDESHOW_MESSAGES = [
-    "The first marketing tool to send multiple advertisements all across discord with one click",
-    "Reach thousands of Discord servers instantly",
-    "Automate your Discord marketing campaigns effortlessly",
-    "Grow your community with powerful bulk messaging",
-    "Save hours with automated multi-server posting",
-    "Professional Discord marketing made simple"
-]
-```
-
-### Example 3: Single Static Message (No Slideshow)
-```python
-SLIDESHOW_INTERVAL = 999999  # Very long interval (effectively static)
-
-SLIDESHOW_MESSAGES = [
-    "The first marketing tool to send multiple advertisements all across discord with one click"
-]
-```
-**Note:** With only one message, the slideshow won't cycle, so the interval doesn't matter.
-
-## Layout and Button Position
-
-The hero section is designed to keep the "View Pricing" button in a fixed position:
-- The text area has a minimum height of 6em
-- This prevents the button from moving when text changes
-- Works with messages of varying lengths
 
 ## Tips
 
-1. **Message Length:** Keep messages concise for better readability
-2. **Timing:** Match interval to message length (longer messages = longer interval)
-3. **Consistency:** Use similar message lengths for smooth visual flow
-4. **Testing:** Reload the homepage after changes to see the effect
-5. **Restart Required:** After editing `homepage_config.py`, restart the Flask app
-
-## How to Apply Changes
-
-1. Open `homepage_config.py`
-2. Edit `SLIDESHOW_INTERVAL`, `SLIDESHOW_FADE_DURATION`, and/or `SLIDESHOW_MESSAGES`
-3. Save the file
-4. Restart the Flask application
-5. Refresh your browser at http://127.0.0.1:5000
-
-The slideshow will start automatically when you load the homepage!
-
-## Complete Configuration Example
-
-```python
-# Homepage Configuration
-SLIDESHOW_INTERVAL = 5000  # 5 seconds between slides
-SLIDESHOW_FADE_DURATION = 400  # 0.4 second fade
-
-SLIDESHOW_MESSAGES = [
-    "The first marketing tool to send multiple advertisements all across discord with one click",
-    "Reach thousands of Discord servers instantly",
-    "Automate your Discord marketing campaigns effortlessly"
-]
-```
+1. **Slideshow messages**: Keep concise for readability
+2. **Timing**: Match interval to message length (longer messages = longer interval)
+3. **Images**: Use consistent dimensions for gallery images
+4. **Testing**: Refresh the homepage after changes to see updates

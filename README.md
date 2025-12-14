@@ -1,13 +1,15 @@
-# Discord OAuth2 Panel
+# Borz Marketing Panel
 
-A modern web application to view and manage your Discord servers with OAuth2 authentication.
+A Discord marketing automation web application with OAuth2 authentication.
 
 ## Features
 
-✨ **Modern Design** - Beautiful, responsive interface with gradient backgrounds and smooth animations
-🔐 **Discord OAuth2** - Secure login with Discord
-🖥️ **Server Dashboard** - View all your Discord servers where you have admin or owner permissions
-⚡ **Fast & Lightweight** - Built with Flask and vanilla CSS
+- Discord OAuth2 login
+- Multi-server message broadcasting
+- Subscription and one-time purchase plans
+- Business team management
+- Admin panel for user management
+- Mobile-responsive design
 
 ## Setup Instructions
 
@@ -15,11 +17,9 @@ A modern web application to view and manage your Discord servers with OAuth2 aut
 
 1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
 2. Click "New Application"
-3. Give it a name and create it
-4. Go to "OAuth2" → "General"
-5. Copy your **Client ID**
-6. Go to "OAuth2" → "Client Secret" and copy it
-7. In "OAuth2" → "Redirects", add: `http://localhost:5000/callback`
+3. Go to "OAuth2" > "General"
+4. Copy your **Client ID** and **Client Secret**
+5. In "OAuth2" > "Redirects", add: `http://localhost:5000/callback`
 
 ### 2. Install Dependencies
 
@@ -45,68 +45,57 @@ python app.py
 
 The application will be available at `http://localhost:5000`
 
-## How to Use
-
-1. Click "Login with Discord" on the home page
-2. Authorize the application to access your Discord account
-3. View all servers where you have admin or owner permissions
-4. Your profile information and avatar are displayed in the top-right corner
-
-## File Structure
+## Project Structure
 
 ```
-project/
-├── app.py                 # Flask application and routes
-├── requirements.txt       # Python dependencies
-├── templates/
-│   ├── index.html        # Home page with login button
-│   └── dashboard.html    # Server list dashboard
-├── static/
-│   └── styles.css        # Modern styling
-└── .env                  # Environment variables (create this)
+borz_adveristing_website/
+├── app.py                    # Flask application
+├── requirements.txt          # Python dependencies
+├── config/                   # Configuration files
+│   ├── __init__.py          # Config exports
+│   ├── admin.py             # Admin user IDs
+│   ├── buttons.py           # Button text config
+│   ├── colors.py            # Color theme config
+│   ├── database_version.py  # DB version for wipe notices
+│   ├── homepage.py          # Homepage content config
+│   ├── navbar.py            # Navigation config
+│   ├── pages.py             # Page titles config
+│   ├── plans.py             # Pricing plans config
+│   └── text.py              # UI text/labels config
+├── database/                 # Database utilities
+│   └── init_db.py           # Database initialization
+├── security/                 # Security utilities
+│   └── encryption.py        # Token encryption
+├── templates/                # Jinja2 HTML templates
+├── static/                   # CSS, JS, images
+├── docs/                     # Documentation
+└── RESET_DATABASE.py         # Database reset script
 ```
 
-## Technologies Used
+## Configuration
 
-- **Backend**: Flask
-- **Authentication**: Authlib + Discord OAuth2
-- **Frontend**: HTML5, CSS3
-- **API**: Discord API v10
+All configuration is in the `config/` folder:
 
-## API Permissions
+- **plans.py** - Pricing plans and features
+- **homepage.py** - Homepage slideshow and content
+- **navbar.py** - Navigation menu labels
+- **text.py** - UI text and labels
+- **admin.py** - Admin user Discord IDs
+- **database_version.py** - Database wipe notification version
 
-The application requests:
-- `identify` - Read your user profile
-- `guilds` - Read your server list
+See the `docs/` folder for detailed configuration guides.
+
+## Database Management
+
+### Reset Database
+Run `python RESET_DATABASE.py` to:
+1. **Reset** - Clear all data but keep table structure
+2. **Delete** - Remove database file entirely
+
+Both options increment the database version, which triggers a notification for all users.
 
 ## Security Notes
 
 - Keep your `.env` file private (add to `.gitignore`)
-- Never commit your Discord credentials
-- Use a strong `SECRET_KEY` in production
-
-## Troubleshooting
-
-### "npx: command not found"
-Node.js is not installed. This project uses Python/Flask instead.
-
-### Discord login not working
-- Verify your Client ID and Secret are correct
-- Check that the redirect URL matches exactly (including http/https)
-- Ensure the scopes include `identify` and `guilds`
-
-### No servers showing
-Only servers where you have admin or owner permissions will appear.
-
-## Future Enhancements
-
-- Server settings management
-- Member lists
-- Channel information
-- Role management
-- Audit logs
-- Database integration
-
----
-
-Made with ❤️ for Discord server management
+- Never commit Discord credentials
+- User tokens are encrypted before storage

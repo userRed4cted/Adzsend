@@ -12,11 +12,50 @@ Usage:
 """
 
 import os
+import re
 import sqlite3
 import sys
 
 # Database file path
 DB_PATH = os.path.join(os.path.dirname(__file__), 'marketing_panel.db')
+VERSION_FILE = os.path.join(os.path.dirname(__file__), 'config', 'database_version.py')
+
+
+def increment_database_version():
+    """Increment the DATABASE_VERSION in config/database_version.py"""
+    try:
+        with open(VERSION_FILE, 'r') as f:
+            content = f.read()
+
+        # Find current version
+        match = re.search(r'DATABASE_VERSION\s*=\s*(\d+)', content)
+        if match:
+            current_version = int(match.group(1))
+            new_version = current_version + 1
+
+            # Replace the version
+            new_content = re.sub(
+                r'DATABASE_VERSION\s*=\s*\d+',
+                f'DATABASE_VERSION = {new_version}',
+                content
+            )
+
+            with open(VERSION_FILE, 'w') as f:
+                f.write(new_content)
+
+            print(f"\nDatabase version incremented: {current_version} -> {new_version}")
+            print("Users will see a wipe notice when they visit the site.")
+            return True
+        else:
+            print("\nWarning: Could not find DATABASE_VERSION in config file.")
+            return False
+
+    except FileNotFoundError:
+        print(f"\nWarning: Version file not found: {VERSION_FILE}")
+        return False
+    except Exception as e:
+        print(f"\nWarning: Could not increment version: {e}")
+        return False
 
 
 def reset_database():
@@ -79,6 +118,9 @@ def reset_database():
         conn.commit()
         conn.close()
 
+        # Increment database version to notify users
+        increment_database_version()
+
         print("\n" + "=" * 60)
         print("           DATABASE RESET COMPLETE")
         print("=" * 60)
@@ -116,6 +158,10 @@ def delete_database():
         if os.path.exists(DB_PATH):
             os.remove(DB_PATH)
             print(f"\nDeleted: {DB_PATH}")
+
+            # Increment database version to notify users
+            increment_database_version()
+
             print("\nDatabase file has been completely removed.")
             print("Restart the Flask app to create a fresh database.")
             return True

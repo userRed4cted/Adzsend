@@ -2,66 +2,33 @@
 
 ## Current Scopes in Use
 
-The application currently requests the following Discord OAuth2 scopes:
+The application requests the following Discord OAuth2 scopes:
 
 ```
-identify guilds channels:read messages.read
+identify guilds
 ```
 
-### Scope Breakdown:
+### Scope Breakdown
 
-| Scope | Purpose | Why Needed |
-|-------|---------|-----------|
-| `identify` | Read basic user profile info (username, ID, avatar) | Display user info in the navbar |
-| `guilds` | Read list of servers the user is in | Show all servers where user is admin/owner |
-| `channels:read` | Read channels in servers | List channels for message sending |
-| `messages.read` | Read message history | **Currently not needed**, but ready for future features |
+| Scope | Purpose |
+|-------|---------|
+| `identify` | Read basic user profile info (username, ID, avatar) |
+| `guilds` | Read list of servers the user is in |
 
-## How to Enable These Scopes in Discord Developer Portal
+## How to Enable These Scopes
 
-1. **Go to** [Discord Developer Portal](https://discord.com/developers/applications)
-2. **Select your application**
-3. **Navigate to** OAuth2 → General
-4. **In the SCOPES section:**
-   - ✅ Check: `identify`
-   - ✅ Check: `guilds`
-   - ⚠️ Note: `channels:read` and `messages.read` need to be authorized manually during user login (see below)
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+2. Select your application
+3. Navigate to OAuth2 > General
+4. In the SCOPES section, check: `identify` and `guilds`
+5. Add your redirect URL: `http://localhost:5000/callback`
 
-## Permission for Sending Messages
+## Message Sending
 
-To actually **send messages** to Discord channels, you'll need:
+The application uses the user's Discord token (stored encrypted) to send messages on their behalf. This requires the user to have appropriate permissions in the target servers/channels.
 
-- **Bot Token Permissions**: `send_messages` (8192)
-- **Admin or Bot User**: The application would need to be a Discord bot with proper permissions
+## Security Notes
 
-**Current Limitation**: The current implementation only reads user data and lists channels. To actually send messages, you would need either:
-
-1. **Option A: Implement a Discord Bot**
-   - Create a bot application in Discord Developer Portal
-   - Add bot to your servers with `send_messages` permission
-   - Use the bot token to send messages on behalf of the bot
-
-2. **Option B: User-Initiated Sends** (Requires browser automation)
-   - Would require user's active browser session
-   - Not recommended due to security concerns
-
-## Recommended Scopes for Full Message Sending
-
-If you want to enable actual message sending functionality, update scopes in `app.py`:
-
-```python
-client_kwargs={'scope': 'identify guilds channels:read'}
-```
-
-Then implement a bot user or server-to-server API approach.
-
-## For Future Features
-
-- `messages.read` - Read message history (currently included)
-- `channels:manage` - Create/delete channels (admin features)
-- `roles:read` - Read server roles (user management)
-- `members:read` - Read member information (member lists)
-
----
-
-**Important**: Users will be prompted to authorize these scopes when they click "Login with Discord"
+- User tokens are encrypted before storage
+- Tokens are only used for sending messages
+- Users must have permission in target channels

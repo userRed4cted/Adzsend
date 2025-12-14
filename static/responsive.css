@@ -284,10 +284,6 @@
         padding: 0.75rem;
     }
 
-    .purchase-header h1 {
-        font-size: 1.5rem;
-    }
-
     .purchase-mode-toggle {
         flex-direction: column;
         gap: 0.5rem;
@@ -299,15 +295,22 @@
         font-size: 0.9rem;
     }
 
+    /* Billing toggle stays horizontal on mobile - text left, switch center, text right */
     .billing-toggle {
-        flex-direction: column;
-        gap: 0.5rem;
-        align-items: stretch;
+        flex-direction: row;
+        gap: 0.75rem;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: nowrap;
     }
 
-    .billing-option {
-        padding: 0.6rem 1rem;
-        font-size: 0.85rem;
+    .billing-label {
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+
+    .toggle-switch {
+        flex-shrink: 0;
     }
 
     .plans-grid {
@@ -326,18 +329,6 @@
 
     .price {
         font-size: 2rem;
-    }
-
-    .price-period {
-        font-size: 0.8rem;
-    }
-
-    .features-list {
-        gap: 0.5rem;
-    }
-
-    .feature-item {
-        font-size: 0.85rem;
     }
 
     .purchase-btn {

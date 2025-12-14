@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
+    <script>
+        window.DB_VERSION = {{ db_version }};
+        window.DB_WIPE_MESSAGE = "{{ db_wipe_message }}";
+    </script>
+    <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
 </head>
 <body>
     <div class="panel">
@@ -60,6 +65,67 @@
                 <a href="{{ url_for('logout') }}" class="dropdown-item logout-item">Logout</a>
             </div>
         </nav>
+
+        <!-- Token Update Modal -->
+        <div id="token-update-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content" style="max-width: 500px;">
+                <h2 style="margin-bottom: 1rem; color: #ff6b6b;">Account Token Invalid</h2>
+                <p style="color: #949ba4; margin-bottom: 1rem;">This happens when you change your Discord password, enable/disable 2FA, or your token expires.</p>
+                <p style="color: #ffffff; margin-bottom: 1.5rem;">Please provide your new account token to continue using the panel.</p>
+
+                <div class="form-group-login" style="margin-bottom: 1rem;">
+                    <input type="password" id="new-token-input" class="token-input" placeholder="Paste new account token here..." style="width: 100%; padding: 0.75rem; background: #1a1a1d; border: 1px solid #2a2a2d; border-radius: 8px; color: #fff;">
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+                    <button type="button" class="help-btn" onclick="showTokenHelp()" style="flex: 1;">How to get token</button>
+                    <button type="button" class="help-btn" onclick="showTokenInfo()" style="flex: 1;">Why we need it</button>
+                </div>
+
+                <p class="security-warning" style="font-size: 0.8rem; color: #949ba4; margin-bottom: 1rem;">Your token is encrypted and stored securely. We recommend using an alternate account.</p>
+
+                <div style="display: flex; gap: 1rem;">
+                    <button type="button" id="update-token-btn" class="submit-btn" style="flex: 1; padding: 0.75rem; background: #335FFF; border: none; border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer;">Update Token</button>
+                    <button type="button" id="cancel-token-btn" class="submit-btn" style="flex: 1; padding: 0.75rem; background: #2a2a2d; border: none; border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer;">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+            }
+            .modal-content {
+                background: #121215;
+                border: 1px solid #2a2a2d;
+                border-radius: 12px;
+                padding: 2rem;
+                max-width: 90%;
+            }
+            .help-btn {
+                padding: 0.5rem 1rem;
+                background: #2a2a2d;
+                border: none;
+                border-radius: 6px;
+                color: #949ba4;
+                font-size: 0.85rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            .help-btn:hover {
+                background: #3a3a3d;
+                color: #fff;
+            }
+        </style>
 
         <div class="panel-container">
 
@@ -196,12 +262,101 @@
                 }
             }
 
-            // Check session on API error
-            function handleSessionError(response) {
+            // Token update modal elements
+            const tokenModal = document.getElementById('token-update-modal');
+            const newTokenInput = document.getElementById('new-token-input');
+            const updateTokenBtn = document.getElementById('update-token-btn');
+            const cancelTokenBtn = document.getElementById('cancel-token-btn');
+
+            // Show token update modal
+            function showTokenUpdateModal() {
+                tokenModal.style.display = 'flex';
+                newTokenInput.value = '';
+                newTokenInput.focus();
+            }
+
+            // Hide token update modal
+            function hideTokenUpdateModal() {
+                tokenModal.style.display = 'none';
+                newTokenInput.value = '';
+            }
+
+            // Token help functions
+            function showTokenHelp() {
+                alert('1. Open Discord in your browser (discord.com)\n' +
+                      '2. Press F12 to open Developer Tools\n' +
+                      '3. Go to the "Application" tab (Chrome) or "Storage" tab (Firefox)\n' +
+                      '4. In the left sidebar, expand "Local Storage"\n' +
+                      '5. Click on the Discord domain\n' +
+                      '6. Find the "token" key in the list\n' +
+                      '7. Copy the value (your token) - make sure to exclude the "" at the start and end');
+            }
+
+            function showTokenInfo() {
+                alert('So the panel can send messages on your behalf, check if you have send permission in channels, check if you\'re being rate limited, and so that you can post in every single server you are in. (Not doable with just Discord apps / bots)');
+            }
+
+            // Handle token update submission
+            async function submitTokenUpdate() {
+                const newToken = newTokenInput.value.trim();
+                if (!newToken) {
+                    alert('Please enter your new token');
+                    return;
+                }
+
+                updateTokenBtn.disabled = true;
+                updateTokenBtn.textContent = 'Updating...';
+
+                try {
+                    const response = await fetch('/api/update-token', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({ token: newToken })
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        alert('Token updated successfully! The page will now reload.');
+                        hideTokenUpdateModal();
+                        window.location.reload();
+                    } else {
+                        alert(result.error || 'Failed to update token');
+                    }
+                } catch (error) {
+                    console.error('Token update error:', error);
+                    alert('Error updating token. Please try again.');
+                } finally {
+                    updateTokenBtn.disabled = false;
+                    updateTokenBtn.textContent = 'Update Token';
+                }
+            }
+
+            // Event listeners for token modal
+            updateTokenBtn.addEventListener('click', submitTokenUpdate);
+            cancelTokenBtn.addEventListener('click', hideTokenUpdateModal);
+            newTokenInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') submitTokenUpdate();
+            });
+
+            // Check session on API error - now handles token_invalid
+            async function handleSessionError(response) {
                 if (response.status === 401) {
-                    // Auto logout on session expiry
+                    try {
+                        const data = await response.clone().json();
+                        if (data.token_invalid) {
+                            // Show token update modal instead of logging out
+                            showTokenUpdateModal();
+                            return true; // Indicate we handled it
+                        }
+                    } catch (e) {}
+                    // Regular session expiry - logout
                     window.location.href = '/logout';
                 }
+                return false;
             }
 
             // Warn user before leaving if messages are being sent
@@ -524,12 +679,18 @@
                             return;
                         }
 
-                        if (!response.ok) {
-                            handleSessionError(response);
+                        const data = await response.json();
+
+                        // Check for token_invalid error
+                        if (data.token_invalid) {
+                            showTokenUpdateModal();
                             return;
                         }
 
-                        const data = await response.json();
+                        if (!response.ok) {
+                            await handleSessionError(response);
+                            return;
+                        }
 
                         if (data.channels) {
                             serverChannels[guildId] = data.channels.filter(ch => ch.type === 0);
@@ -869,6 +1030,10 @@
 
                                 if (result.success) {
                                     successCount++;
+                                } else if (result.token_invalid) {
+                                    // Token is invalid - stop sending and show update modal
+                                    showTokenUpdateModal();
+                                    break; // Stop the loop
                                 } else if (response.status === 429) {
                                     // Rate limited - mark and skip (don't retry)
                                     const channelKey = `${channel.guildId}-${channel.id}`;

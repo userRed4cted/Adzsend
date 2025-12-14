@@ -17,7 +17,7 @@ from database import (
 )
 
 # Config imports
-from config import BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, TEXT, get_all_config, is_admin
+from config import BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, TEXT, get_all_config, is_admin, DATABASE_VERSION, DATABASE_WIPE_MESSAGE
 
 # Security imports
 from security import (
@@ -67,6 +67,8 @@ def inject_site_config():
         'colors': COLORS,
         'pages': PAGES,
         'text': TEXT,
+        'db_version': DATABASE_VERSION,
+        'db_wipe_message': DATABASE_WIPE_MESSAGE,
     }
 
 # Discord OAuth2 configuration
@@ -558,6 +560,68 @@ def set_plan():
         print(f"[ERROR] Plan activation error: {str(e)}")
         return jsonify({'success': False, 'error': 'Failed to activate plan'}), 500
 
+@app.route('/api/update-token', methods=['POST'])
+@rate_limit('token_update')
+def update_token():
+    """Update user's Discord token securely."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    if 'authenticated' not in session:
+        return {'error': 'Unauthorized'}, 401
+
+    user = get_user_by_discord_id(session['user']['id'])
+    if not user:
+        return {'error': 'User not found'}, 404
+
+    data = request.json
+    if not data:
+        return {'error': 'Invalid request data'}, 400
+
+    new_token = data.get('token', '').strip()
+
+    # Validate token format
+    if not new_token:
+        return {'error': 'Token is required'}, 400
+
+    if not validate_discord_token(new_token):
+        return {'error': 'Invalid token format'}, 400
+
+    # Verify the token by making an API call to Discord
+    test_headers = {'Authorization': new_token}
+    try:
+        test_response = requests.get(f'{DISCORD_API_BASE}/users/@me', headers=test_headers, timeout=10)
+
+        if test_response.status_code != 200:
+            return {'error': 'Invalid Discord token. Please check your token and try again.'}, 400
+
+        test_user_data = test_response.json()
+        test_discord_id = test_user_data.get('id')
+
+        # Verify the token belongs to the same user
+        if test_discord_id != session['user']['id']:
+            return {'error': 'Token does not match your Discord account. Please use your own token.'}, 400
+
+        # Update the token in database (encrypted)
+        update_user_token(session['user']['id'], new_token)
+
+        # Update session with any new user info
+        session['user']['username'] = test_user_data.get('username')
+        session['user']['avatar'] = test_user_data.get('avatar')
+        session.modified = True
+
+        print(f"[TOKEN UPDATE] User {session['user']['id']} updated their token | IP: {get_client_ip()}")
+
+        return {'success': True, 'message': 'Token updated successfully'}, 200
+
+    except requests.exceptions.Timeout:
+        return {'error': 'Discord API timeout. Please try again.'}, 500
+    except Exception as e:
+        print(f"[ERROR] Token update error: {str(e)}")
+        return {'error': 'Failed to verify token'}, 500
+
 @app.route('/panel')
 def panel():
     if 'authenticated' not in session:
@@ -652,9 +716,8 @@ def get_guild_channels(guild_id):
             text_channels = [ch for ch in channels if ch.get('type') == 0]
             return {'channels': text_channels}, 200
         elif resp.status_code == 401:
-            # Token is invalid, clear session
-            session.clear()
-            return {'error': 'Session expired'}, 401
+            # Token is invalid/expired - user needs to update it
+            return {'error': 'Token invalid', 'token_invalid': True}, 401
         else:
             return {'error': 'Failed to fetch channels'}, resp.status_code
     except requests.exceptions.Timeout:
@@ -732,6 +795,9 @@ def send_message_single():
             session['sent_count'] += 1
             session.modified = True
             return {'success': True, 'channel': channel_name}, 200
+        elif resp.status_code == 401:
+            # Token is invalid/expired - user needs to update it
+            return {'success': False, 'error': 'Token invalid', 'token_invalid': True}, 401
         elif resp.status_code == 429:
             # Extract retry_after from Discord's response
             try:

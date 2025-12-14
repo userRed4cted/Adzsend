@@ -16,7 +16,7 @@
 #   - System fonts: 'Arial', 'Helvetica', 'Georgia', etc.
 #   - Google Fonts: 'Inter', 'Roboto', 'Open Sans', etc. (must be imported in CSS)
 #   - Font stacks: "'Inter', 'Segoe UI', sans-serif"
-SITE_FONT = "'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+SITE_FONT = "'Roboto', sans-serif"
 
 # Heading font family - used for h1, h2, h3, etc.
 # Set to None to use SITE_FONT for headings too

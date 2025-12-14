@@ -15,10 +15,10 @@ SUBSCRIPTION_PLANS = {
         'price_monthly': 7,  # Monthly price in dollars
         'price_yearly': 75,  # Yearly total price in dollars (should show savings)
         'features': [
-            '1000 message posts per week limit',
+            '500 message posts per week limit',
             'Personal use'
         ],
-        'message_limit': 1000,  # -1 for unlimited
+        'message_limit': 500,  # -1 for unlimited
         'usage_type': 'allowance',  # 'allowance' or 'amount'
         'allowance_period': 'weekly',  # 'daily', 'weekly', 'monthly' (only used if usage_type is 'allowance')
         'glow_color': 'rgba(255, 255, 255, 0.6)',  # Glow effect color

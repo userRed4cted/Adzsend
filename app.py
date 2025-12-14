@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 import requests
 import uuid
 from datetime import timedelta
+
+# Database imports
 from database import (
     init_db, create_user, get_user_by_discord_id, get_user_by_id, update_user_token,
     set_subscription, get_active_subscription, can_send_message,
@@ -13,16 +15,19 @@ from database import (
     flag_user, unflag_user, delete_user_account_admin,
     get_decrypted_token
 )
-from homepage_config import SLIDESHOW_MESSAGES, SLIDESHOW_INTERVAL, SLIDESHOW_FADE_DURATION, GALLERY_IMAGES, ABOUT_DESCRIPTION
-from content_filter import check_message_content, BLACKLISTED_WORDS
-from admin_config import is_admin
+
+# Config imports
+from config import BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, TEXT, get_all_config, is_admin
+
+# Security imports
 from security import (
     rate_limit, rate_limiter,
     validate_discord_id, validate_discord_token, validate_message_content, validate_plan_data,
     validate_channel_id, validate_guild_id,
     sanitize_string, generate_csrf_token, validate_csrf_token, add_security_headers,
     secure_session_config, get_client_ip as security_get_client_ip,
-    ip_block_check, is_ip_blocked
+    ip_block_check, is_ip_blocked,
+    check_message_content, BLACKLISTED_WORDS
 )
 
 load_dotenv()
@@ -47,6 +52,22 @@ app.config['SESSION_PERMANENT'] = True
 @app.context_processor
 def inject_csrf_token():
     return {'csrf_token': generate_csrf_token()}
+
+# Make site config available in all templates
+@app.context_processor
+def inject_site_config():
+    return {
+        'site_config': get_all_config(),
+        'site_title': NAVBAR['branding']['title'],
+        'site_subtitle': NAVBAR['branding']['subtitle'],
+        'nav_labels': NAVBAR['menu'],
+        'discord_invite_url': NAVBAR['links']['discord_invite'],
+        'auth_labels': NAVBAR['auth_buttons'],
+        'button_styles': BUTTONS,
+        'colors': COLORS,
+        'pages': PAGES,
+        'text': TEXT,
+    }
 
 # Discord OAuth2 configuration
 DISCORD_CLIENT_ID = os.getenv('DISCORD_CLIENT_ID')
@@ -170,11 +191,15 @@ def home():
             is_admin_user = is_admin(session['user']['id'])
 
     return render_template('home.html',
-                         slideshow_messages=SLIDESHOW_MESSAGES,
-                         slideshow_interval=SLIDESHOW_INTERVAL,
-                         slideshow_fade_duration=SLIDESHOW_FADE_DURATION,
-                         gallery_images=GALLERY_IMAGES,
-                         about_description=ABOUT_DESCRIPTION,
+                         slideshow_messages=HOMEPAGE['hero']['slideshow_messages'],
+                         slideshow_interval=HOMEPAGE['hero']['slideshow_interval'],
+                         slideshow_fade_duration=HOMEPAGE['hero']['slideshow_fade_duration'],
+                         gallery_images=HOMEPAGE['gallery']['images'],
+                         gallery_title=HOMEPAGE['gallery']['title'],
+                         about_title=HOMEPAGE['about']['title'],
+                         about_description=HOMEPAGE['about']['description'],
+                         hero_cta_button_text=HOMEPAGE['hero']['cta_button_text'],
+                         scroll_indicator_text=HOMEPAGE['hero']['scroll_indicator_text'],
                          plan_status=plan_status,
                          has_business=has_business,
                          is_admin_user=is_admin_user)

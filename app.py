@@ -276,8 +276,7 @@ def signup_page():
 
 @app.route('/callback')
 def oauth_callback():
-    import sys
-    print("[CALLBACK] Callback route hit", file=sys.stderr, flush=True)
+    print("[CALLBACK] Callback route hit")
 
     # Get the authorization code from the callback
     code = request.args.get('code')
@@ -432,16 +431,16 @@ def oauth_callback():
 
         else:
             # Regular login flow (no pending token)
-            print("[CALLBACK] Regular login flow (no pending token)", file=sys.stderr, flush=True)
+            print("[CALLBACK] Regular login flow (no pending token)")
             # Check if user already exists
             existing_user = get_user_by_discord_id(discord_id)
-            print(f"[CALLBACK] Login flow - Discord ID: {discord_id}, User exists: {existing_user is not None}", file=sys.stderr, flush=True)
+            print(f"[CALLBACK] Login flow - Discord ID: {discord_id}, User exists: {existing_user is not None}")
 
             if not existing_user:
                 # User doesn't exist, redirect to signup page
-                print(f"[LOGIN] No user found for Discord ID: {discord_id}, redirecting to signup", file=sys.stderr, flush=True)
+                print(f"[LOGIN] No user found for Discord ID: {discord_id}, redirecting to signup")
                 session['signup_error'] = 'No account found. Please sign up first.'
-                print(f"[LOGIN] Set signup_error in session, redirecting to signup_page", file=sys.stderr, flush=True)
+                print(f"[LOGIN] Set signup_error in session, redirecting to signup_page")
                 return redirect(url_for('signup_page'))
 
             # User exists, log them in (token stays encrypted in database)
@@ -466,8 +465,8 @@ def oauth_callback():
 
     except Exception as e:
         import traceback
-        print(f"[ERROR] OAuth2 callback error: {str(e)}", file=sys.stderr, flush=True)
-        print(f"[ERROR] Traceback: {traceback.format_exc()}", file=sys.stderr, flush=True)
+        print(f"[ERROR] OAuth2 callback error: {str(e)}")
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
         return redirect(url_for('home'))
 
 @app.route('/purchase')

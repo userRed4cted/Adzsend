@@ -1,9 +1,11 @@
-from flask import Flask, render_template, redirect, url_for, session, request
+from flask import Flask, render_template, redirect, url_for, session, request, jsonify
 import os
+import secrets
 from dotenv import load_dotenv
 import requests
 import uuid
-from datetime import timedelta
+from datetime import timedelta, datetime
+from urllib.parse import urlencode
 
 # Database imports
 from database import (
@@ -13,24 +15,32 @@ from database import (
     validate_user_session, save_user_data, get_user_data,
     get_all_users_for_admin, get_user_admin_details, ban_user, unban_user,
     flag_user, unflag_user, delete_user_account_admin,
-    get_decrypted_token
+    get_decrypted_token,
+    # Email authentication functions
+    get_user_by_email, create_user_with_email, create_verification_code,
+    verify_code, get_resend_status, resend_verification_code, clear_rate_limit,
+    is_code_rate_limited,
+    # Discord OAuth account linking functions
+    save_discord_oauth, get_discord_oauth_status, get_discord_oauth_info,
+    complete_discord_link, unlink_discord_oauth, is_discord_linked,
+    get_user_by_internal_id, full_unlink_discord_account
 )
 
 # Config imports
 from config import (
     BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, TEXT, get_all_config, is_admin,
-    DATABASE_VERSION, DATABASE_WIPE_MESSAGE, SITE
+    DATABASE_VERSION, DATABASE_WIPE_MESSAGE, SITE,
+    get_page_description, get_page_embed
 )
 
 # Security imports
 from security import (
     rate_limit, rate_limiter,
     validate_discord_id, validate_discord_token, validate_message_content, validate_plan_data,
-    validate_channel_id, validate_guild_id,
-    sanitize_string, generate_csrf_token, validate_csrf_token, add_security_headers,
+    validate_channel_id,
+    generate_csrf_token, validate_csrf_token, add_security_headers,
     secure_session_config, get_client_ip as security_get_client_ip,
-    ip_block_check, is_ip_blocked,
-    check_message_content, BLACKLISTED_WORDS
+    is_ip_blocked, check_message_content, BLACKLISTED_WORDS, PHRASE_EXCEPTIONS
 )
 
 load_dotenv()
@@ -70,16 +80,34 @@ def inject_site_config():
         'db_wipe_message': DATABASE_WIPE_MESSAGE,
         # Site-wide settings (font, layout, etc.)
         'site': SITE,
+        # Page metadata helper functions
+        'get_page_embed': get_page_embed,
+        'get_page_description': get_page_description,
     }
 
-# Discord OAuth2 configuration
+# Custom Jinja filter for formatting dates
+@app.template_filter('format_date')
+def format_date_filter(date_str):
+    """Format ISO date string to readable format like 'January 3, 2026'"""
+    if not date_str:
+        return '-'
+    try:
+        # Parse the ISO date string (handles both full datetime and date-only)
+        if 'T' in str(date_str):
+            dt = datetime.fromisoformat(str(date_str).replace('Z', '+00:00'))
+        else:
+            dt = datetime.strptime(str(date_str)[:10], '%Y-%m-%d')
+        return dt.strftime('%B %d, %Y')  # e.g., "January 03, 2026"
+    except (ValueError, TypeError):
+        return str(date_str)[:10] if date_str else '-'
+
+# Discord API configuration (for fetching user info)
+DISCORD_API_BASE = 'https://discord.com/api/v10'
+
+# Discord OAuth2 configuration (for account linking)
 DISCORD_CLIENT_ID = os.getenv('DISCORD_CLIENT_ID')
 DISCORD_CLIENT_SECRET = os.getenv('DISCORD_CLIENT_SECRET')
-DISCORD_REDIRECT_URI = os.getenv('DISCORD_REDIRECT_URI', 'http://127.0.0.1:5000/callback')
-DISCORD_API_BASE = 'https://discord.com/api/v10'
-DISCORD_OAUTH_URL = f'https://discord.com/api/oauth2/authorize?client_id={DISCORD_CLIENT_ID}&redirect_uri={DISCORD_REDIRECT_URI}&response_type=code&scope=identify%20guilds'
-
-# OAuth credentials loaded from environment variables
+DISCORD_OAUTH_REDIRECT_URI = os.getenv('DISCORD_OAUTH_REDIRECT_URI', 'http://127.0.0.1:5000/discord/callback')
 
 # Initialize database
 init_db()
@@ -102,25 +130,43 @@ def check_csrf():
 # Helper function to check business access
 def has_business_access(user_id, discord_id):
     """Check if user has access to business features (owner or member)."""
-    from database import get_business_team_by_owner, get_business_team_by_member
+    from database import get_business_team_by_owner, get_business_team_by_member, get_discord_oauth_info, get_active_subscription
 
     # Check if user owns a business team
     team = get_business_team_by_owner(user_id)
     if team:
         return True
 
-    # Check if user is a member of a business team
+    # Check if user has a business subscription but no team yet (team creation failed previously)
+    subscription = get_active_subscription(user_id)
+    if subscription and subscription.get('plan_id', '').startswith('team_plan_'):
+        return True
+
+    # Check if user is a member of a business team using their main discord_id
     team = get_business_team_by_member(discord_id)
     if team:
         return True
 
+    # Also check using OAuth-linked Discord ID (for email users who linked Discord later)
+    oauth_info = get_discord_oauth_info(user_id)
+    if oauth_info and oauth_info.get('oauth_discord_id'):
+        team = get_business_team_by_member(oauth_info['oauth_discord_id'])
+        if team:
+            return True
+
     return False
 
 def is_business_owner(user_id):
-    """Check if user is specifically a business team owner."""
-    from database import get_business_team_by_owner
+    """Check if user is specifically a business team owner (or has a business subscription)."""
+    from database import get_business_team_by_owner, get_active_subscription
     team = get_business_team_by_owner(user_id)
-    return team is not None
+    if team:
+        return True
+    # Also check for business subscription without team (team creation may have failed)
+    subscription = get_active_subscription(user_id)
+    if subscription and subscription.get('plan_id', '').startswith('team_plan_'):
+        return True
+    return False
 
 def fetch_discord_user_info(discord_id):
     """Fetch user information from Discord API using bot token."""
@@ -153,8 +199,8 @@ def fetch_discord_user_info(discord_id):
 @app.before_request
 def validate_session():
     """Validate user session before each request (single session enforcement)."""
-    # Skip validation for static files, login, signup, callback, and home page
-    if request.endpoint in ['static', 'login_page', 'signup_page', 'callback', 'home', 'root']:
+    # Skip validation for static files, login, signup, verify, discord callback, and home page
+    if request.endpoint in ['static', 'login_page', 'signup_page', 'verify_page', 'discord_oauth_callback', 'home', 'root']:
         return
 
     # Check if user is logged in
@@ -198,8 +244,8 @@ def home():
             from database import is_business_plan_owner, is_business_team_member
             has_business = is_business_plan_owner(user['id']) or is_business_team_member(session['user']['id'])
             is_owner = is_business_owner(user['id'])
-            # Check if user is admin
-            is_admin_user = is_admin(session['user']['id'])
+            # Check if user is admin (use email from database)
+            is_admin_user = is_admin(user.get('email'))
 
     return render_template('home.html',
                          slideshow_messages=HOMEPAGE['hero']['slideshow_messages'],
@@ -211,263 +257,291 @@ def home():
                          about_description=HOMEPAGE['about']['description'],
                          hero_cta_button_text=HOMEPAGE['hero']['cta_button_text'],
                          scroll_indicator_text=HOMEPAGE['hero']['scroll_indicator_text'],
+                         why_discord_title=HOMEPAGE['why_discord']['title'],
+                         why_discord_stats=HOMEPAGE['why_discord']['stats'],
+                         why_discord_benefits=HOMEPAGE['why_discord']['benefits'],
                          plan_status=plan_status,
                          has_business=has_business,
                          is_owner=is_owner,
                          is_admin_user=is_admin_user)
 
 @app.route('/login', methods=['GET', 'POST'])
-@rate_limit('login')
 def login_page():
+    if 'authenticated' in session:
+        return redirect(url_for('panel'))
+
     if request.method == 'GET':
-        # Direct OAuth login (from navbar button)
-        return redirect(DISCORD_OAUTH_URL)
+        error = session.pop('login_error', None)
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
 
-    # POST request handling (token-based login)
-    user_token = request.form.get('user_token', '').strip()
-
-    if not user_token:
-        return render_template('index.html', error='Discord token is required'), 400
-
-    # Validate token format
-    if not validate_discord_token(user_token):
-        return render_template('index.html', error='Invalid token format'), 400
-
-    # Store token temporarily to verify with OAuth2
-    session['pending_token'] = user_token
-    session['is_signup_flow'] = False  # Mark this as a login flow
-
-    # Redirect to Discord OAuth
-    return redirect(DISCORD_OAUTH_URL)
-
-@app.route('/signup', methods=['GET', 'POST'])
-@rate_limit('signup')
-def signup_page():
-    if request.method == 'GET':
-        if 'authenticated' in session:
-            return redirect(url_for('panel'))
-
-        # Check for signup error from login redirect
-        error = session.pop('signup_error', None)
-
-        response = app.make_response(render_template('signup.html', error=error))
-        # Prevent caching of signup page
+        response = app.make_response(render_template('login.html', error=error, csrf_token=csrf_token))
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
         return response
 
-    # POST request handling
-    user_token = request.form.get('user_token', '').strip()
+    # POST request handling - email-based login
+    email = request.form.get('email', '').strip().lower()
 
-    if not user_token:
-        return render_template('signup.html', error='Discord token is required'), 400
+    if not email:
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+        return render_template('login.html', error='Email is required', csrf_token=csrf_token), 400
 
-    # Validate token format
-    if not validate_discord_token(user_token):
-        return render_template('signup.html', error='Invalid token format'), 400
+    # Check if email exists
+    user = get_user_by_email(email)
+    if not user:
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+        return render_template('login.html', error='No account found with this email. Please sign up first.', csrf_token=csrf_token), 400
 
-    # Store token temporarily to verify with OAuth2
-    session['pending_token'] = user_token
-    session['is_signup_flow'] = True  # Mark this as a signup flow
+    # Check if there's already an active verification code (prevents bypass by re-submitting login)
+    from database import has_active_verification_code
+    has_active, is_rate_limited = has_active_verification_code(email, 'login')
 
-    # Redirect to OAuth2 for verification
-    return redirect(DISCORD_OAUTH_URL)
+    if is_rate_limited:
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+        return render_template('login.html', error='Too many incorrect attempts. Please wait 5 minutes before trying again.', csrf_token=csrf_token), 429
 
-@app.route('/callback')
-def oauth_callback():
-    print("[CALLBACK] Callback route hit")
+    # Store email in session for login verification
+    session['pending_login_email'] = email
 
-    # Get the authorization code from the callback
-    code = request.args.get('code')
-    error = request.args.get('error')
+    # Only create a new code if there isn't an active one
+    if not has_active:
+        # Check resend rate limiting (prevents spam)
+        can_send, cooldown_seconds, attempts_remaining = get_resend_status(email, 'login')
+        if not can_send and cooldown_seconds > 0:
+            csrf_token = generate_csrf_token()
+            session['csrf_token'] = csrf_token
+            return render_template('login.html', error=f'Too many attempts. Please wait {cooldown_seconds} seconds.', csrf_token=csrf_token), 429
 
-    if error:
-        print(f"[CALLBACK] OAuth2 error: {error}")
+        # Create verification code and send email
+        code = create_verification_code(email, 'login')
+
+        # Check if rate limited from too many wrong attempts
+        if code is None:
+            csrf_token = generate_csrf_token()
+            session['csrf_token'] = csrf_token
+            return render_template('login.html', error='Too many incorrect attempts. Please wait 5 minutes before trying again.', csrf_token=csrf_token), 429
+
+        # TODO: Send email via Resend API
+
+    # Redirect to verification page (code already exists or was just created)
+    return redirect(url_for('verify_code_page', purpose='login'))
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup_page():
+    if 'authenticated' in session:
+        return redirect(url_for('panel'))
+
+    if request.method == 'GET':
+        error = session.pop('signup_error', None)
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+
+        response = app.make_response(render_template('signup.html', error=error, csrf_token=csrf_token))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+
+    # POST request handling - email-based signup
+    email = request.form.get('email', '').strip().lower()
+
+    if not email:
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+        return render_template('signup.html', error='Email is required', csrf_token=csrf_token), 400
+
+    # Validate email format and domain
+    import re
+    if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+        return render_template('signup.html', error='Invalid email format', csrf_token=csrf_token), 400
+
+    # Check against blacklisted domains
+    from config import BLACKLISTED_EMAIL_DOMAINS, ALLOWED_EMAIL_TLDS
+    for blacklisted in BLACKLISTED_EMAIL_DOMAINS:
+        if email.endswith(blacklisted):
+            csrf_token = generate_csrf_token()
+            session['csrf_token'] = csrf_token
+            return render_template('signup.html', error=f'Email domain {blacklisted} is not allowed', csrf_token=csrf_token), 400
+
+    # Check if email ends with an allowed TLD
+    if ALLOWED_EMAIL_TLDS:
+        is_allowed = any(email.endswith(tld) for tld in ALLOWED_EMAIL_TLDS)
+        if not is_allowed:
+            csrf_token = generate_csrf_token()
+            session['csrf_token'] = csrf_token
+            return render_template('signup.html', error='Email domain is not supported', csrf_token=csrf_token), 400
+
+    # Check if email already exists
+    existing_user = get_user_by_email(email)
+    if existing_user:
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+        return render_template('signup.html', error='An account with this email already exists. Please login instead.', csrf_token=csrf_token), 400
+
+    # Check if there's already an active verification code (prevents bypass by re-submitting signup)
+    from database import has_active_verification_code
+    has_active, is_rate_limited = has_active_verification_code(email, 'signup')
+
+    if is_rate_limited:
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+        return render_template('signup.html', error='Too many incorrect attempts. Please wait 5 minutes before trying again.', csrf_token=csrf_token), 429
+
+    # Store email in session for signup completion
+    session['pending_signup_email'] = email
+
+    # Only create a new code if there isn't an active one
+    if not has_active:
+        # Check resend rate limiting (prevents spam)
+        can_send, cooldown_seconds, attempts_remaining = get_resend_status(email, 'signup')
+        if not can_send and cooldown_seconds > 0:
+            csrf_token = generate_csrf_token()
+            session['csrf_token'] = csrf_token
+            return render_template('signup.html', error=f'Too many attempts. Please wait {cooldown_seconds} seconds.', csrf_token=csrf_token), 429
+
+        # Create verification code and send email
+        code = create_verification_code(email, 'signup')
+
+        # Check if rate limited from too many wrong attempts
+        if code is None:
+            csrf_token = generate_csrf_token()
+            session['csrf_token'] = csrf_token
+            return render_template('signup.html', error='Too many incorrect attempts. Please wait 5 minutes before trying again.', csrf_token=csrf_token), 429
+
+        # TODO: Send email via Resend API
+
+    # Redirect to verification page (code already exists or was just created)
+    return redirect(url_for('verify_code_page', purpose='signup'))
+
+@app.route('/verify', methods=['GET', 'POST'])
+def verify_code_page():
+    purpose = request.args.get('purpose') or request.form.get('purpose', 'login')
+
+    # SECURITY: Get email from session only - never from client input
+    # This prevents attackers from verifying arbitrary emails via inspect element
+    if purpose == 'signup':
+        email = session.get('pending_signup_email')
+    elif purpose == 'login':
+        email = session.get('pending_login_email')
+    elif purpose == 'email_change':
+        email = session.get('pending_email_change')
+    else:
+        email = None
+
+    if not email:
+        # No pending verification - redirect to appropriate page
+        if purpose == 'signup':
+            return redirect(url_for('signup_page'))
+        return redirect(url_for('login_page'))
+
+    csrf_token = generate_csrf_token()
+    session['csrf_token'] = csrf_token
+
+    # Get resend status
+    can_resend, cooldown_seconds, attempts_remaining = get_resend_status(email, purpose)
+
+    # Check if code verification is rate limited
+    code_rate_limited = is_code_rate_limited(email, purpose)
+
+    if request.method == 'GET':
+        return render_template('verify.html',
+                             email=email,
+                             purpose=purpose,
+                             csrf_token=csrf_token,
+                             cooldown_seconds=cooldown_seconds,
+                             code_rate_limited=code_rate_limited)
+
+    # POST - verify the code
+    code = request.form.get('code', '').strip()
+
+    if not code or len(code) != 6:
+        return render_template('verify.html',
+                             email=email,
+                             purpose=purpose,
+                             csrf_token=csrf_token,
+                             cooldown_seconds=cooldown_seconds,
+                             code_rate_limited=code_rate_limited,
+                             error='Please enter a valid 6-digit code')
+
+    # Verify the code
+    success, error_msg, code_rate_limited = verify_code(email, code, purpose)
+
+    if not success:
+        return render_template('verify.html',
+                             email=email,
+                             purpose=purpose,
+                             csrf_token=csrf_token,
+                             cooldown_seconds=cooldown_seconds,
+                             code_rate_limited=code_rate_limited,
+                             error=error_msg)
+
+    # Clear rate limits on successful verification
+    clear_rate_limit(email, purpose)
+
+    # Clear pending email from session
+    session.pop('pending_signup_email', None)
+    session.pop('pending_login_email', None)
+
+    # Handle based on purpose
+    if purpose == 'signup':
+        # Create the user account
+        client_ip = security_get_client_ip()
+        user_id = create_user_with_email(email, client_ip)
+
+        if not user_id:
+            return render_template('verify.html',
+                                 email=email,
+                                 purpose=purpose,
+                                 csrf_token=csrf_token,
+                                 cooldown_seconds=0,
+                                 code_rate_limited=False,
+                                 error='Failed to create account. Email may already be registered.')
+
+        # Get the user
+        user = get_user_by_email(email)
+    else:
+        # Login - get existing user
+        user = get_user_by_email(email)
+        if not user:
+            return render_template('verify.html',
+                                 email=email,
+                                 purpose=purpose,
+                                 csrf_token=csrf_token,
+                                 cooldown_seconds=0,
+                                 code_rate_limited=False,
+                                 error='Account not found')
+
+    # Check if user is banned
+    if user.get('banned'):
+        session.clear()
         return redirect(url_for('home'))
 
-    if not code:
-        print("[CALLBACK] No code provided, redirecting to home")
-        return redirect(url_for('home'))
+    # Create session
+    session_id = str(uuid.uuid4())
+    update_user_session(user['discord_id'], session_id)
 
-    print(f"[CALLBACK] Received code: {code[:20]}...")
-
-    # Exchange code for access token
-    data = {
-        'client_id': DISCORD_CLIENT_ID,
-        'client_secret': DISCORD_CLIENT_SECRET,
-        'grant_type': 'authorization_code',
-        'code': code,
-        'redirect_uri': DISCORD_REDIRECT_URI
+    session['user'] = {
+        'id': user['discord_id'],
+        'username': user['username'],
+        'avatar': user.get('avatar'),
+        'email': user.get('email')
     }
-    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    session['user_id'] = user['id']  # Database user ID for OAuth endpoints
+    session['authenticated'] = True
+    session['user_session_id'] = session_id
+    session.permanent = True
 
-    try:
-        # Get access token
-        print("[CALLBACK] Exchanging code for token...")
-        token_response = requests.post(f'{DISCORD_API_BASE}/oauth2/token', data=data, headers=headers)
-        print(f"[CALLBACK] Token response status: {token_response.status_code}")
-
-        if token_response.status_code != 200:
-            print(f"[CALLBACK] Token exchange failed: {token_response.text}")
-            return redirect(url_for('home'))
-
-        token_data = token_response.json()
-        access_token = token_data.get('access_token')
-
-        # Get user information
-        auth_headers = {'Authorization': f'Bearer {access_token}'}
-        print("[CALLBACK] Fetching user info...")
-        user_response = requests.get(f'{DISCORD_API_BASE}/users/@me', headers=auth_headers)
-        print(f"[CALLBACK] User info response status: {user_response.status_code}")
-
-        if user_response.status_code != 200:
-            print(f"[CALLBACK] User info fetch failed: {user_response.text}")
-            return redirect(url_for('home'))
-
-        user_data = user_response.json()
-        discord_id = user_data.get('id')
-        username = user_data.get('username')
-        avatar = user_data.get('avatar')
-        print(f"[CALLBACK] User: {username} (ID: {discord_id})")
-
-        # Get client IP
-        client_ip = get_client_ip()
-        print(f"[CALLBACK] Client IP: {client_ip}")
-
-        # Check if this is a token verification flow (login or signup with token)
-        print(f"[CALLBACK] Checking session - pending_token: {'pending_token' in session}, is_signup_flow: {session.get('is_signup_flow', False)}")
-
-        if 'pending_token' in session:
-            pending_token = session['pending_token']
-            is_signup_flow = session.get('is_signup_flow', False)
-            print(f"[CALLBACK] Token verification flow - signup: {is_signup_flow}")
-
-            # Verify the pending token matches this user
-            # Test the pending token by making an API call
-            test_headers = {'Authorization': pending_token}
-            test_response = requests.get(f'{DISCORD_API_BASE}/users/@me', headers=test_headers)
-
-            if test_response.status_code != 200:
-                session.pop('pending_token', None)
-                session.pop('is_signup_flow', None)
-                error_template = 'signup.html' if is_signup_flow else 'index.html'
-                return render_template(error_template, error='Invalid Discord token. Please check your token and try again.')
-
-            test_user_data = test_response.json()
-            test_discord_id = test_user_data.get('id')
-
-            # Verify the token belongs to the OAuth2 authenticated user
-            if test_discord_id != discord_id:
-                session.pop('pending_token', None)
-                session.pop('is_signup_flow', None)
-                error_template = 'signup.html' if is_signup_flow else 'index.html'
-                return render_template(error_template, error='Token does not match your Discord account. Please use your own token.')
-
-            # Check if user already exists
-            existing_user = get_user_by_discord_id(discord_id)
-
-            if existing_user:
-                # User already exists
-                if is_signup_flow:
-                    # This is signup - show error
-                    session.pop('pending_token', None)
-                    session.pop('is_signup_flow', None)
-                    return render_template('signup.html', error='Account already exists. Please login instead.')
-                else:
-                    # This is login - update their token (encrypted) and log them in
-                    update_user_token(discord_id, pending_token)
-                    print(f"[LOGIN] User logged in with token: {username} (ID: {discord_id}) | IP: {client_ip}")
-
-                    # Generate new session ID and store in database
-                    new_session_id = str(uuid.uuid4())
-                    update_user_session(discord_id, new_session_id)
-
-                    # Store session data (token NOT stored in session - decrypted from DB when needed)
-                    session.permanent = True
-                    session['authenticated'] = True  # Flag that user is logged in
-                    session['user'] = user_data
-                    session['login_ip'] = client_ip
-                    session['session_id'] = new_session_id
-                    session.pop('pending_token', None)
-                    session.pop('is_signup_flow', None)
-
-                    # Initialize sent_count
-                    if 'sent_count' not in session:
-                        session['sent_count'] = 0
-
-                    return redirect(url_for('home'))
-            else:
-                # User doesn't exist
-                if not is_signup_flow:
-                    # This is login - redirect to signup
-                    session.pop('pending_token', None)
-                    session.pop('is_signup_flow', None)
-                    session['signup_error'] = 'No account found. Please sign up first.'
-                    return redirect(url_for('signup_page'))
-
-                # This is signup - create new user (token encrypted in create_user)
-                create_user(discord_id, username, avatar, pending_token, client_ip)
-                print(f"[SIGNUP] New user created: {username} (ID: {discord_id}) | IP: {client_ip}")
-
-                # Generate new session ID and store in database
-                new_session_id = str(uuid.uuid4())
-                update_user_session(discord_id, new_session_id)
-
-                # Store session data (token NOT stored in session - decrypted from DB when needed)
-                session.permanent = True
-                session['authenticated'] = True  # Flag that user is logged in
-                session['user'] = user_data
-                session['login_ip'] = client_ip
-                session['session_id'] = new_session_id
-                session.pop('pending_token', None)
-                session.pop('is_signup_flow', None)
-
-                # Initialize sent_count
-                if 'sent_count' not in session:
-                    session['sent_count'] = 0
-
-                return redirect(url_for('home'))
-
-        else:
-            # Regular login flow (no pending token)
-            print("[CALLBACK] Regular login flow (no pending token)")
-            # Check if user already exists
-            existing_user = get_user_by_discord_id(discord_id)
-            print(f"[CALLBACK] Login flow - Discord ID: {discord_id}, User exists: {existing_user is not None}")
-
-            if not existing_user:
-                # User doesn't exist, redirect to signup page
-                print(f"[LOGIN] No user found for Discord ID: {discord_id}, redirecting to signup")
-                session['signup_error'] = 'No account found. Please sign up first.'
-                print(f"[LOGIN] Set signup_error in session, redirecting to signup_page")
-                return redirect(url_for('signup_page'))
-
-            # User exists, log them in (token stays encrypted in database)
-            print(f"[LOGIN] Existing user via OAuth2: {username} (ID: {discord_id}) | IP: {client_ip}")
-
-            # Generate new session ID and store in database (invalidates other sessions)
-            new_session_id = str(uuid.uuid4())
-            update_user_session(discord_id, new_session_id)
-
-            # Store session data (token NOT stored in session - decrypted from DB when needed)
-            session.permanent = True
-            session['authenticated'] = True  # Flag that user is logged in
-            session['user'] = user_data
-            session['login_ip'] = client_ip
-            session['session_id'] = new_session_id
-
-            # Initialize sent_count if not exists
-            if 'sent_count' not in session:
-                session['sent_count'] = 0
-
-            return redirect(url_for('home'))
-
-    except Exception as e:
-        import traceback
-        print(f"[ERROR] OAuth2 callback error: {str(e)}")
-        print(f"[ERROR] Traceback: {traceback.format_exc()}")
-        return redirect(url_for('home'))
+    # Redirect - signup goes to purchase, login goes to panel
+    if purpose == 'signup':
+        return redirect(url_for('purchase'))
+    return redirect(url_for('panel'))
 
 @app.route('/purchase')
 def purchase():
@@ -484,7 +558,7 @@ def purchase():
             plan_status = get_plan_status(user['id'])
             has_business = has_business_access(user['id'], session['user']['id'])
             is_owner = is_business_owner(user['id'])
-            is_admin_user = is_admin(session['user']['id'])
+            is_admin_user = is_admin(user.get('email'))
 
     return render_template('purchase.html',
                          subscription_plans=SUBSCRIPTION_PLANS,
@@ -494,6 +568,208 @@ def purchase():
                          has_business=has_business,
                          is_owner=is_owner,
                          is_admin_user=is_admin_user)
+
+@app.route('/api/resend-code', methods=['POST'])
+@rate_limit('api')
+def resend_code_api():
+    """API endpoint to resend verification code."""
+    from flask import jsonify
+
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return jsonify({'success': False, 'error': 'CSRF token invalid'}), 403
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'Invalid request'}), 400
+
+    purpose = data.get('purpose', 'login')
+
+    if purpose not in ['login', 'signup', 'email_change']:
+        return jsonify({'success': False, 'error': 'Invalid purpose'}), 400
+
+    # SECURITY: Get email from session only - never from client input
+    if purpose == 'signup':
+        email = session.get('pending_signup_email')
+    elif purpose == 'login':
+        email = session.get('pending_login_email')
+    elif purpose == 'email_change':
+        email = session.get('pending_email_change')
+    else:
+        email = None
+
+    if not email:
+        return jsonify({'success': False, 'error': 'No pending verification. Please start over.'}), 400
+
+    # Check if code verification is rate limited (3+ wrong attempts)
+    if is_code_rate_limited(email, purpose):
+        return jsonify({
+            'success': False,
+            'error': 'Too many incorrect attempts. Please wait before trying again.',
+            'rate_limited': True
+        }), 429
+
+    # Check resend status
+    can_resend, cooldown_seconds, attempts_remaining = get_resend_status(email, purpose)
+
+    if not can_resend:
+        # Check if rate limited (no attempts remaining)
+        if attempts_remaining <= 0:
+            return jsonify({
+                'success': False,
+                'error': 'Rate limit reached',
+                'rate_limited': True
+            }), 429
+        return jsonify({
+            'success': False,
+            'error': f'Please wait {cooldown_seconds} seconds before resending',
+            'blocked_seconds': cooldown_seconds
+        }), 429
+
+    # Resend the code
+    success, code_or_error, blocked_seconds = resend_verification_code(email, purpose)
+
+    if not success:
+        # Check if it's a rate limit error
+        if 'limit' in code_or_error.lower() or attempts_remaining <= 0:
+            return jsonify({
+                'success': False,
+                'error': 'Rate limit reached',
+                'rate_limited': True
+            }), 429
+        return jsonify({
+            'success': False,
+            'error': code_or_error,
+            'blocked_seconds': blocked_seconds
+        }), 429
+
+    # TODO: Send email via Resend API
+
+    return jsonify({'success': True, 'message': 'Verification code sent'})
+
+@app.route('/api/verify-code', methods=['POST'])
+@rate_limit('api')
+def verify_code_api():
+    """API endpoint to verify code without page refresh."""
+    from flask import jsonify
+
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return jsonify({'success': False, 'error': 'CSRF token invalid'}), 403
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'Invalid request'}), 400
+
+    code = data.get('code', '').strip()
+    purpose = data.get('purpose', 'login')
+
+    if purpose not in ['login', 'signup', 'email_change']:
+        return jsonify({'success': False, 'error': 'Invalid purpose'}), 400
+
+    # SECURITY: Get email from session only - never from client input
+    # This prevents attackers from verifying arbitrary emails via inspect element
+    if purpose == 'signup':
+        email = session.get('pending_signup_email')
+    elif purpose == 'login':
+        email = session.get('pending_login_email')
+    elif purpose == 'email_change':
+        email = session.get('pending_email_change')
+    else:
+        email = None
+
+    if not email:
+        return jsonify({'success': False, 'error': 'No pending verification. Please start over.'}), 400
+
+    if not code:
+        return jsonify({'success': False, 'error': 'Code is required'}), 400
+
+    if len(code) != 6:
+        return jsonify({'success': False, 'error': 'Please enter a valid 6-digit code'}), 400
+
+    # Verify the code
+    success, error_msg, code_rate_limited = verify_code(email, code, purpose)
+
+    if not success:
+        return jsonify({
+            'success': False,
+            'error': error_msg,
+            'code_rate_limited': code_rate_limited
+        }), 429 if code_rate_limited else 400
+
+    # Clear rate limits on successful verification
+    clear_rate_limit(email, purpose)
+
+    # Clear pending email from session
+    session.pop('pending_signup_email', None)
+    session.pop('pending_login_email', None)
+
+    # Handle email change purpose
+    if purpose == 'email_change':
+        from database import update_user_email
+
+        # Get user
+        user = get_user_by_discord_id(session['user']['id'])
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+
+        # Update the email
+        update_user_email(user['id'], email)
+
+        # Update session
+        session['user']['email'] = email
+
+        # Clear pending email change
+        session.pop('pending_email_change', None)
+        session.pop('email_change_user_id', None)
+
+        print(f"[EMAIL CHANGE] Email changed for user {user['id']} to {email}")
+
+        return jsonify({'success': True, 'redirect': url_for('settings')})
+
+    # Handle based on purpose
+    if purpose == 'signup':
+        # Create the user account
+        client_ip = security_get_client_ip()
+        user_id = create_user_with_email(email, client_ip)
+
+        if not user_id:
+            return jsonify({'success': False, 'error': 'Failed to create account. Email may already be registered.'}), 400
+
+        # Get the user
+        user = get_user_by_email(email)
+    else:
+        # Login - get existing user
+        user = get_user_by_email(email)
+        if not user:
+            return jsonify({'success': False, 'error': 'Account not found'}), 400
+
+    # Check if user is banned
+    if user.get('banned'):
+        session.clear()
+        return jsonify({'success': False, 'error': 'Account is banned'}), 403
+
+    # Create session
+    session_id = str(uuid.uuid4())
+    update_user_session(user['discord_id'], session_id)
+
+    session['user'] = {
+        'id': user['discord_id'],
+        'username': user['username'],
+        'avatar': user.get('avatar'),
+        'email': user.get('email')
+    }
+    session['user_id'] = user['id']  # Database user ID for OAuth endpoints
+    session['authenticated'] = True
+    session['user_session_id'] = session_id
+    session.permanent = True
+
+    # Return success with redirect URL
+    # Signup goes to purchase page, login goes to panel
+    redirect_url = url_for('purchase') if purpose == 'signup' else url_for('panel')
+    return jsonify({'success': True, 'redirect': redirect_url})
 
 @app.route('/api/set-plan', methods=['POST'])
 @rate_limit('api')
@@ -555,12 +831,19 @@ def set_plan():
         # If it's a business plan, create a business team
         redirect_url = '/panel'
         if plan_type == 'business':
-            from database import create_business_team, get_active_subscription
+            from database import create_business_team, get_active_subscription, auto_deny_pending_invitations
             subscription = get_active_subscription(user['id'])
+            print(f"[PLAN] Business plan - subscription lookup for user {user['id']}: {subscription}")
             if subscription:
                 max_members = plan_config.get('max_members', 3)
-                create_business_team(user['id'], subscription['id'], max_members)
-                redirect_url = '/business-management'
+                team_id = create_business_team(user['id'], subscription['id'], max_members)
+                print(f"[PLAN] Business team created: team_id={team_id}, max_members={max_members}")
+                redirect_url = '/team-management'
+
+                # Auto-deny any pending team invitations since user is now a business owner
+                auto_deny_pending_invitations(session['user']['id'])
+            else:
+                print(f"[ERROR] No subscription found after activation for user {user['id']}")
 
         return jsonify({
             'success': True,
@@ -650,36 +933,32 @@ def panel():
         session.clear()
         return redirect(url_for('login_page'))
 
-    # Check if user is banned
-    if user.get('banned', 0) == 1:
-        session.clear()
-        return redirect(url_for('home'))
+    # Check if Discord account is linked
+    discord_linked = is_discord_linked(user['id'])
+
+    # Check if user is banned - pass to template instead of redirecting
+    is_banned = user.get('banned', 0) == 1
 
     plan_status = get_plan_status(user['id'])
-    if not plan_status['has_plan']:
-        # Redirect to purchase page if no active plan
-        return redirect(url_for('purchase'))
 
     # Block business plan holders from accessing personal panel
-    if plan_status.get('plan_id', '').startswith('business_'):
+    if plan_status.get('plan_id', '').startswith('team_plan_'):
         # Redirect business plan holders to purchase page
         return redirect(url_for('purchase'))
 
-    # Decrypt token only when needed for API call
-    user_token = get_decrypted_token(session['user']['id'])
-    if not user_token:
-        session.clear()
-        return redirect(url_for('login_page'))
-    headers = {'Authorization': user_token}
+    # If Discord not linked, show panel but with modal
+    guilds = []
+    if discord_linked:
+        # Decrypt token only when needed for API call
+        user_token = get_decrypted_token(session['user']['id'])
+        if user_token:
+            headers = {'Authorization': user_token}
 
-    # Fetch user's guilds
-    resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
+            # Fetch user's guilds
+            resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
 
-    if resp.status_code != 200:
-        session.clear()
-        return redirect(url_for('home'))
-
-    guilds = resp.json()
+            if resp.status_code == 200:
+                guilds = resp.json()
 
     # Get user data (includes message_delay)
     user_data = get_user_data(user['id'])
@@ -687,11 +966,11 @@ def panel():
     # Check if user has business access
     has_business = has_business_access(user['id'], session['user']['id'])
 
-    # Check if user is admin
-    is_admin_user = is_admin(session['user']['id'])
+    # Check if user is admin (use email from database)
+    is_admin_user = is_admin(user.get('email'))
 
-    response = app.make_response(render_template('dashboard.html', user=session['user'], guilds=guilds, plan_status=plan_status, user_data=user_data, has_business=has_business, is_owner=is_business_owner(user['id']), is_admin_user=is_admin_user, BLACKLISTED_WORDS=BLACKLISTED_WORDS))
-    # Prevent caching of dashboard page
+    response = app.make_response(render_template('dashboard.html', user=session['user'], guilds=guilds, plan_status=plan_status, user_data=user_data, has_business=has_business, is_owner=is_business_owner(user['id']), is_admin_user=is_admin_user, BLACKLISTED_WORDS=BLACKLISTED_WORDS, PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS, is_banned=is_banned, discord_linked=discord_linked))
+    # Prevent caching of personal panel page
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
@@ -727,7 +1006,10 @@ def get_guild_channels(guild_id):
             text_channels = [ch for ch in channels if ch.get('type') == 0]
             return {'channels': text_channels}, 200
         elif resp.status_code == 401:
-            # Token is invalid/expired - user needs to update it
+            # Token is invalid/expired - unlink Discord account
+            user = get_user_by_discord_id(session['user']['id'])
+            if user:
+                full_unlink_discord_account(user['id'])
             return {'error': 'Token invalid', 'token_invalid': True}, 401
         else:
             return {'error': 'Failed to fetch channels'}, resp.status_code
@@ -837,7 +1119,8 @@ def send_message_single():
             session.modified = True
             return {'success': True, 'channel': channel_name}, 200
         elif resp.status_code == 401:
-            # Token is invalid/expired - user needs to update it
+            # Token is invalid/expired - unlink Discord account
+            full_unlink_discord_account(user['id'])
             return {'success': False, 'error': 'Token invalid', 'token_invalid': True}, 401
         elif resp.status_code == 429:
             # Extract retry_after from Discord's response
@@ -950,9 +1233,9 @@ def send_message():
 
     return results, 200
 
-@app.route('/business-management')
-def business_management():
-    """Business plan management page for team owners."""
+@app.route('/team-management')
+def team_management():
+    """Team plan management page for team owners."""
     if 'authenticated' not in session:
         return redirect(url_for('login_page'))
 
@@ -966,14 +1249,25 @@ def business_management():
         session.clear()
         return redirect(url_for('login_page'))
 
-    # Check if user is banned
-    if user.get('banned', 0) == 1:
-        session.clear()
-        return redirect(url_for('home'))
+    # Check if user is banned - pass to template instead of redirecting
+    is_banned = user.get('banned', 0) == 1
 
     # Check if user owns a business plan
-    from database import get_business_team_by_owner, get_team_members, get_team_member_stats, update_team_member_info, get_team_member_count
+    from database import get_business_team_by_owner, get_team_members, get_team_member_stats, update_team_member_info, get_team_member_count, get_active_subscription, create_business_team
+    from config import BUSINESS_PLANS
     team = get_business_team_by_owner(user['id'])
+
+    if not team:
+        # Check if user has an active business subscription but no team (could happen if team creation failed)
+        subscription = get_active_subscription(user['id'])
+        if subscription and subscription.get('plan_id', '').startswith('team_plan_'):
+            # Create the business team now
+            plan_config = BUSINESS_PLANS.get(subscription['plan_id'], {})
+            max_members = plan_config.get('max_members', 3)
+            team_id = create_business_team(user['id'], subscription['id'], max_members)
+            print(f"[BUSINESS] Late team creation for user {user['id']}: team_id={team_id}")
+            # Refetch the team
+            team = get_business_team_by_owner(user['id'])
 
     if not team:
         return redirect(url_for('purchase'))
@@ -999,10 +1293,10 @@ def business_management():
     # User has business access (they're on this page)
     has_business = True
 
-    # Check if user is admin
-    is_admin_user = is_admin(session['user']['id'])
+    # Check if user is admin (use email from database)
+    is_admin_user = is_admin(user.get('email'))
 
-    return render_template('business.html',
+    return render_template('team-management.html',
                          user=session['user'],
                          team=team,
                          members=members,
@@ -1012,11 +1306,13 @@ def business_management():
                          is_owner=True,
                          is_admin_user=is_admin_user,
                          active_member_count=active_member_count,
-                         BLACKLISTED_WORDS=BLACKLISTED_WORDS)
+                         BLACKLISTED_WORDS=BLACKLISTED_WORDS,
+                         PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS,
+                         is_banned=is_banned)
 
-@app.route('/business-panel')
-def business_panel():
-    """Business panel for team members to send messages."""
+@app.route('/team-panel')
+def team_panel():
+    """Team panel for team members to send messages."""
     if 'authenticated' not in session:
         return redirect(url_for('login_page'))
 
@@ -1030,36 +1326,55 @@ def business_panel():
         session.clear()
         return redirect(url_for('login_page'))
 
-    # Check if user is banned
-    if user.get('banned', 0) == 1:
-        session.clear()
-        return redirect(url_for('home'))
+    # Check if Discord account is linked
+    discord_linked = is_discord_linked(user['id'])
+
+    # Check if user is banned - pass to template instead of redirecting
+    is_banned = user.get('banned', 0) == 1
 
     # Check if user is team owner or member
-    from database import get_business_team_by_owner, get_business_team_by_member
+    from database import get_business_team_by_owner, get_business_team_by_member, get_discord_oauth_info, get_active_subscription, create_business_team
+    from config import BUSINESS_PLANS
     team = get_business_team_by_owner(user['id'])
 
     if not team:
+        # Check if user has an active business subscription but no team (could happen if team creation failed)
+        subscription = get_active_subscription(user['id'])
+        if subscription and subscription.get('plan_id', '').startswith('team_plan_'):
+            # Create the business team now
+            plan_config = BUSINESS_PLANS.get(subscription['plan_id'], {})
+            max_members = plan_config.get('max_members', 3)
+            team_id = create_business_team(user['id'], subscription['id'], max_members)
+            print(f"[TEAM] Late team creation for user {user['id']}: team_id={team_id}")
+            # Refetch the team
+            team = get_business_team_by_owner(user['id'])
+
+    if not team:
+        # Check by main discord_id
         team = get_business_team_by_member(session['user']['id'])
+
+    if not team:
+        # Also check by OAuth-linked Discord ID (for email users who linked Discord)
+        oauth_info = get_discord_oauth_info(user['id'])
+        if oauth_info and oauth_info.get('oauth_discord_id'):
+            team = get_business_team_by_member(oauth_info['oauth_discord_id'])
 
     if not team:
         return redirect(url_for('purchase'))
 
     plan_status = get_plan_status(user['id'])
 
-    # Decrypt token only when needed for API call
-    user_token = get_decrypted_token(session['user']['id'])
-    if not user_token:
-        session.clear()
-        return redirect(url_for('login_page'))
-    headers = {'Authorization': user_token}
-    resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
+    # If Discord not linked, show panel but with modal
+    guilds = []
+    if discord_linked:
+        # Decrypt token only when needed for API call
+        user_token = get_decrypted_token(session['user']['id'])
+        if user_token:
+            headers = {'Authorization': user_token}
+            resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
 
-    if resp.status_code != 200:
-        session.clear()
-        return redirect(url_for('home'))
-
-    guilds = resp.json()
+            if resp.status_code == 200:
+                guilds = resp.json()
 
     # Get user data
     user_data = get_user_data(user['id'])
@@ -1067,10 +1382,10 @@ def business_panel():
     # User has business access (they're on this page)
     has_business = True
 
-    # Check if user is admin
-    is_admin_user = is_admin(session['user']['id'])
+    # Check if user is admin (use email from database)
+    is_admin_user = is_admin(user.get('email'))
 
-    response = app.make_response(render_template('business-panel.html',
+    response = app.make_response(render_template('team-panel.html',
                                                 user=session['user'],
                                                 guilds=guilds,
                                                 team=team,
@@ -1079,7 +1394,10 @@ def business_panel():
                                                 has_business=has_business,
                                                 is_owner=is_business_owner(user['id']),
                                                 is_admin_user=is_admin_user,
-                                                BLACKLISTED_WORDS=BLACKLISTED_WORDS))
+                                                BLACKLISTED_WORDS=BLACKLISTED_WORDS,
+                                                PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS,
+                                                is_banned=is_banned,
+                                                discord_linked=discord_linked))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
@@ -1101,6 +1419,10 @@ def settings():
     if not user:
         session.clear()
         return redirect(url_for('login_page'))
+
+    # Ensure user_id is in session (for users who logged in before this was added)
+    if 'user_id' not in session:
+        session['user_id'] = user['id']
 
     # Get plan status information
     plan_status = get_plan_status(user['id'])
@@ -1126,8 +1448,28 @@ def settings():
             if team:
                 business_plan_status = get_business_plan_status(team['id'], team['owner_user_id'])
 
-    # Check if user is admin
-    is_admin_user = is_admin(session['user']['id'])
+    # Check if user is admin (use email from database, not session, as session might be stale)
+    is_admin_user = is_admin(user.get('email'))
+
+    # Get purchase history for invoices
+    from database import get_purchase_history
+    purchase_history = get_purchase_history(user['id'])
+
+    # Get Discord OAuth info for the Discord linking panel
+    discord_oauth_info = get_discord_oauth_info(user['id'])
+
+    # Check if this is a fresh OAuth callback (user just returned from Discord)
+    is_oauth_callback = request.args.get('discord_success') == '1'
+
+    # Clear OAuth progress if not fully linked AND not a fresh callback
+    # (user refreshed page without completing the token verification step)
+    if discord_oauth_info and discord_oauth_info.get('has_oauth') and not discord_oauth_info.get('is_fully_linked'):
+        if not is_oauth_callback:
+            unlink_discord_oauth(user['id'])
+            discord_oauth_info = None
+
+    # Get email validation config for frontend
+    from config import BLACKLISTED_EMAIL_DOMAINS, ALLOWED_EMAIL_TLDS
 
     response = app.make_response(render_template('settings.html',
                                                 user=session['user'],
@@ -1137,14 +1479,183 @@ def settings():
                                                 has_business=has_business,
                                                 is_owner=is_business_owner(user['id']),
                                                 is_admin_user=is_admin_user,
-                                                business_plan_status=business_plan_status))
+                                                business_plan_status=business_plan_status,
+                                                purchase_history=purchase_history,
+                                                discord_oauth_info=discord_oauth_info,
+                                                user_email=user.get('email', ''),
+                                                blacklisted_email_domains=BLACKLISTED_EMAIL_DOMAINS,
+                                                allowed_email_tlds=ALLOWED_EMAIL_TLDS))
     # Prevent caching of settings page
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
 
+@app.route('/api/change-email', methods=['POST'])
+@rate_limit('api')
+def api_change_email():
+    """Initiate email change process - sends verification code to new email."""
+    from flask import jsonify
+    from database import get_user_by_email, create_verification_code
+
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    try:
+        data = request.get_json()
+        new_email = data.get('new_email', '').strip().lower()
+
+        if not new_email:
+            return jsonify({'success': False, 'error': 'Email is required'}), 400
+
+        # Basic email validation
+        import re
+        if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', new_email):
+            return jsonify({'success': False, 'error': 'Invalid email format'}), 400
+
+        # Check against blacklisted domains
+        from config import BLACKLISTED_EMAIL_DOMAINS, ALLOWED_EMAIL_TLDS
+        email_lower = new_email.lower()
+        for blacklisted in BLACKLISTED_EMAIL_DOMAINS:
+            if email_lower.endswith(blacklisted):
+                return jsonify({'success': False, 'error': f'Email domain {blacklisted} is not allowed'}), 400
+
+        # Check if email ends with an allowed TLD
+        if ALLOWED_EMAIL_TLDS:
+            is_allowed = any(email_lower.endswith(tld) for tld in ALLOWED_EMAIL_TLDS)
+            if not is_allowed:
+                return jsonify({'success': False, 'error': 'Email domain is not supported'}), 400
+
+        # Check if email is already in use
+        existing_user = get_user_by_email(new_email)
+        if existing_user:
+            return jsonify({'success': False, 'error': 'Email already in use'}), 400
+
+        # Get current user
+        user = get_user_by_discord_id(session['user']['id'])
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+
+        # Check if same as current email
+        if user.get('email', '').lower() == new_email:
+            return jsonify({'success': False, 'error': 'This is already your email'}), 400
+
+        # Store the new email in session for verification
+        session['pending_email_change'] = new_email
+        session['email_change_user_id'] = user['id']
+
+        # Create verification code for the new email
+        code = create_verification_code(new_email, 'email_change')
+
+        print(f"[EMAIL CHANGE] Verification code for {new_email}: {code}")
+
+        # Return redirect URL to verification page
+        return jsonify({
+            'success': True,
+            'redirect_url': url_for('verify_email_change', email=new_email)
+        }), 200
+
+    except Exception as e:
+        print(f"[ERROR] Email change error: {str(e)}")
+        return jsonify({'success': False, 'error': 'Failed to initiate email change'}), 500
+
+@app.route('/verify-email-change')
+def verify_email_change():
+    """Verification page for email change."""
+    if 'authenticated' not in session:
+        return redirect(url_for('login_page'))
+
+    email = request.args.get('email', '')
+    if not email or 'pending_email_change' not in session:
+        return redirect(url_for('settings'))
+
+    # Get resend status for rate limiting display
+    can_resend, cooldown_seconds, attempts_remaining = get_resend_status(email, 'email_change')
+    code_rate_limited = is_code_rate_limited(email, 'email_change')
+
+    # Get user info for dropdown menu (user is still logged in with their current email)
+    user = get_user_by_discord_id(session['user']['id'])
+    is_admin_user = is_admin(user.get('email')) if user else False
+    has_business = has_business_access(user['id'], session['user']['id']) if user else False
+    is_owner = is_business_owner(user['id']) if user else False
+    plan_status = get_plan_status(user['id']) if user else {}
+
+    return render_template('verify.html',
+                          email=email,
+                          purpose='email_change',
+                          csrf_token=generate_csrf_token(),
+                          cooldown_seconds=cooldown_seconds,
+                          code_rate_limited=code_rate_limited,
+                          is_admin_user=is_admin_user,
+                          has_business=has_business,
+                          is_owner=is_owner,
+                          plan_status=plan_status)
+
+@app.route('/api/verify-email-change', methods=['POST'])
+@rate_limit('api')
+def api_verify_email_change():
+    """Verify email change code and update email."""
+    from flask import jsonify
+    from database import verify_code, update_user_email
+
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    try:
+        data = request.get_json()
+        code = data.get('code', '').strip()
+
+        if not code:
+            return jsonify({'success': False, 'error': 'Code is required'}), 400
+
+        # SECURITY: Get email from session only - never from client input
+        email = session.get('pending_email_change')
+        if not email:
+            return jsonify({'success': False, 'error': 'No pending email change request'}), 400
+
+        # Verify the code
+        success, error_msg, code_rate_limited = verify_code(email, code, 'email_change')
+        if not success:
+            return jsonify({'success': False, 'error': error_msg or 'Invalid or expired code'}), 400
+
+        # Get user
+        user = get_user_by_discord_id(session['user']['id'])
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+
+        # Update the email
+        update_user_email(user['id'], email)
+
+        # Update session
+        session['user']['email'] = email
+
+        # Clear pending email change
+        session.pop('pending_email_change', None)
+        session.pop('email_change_user_id', None)
+
+        print(f"[EMAIL CHANGE] Email changed for user {user['id']} to {email}")
+
+        return jsonify({
+            'success': True,
+            'redirect': url_for('settings')
+        }), 200
+
+    except Exception as e:
+        print(f"[ERROR] Email change verification error: {str(e)}")
+        return jsonify({'success': False, 'error': 'Failed to change email'}), 500
+
 @app.route('/api/cancel-plan', methods=['POST'])
+@rate_limit('api')
 def cancel_plan():
     from flask import jsonify
     from database import cancel_subscription
@@ -1172,7 +1683,40 @@ def cancel_plan():
         print(f"[ERROR] Cancel plan error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/flag-self', methods=['POST'])
+@rate_limit('api')
+def api_flag_self():
+    """Flag the current user for using banned words."""
+    from flask import jsonify
+
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    try:
+        user = get_user_by_discord_id(session['user']['id'])
+        if not user:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+
+        data = request.get_json()
+        words = data.get('words', [])
+
+        # Flag the user with the banned words as reason
+        reason = f"Used banned words: {', '.join(words)}"
+        flag_user(user['id'], reason)
+
+        return jsonify({'success': True}), 200
+
+    except Exception as e:
+        print(f"[ERROR] Flag self error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/save-user-data', methods=['POST'])
+@rate_limit('api')
 def api_save_user_data():
     """Save user's selected channels, draft message, and/or message delay."""
     from flask import jsonify
@@ -1235,6 +1779,45 @@ def api_get_user_data():
         print(f"[ERROR] Get user data error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/status-check', methods=['GET'])
+def status_check():
+    """Real-time status check for user status changes (ban, team, etc.)."""
+    from flask import jsonify
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    try:
+        user = get_user_by_discord_id(session['user']['id'])
+        if not user:
+            return jsonify({'success': False, 'redirect': '/home'}), 401
+
+        # Check ban status
+        is_banned = user.get('is_banned', False)
+
+        # Check team membership status
+        from database import get_business_team_by_member, is_business_plan_owner
+        team = get_business_team_by_member(session['user']['id'])
+        is_team_member = team is not None
+        is_owner = is_business_plan_owner(user['id'])
+
+        # Check if user has any active plan
+        plan_status = get_plan_status(user['id'])
+        has_plan = plan_status.get('has_plan', False) if plan_status else False
+
+        return jsonify({
+            'success': True,
+            'is_banned': is_banned,
+            'is_team_member': is_team_member,
+            'is_owner': is_owner,
+            'has_plan': has_plan
+        }), 200
+
+    except Exception as e:
+        print(f"[ERROR] Status check error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/delete-account', methods=['POST'])
 @rate_limit('api')
 def delete_account():
@@ -1249,16 +1832,22 @@ def delete_account():
     try:
         user_data = session.get('user')
         discord_id = user_data.get('id')
+        user_email = user_data.get('email')
 
-        # Delete user from database (this will cascade delete subscriptions and usage)
-        from database import delete_user
-        delete_user(discord_id)
+        # Get the actual user from database to ensure we have correct ID
+        from database import delete_user, delete_user_by_email, get_user_by_discord_id
+        user = get_user_by_discord_id(discord_id)
 
-        # Clear localStorage data on client side
-        # This is done on the client side after successful deletion
-
-        # Log the deletion
-        print(f"[DELETE] Account deleted: {user_data.get('username')} (ID: {discord_id})")
+        if user:
+            # Delete user from database (this will cascade delete subscriptions and usage)
+            delete_user(discord_id)
+            print(f"[DELETE] Account deleted: {user_data.get('username')} (ID: {discord_id})")
+        elif user_email:
+            # Fallback: delete by email if discord_id lookup fails
+            delete_user_by_email(user_email)
+            print(f"[DELETE] Account deleted by email: {user_data.get('username')} ({user_email})")
+        else:
+            return {'success': False, 'error': 'User not found'}, 404
 
         # Clear session
         session.clear()
@@ -1269,10 +1858,10 @@ def delete_account():
         print(f"[ERROR] Delete account error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
-@app.route('/api/business/add-member', methods=['POST'])
+@app.route('/api/team/add-member', methods=['POST'])
 @rate_limit('api')
-def add_business_member():
-    """Add a member to the business team."""
+def add_team_member_api():
+    """Add a member to the team by email address."""
     # CSRF protection
     csrf_error = check_csrf()
     if csrf_error:
@@ -1287,7 +1876,7 @@ def add_business_member():
             return {'success': False, 'error': 'User not found'}, 404
 
         # Check if user owns a business team
-        from database import get_business_team_by_owner, get_team_member_count, add_team_member
+        from database import get_business_team_by_owner, get_team_member_count, add_team_member, get_user_by_email
         team = get_business_team_by_owner(user['id'])
 
         if not team:
@@ -1297,59 +1886,72 @@ def add_business_member():
         if not data:
             return {'success': False, 'error': 'Invalid request data'}, 400
 
-        member_discord_id = data.get('discord_id')
+        member_email = data.get('email', '').strip().lower()
 
+        if not member_email:
+            return {'success': False, 'error': 'Email address required'}, 400
+
+        # Basic email format validation
+        import re
+        email_regex = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+        if not email_regex.match(member_email):
+            return {'success': False, 'error': 'Invalid email format'}, 400
+
+        # Look up the user by email - they must have an account
+        member_user = get_user_by_email(member_email)
+        if not member_user:
+            return {'success': False, 'error': 'No account found with this email address'}, 404
+
+        # Get the member's discord_id (could be OAuth or email placeholder)
+        member_discord_id = member_user.get('discord_id')
         if not member_discord_id:
-            return {'success': False, 'error': 'Discord ID required'}, 400
+            return {'success': False, 'error': 'User account is incomplete'}, 400
 
-        # Validate Discord ID format
-        if not validate_discord_id(member_discord_id):
-            return {'success': False, 'error': 'Invalid Discord ID format'}, 400
-
-        # Check if trying to add own Discord ID
-        owner_discord_id = session['user']['id']
-        if member_discord_id == owner_discord_id:
+        # Check if trying to add yourself
+        if member_user['id'] == user['id']:
             return {'success': False, 'error': 'Cannot add yourself as a team member'}, 400
 
         # Check if the user being added is banned
-        from database import get_user_by_discord_id as get_user_check
-        member_user = get_user_check(member_discord_id)
-        if member_user and member_user.get('banned', 0) == 1:
+        if member_user.get('banned', 0) == 1:
             return {'success': False, 'error': 'This user is banned and cannot be added to teams'}, 403
 
         # Check if the user being added is a business plan owner themselves
-        if member_user and is_business_owner(member_user['id']):
-            return {'success': False, 'error': 'This user is a business plan owner and cannot be added to other teams'}, 400
+        if is_business_owner(member_user['id']):
+            return {'success': False, 'error': 'This user is a team plan owner and cannot be added to other teams'}, 400
 
         # Check if team is full
         current_count = get_team_member_count(team['id'])
         if current_count >= team['max_members']:
             return {'success': False, 'error': f"Team is full (max {team['max_members']} members)"}, 400
 
-        # Fetch user info from Discord API
-        username, avatar = fetch_discord_user_info(member_discord_id)
+        # Get username and avatar from the user's account or Discord
+        username = member_user.get('username') or member_user.get('email', '').split('@')[0]
+        avatar = member_user.get('avatar', '')
 
-        # If Discord API failed, use fallback values
-        if not username:
-            username = 'Unknown User'
-            avatar = ''
+        # If user has linked Discord OAuth, try to get their Discord info
+        oauth_discord_id = member_user.get('discord_oauth_discord_id')
+        if oauth_discord_id:
+            discord_username, discord_avatar = fetch_discord_user_info(oauth_discord_id)
+            if discord_username:
+                username = discord_username
+                avatar = discord_avatar or avatar
 
-        # Add member with Discord info
+        # Add member with their info
         success = add_team_member(team['id'], member_discord_id, username, avatar)
 
         if success:
             return {'success': True, 'message': 'Member added successfully'}, 200
         else:
-            return {'success': False, 'error': 'Member already exists'}, 400
+            return {'success': False, 'error': 'Member already exists in the team'}, 400
 
     except Exception as e:
         print(f"[ERROR] Add member error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
-@app.route('/api/business/remove-member', methods=['POST'])
+@app.route('/api/team/remove-member', methods=['POST'])
 @rate_limit('api')
-def remove_business_member():
-    """Remove a member from the business team."""
+def remove_team_member_api():
+    """Remove a member from the team."""
     # CSRF protection
     csrf_error = check_csrf()
     if csrf_error:
@@ -1383,9 +1985,9 @@ def remove_business_member():
         print(f"[ERROR] Remove member error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
-@app.route('/api/business/set-team-message', methods=['POST'])
+@app.route('/api/team/set-team-message', methods=['POST'])
 def set_team_message():
-    """Set the team message for business panel."""
+    """Set the team message for team panel."""
     # CSRF protection
     csrf_error = check_csrf()
     if csrf_error:
@@ -1664,15 +2266,15 @@ def admin_panel():
         session.clear()
         return redirect(url_for('login_page'))
 
-    # Check if user is admin
-    if not is_admin(session['user']['id']):
-        return redirect(url_for('home'))
-
-    # Get user from database
+    # Get user from database first
     user = get_user_by_discord_id(session['user']['id'])
     if not user:
         session.clear()
         return redirect(url_for('login_page'))
+
+    # Check if user is admin using database email (not session email which may be stale)
+    if not is_admin(user.get('email')):
+        return redirect(url_for('home'))
 
     plan_status = get_plan_status(user['id'])
     has_business = has_business_access(user['id'], session['user']['id'])
@@ -1697,8 +2299,9 @@ def admin_get_users():
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
-    # Check if user is admin
-    if not is_admin(session['user']['id']):
+    # Get user from database and check if admin using database email
+    user = get_user_by_discord_id(session['user']['id'])
+    if not user or not is_admin(user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
@@ -1712,6 +2315,8 @@ def admin_get_users():
             filters.append('banned')
         if request.args.get('flagged') == 'true':
             filters.append('flagged')
+        if request.args.get('no_discord') == 'true':
+            filters.append('no_discord')
 
         users = get_all_users_for_admin(filters if filters else None)
         return {'success': True, 'users': users}, 200
@@ -1729,8 +2334,9 @@ def admin_search_user():
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
-    # Check if user is admin
-    if not is_admin(session['user']['id']):
+    # Get user from database and check if admin using database email
+    admin_user = get_user_by_discord_id(session['user']['id'])
+    if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
@@ -1753,7 +2359,7 @@ def admin_search_user():
         user['has_plan'] = 1 if subscription else 0
 
         # Check if user is admin
-        user['is_admin'] = is_admin(discord_id)
+        user['is_admin'] = is_admin(user.get('email'))
 
         # Fetch fresh Discord profile info
         username, avatar = fetch_discord_user_info(discord_id)
@@ -1776,8 +2382,9 @@ def admin_get_user_details(user_id):
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
-    # Check if user is admin
-    if not is_admin(session['user']['id']):
+    # Get user from database and check if admin using database email
+    admin_user = get_user_by_discord_id(session['user']['id'])
+    if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
@@ -1812,14 +2419,15 @@ def admin_ban_user(user_id):
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
-    # Check if user is admin
-    if not is_admin(session['user']['id']):
+    # Get user from database and check if admin using database email
+    admin_user = get_user_by_discord_id(session['user']['id'])
+    if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
         # Prevent banning admin users (server-side protection)
         target_user = get_user_by_id(user_id)
-        if target_user and is_admin(target_user['discord_id']):
+        if target_user and is_admin(target_user.get('email')):
             return {'success': False, 'error': 'Cannot ban admin users'}, 403
 
         ban_user(user_id)
@@ -1841,8 +2449,9 @@ def admin_unban_user(user_id):
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
-    # Check if user is admin
-    if not is_admin(session['user']['id']):
+    # Get user from database and check if admin using database email
+    admin_user = get_user_by_discord_id(session['user']['id'])
+    if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
@@ -1865,8 +2474,9 @@ def admin_flag_user(user_id):
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
-    # Check if user is admin
-    if not is_admin(session['user']['id']):
+    # Get user from database and check if admin using database email
+    admin_user = get_user_by_discord_id(session['user']['id'])
+    if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
@@ -1889,8 +2499,9 @@ def admin_unflag_user(user_id):
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
-    # Check if user is admin
-    if not is_admin(session['user']['id']):
+    # Get user from database and check if admin using database email
+    admin_user = get_user_by_discord_id(session['user']['id'])
+    if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
@@ -1913,14 +2524,15 @@ def admin_delete_user(user_id):
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
-    # Check if user is admin
-    if not is_admin(session['user']['id']):
+    # Get user from database and check if admin using database email
+    admin_user = get_user_by_discord_id(session['user']['id'])
+    if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
         # Prevent deleting admin users (server-side protection)
         target_user = get_user_by_id(user_id)
-        if target_user and is_admin(target_user['discord_id']):
+        if target_user and is_admin(target_user.get('email')):
             return {'success': False, 'error': 'Cannot delete admin users'}, 403
 
         delete_user_account_admin(user_id)
@@ -1936,8 +2548,9 @@ def admin_get_user_message(user_id):
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
-    # Check if user is admin
-    if not is_admin(session['user']['id']):
+    # Get user from database and check if admin using database email
+    admin_user = get_user_by_discord_id(session['user']['id'])
+    if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
@@ -1959,8 +2572,9 @@ def admin_get_team_message(user_id):
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
-    # Check if user is admin
-    if not is_admin(session['user']['id']):
+    # Get user from database and check if admin using database email
+    admin_user = get_user_by_discord_id(session['user']['id'])
+    if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
@@ -1986,15 +2600,349 @@ def admin_get_team_message(user_id):
         print(f"[ERROR] Admin get team message error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
+@app.route('/api/admin/user/<int:user_id>/billing-history', methods=['GET'])
+def admin_get_billing_history(user_id):
+    """Get user's complete billing/subscription history."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Get user from database and check if admin using database email
+    admin_user = get_user_by_discord_id(session['user']['id'])
+    if not admin_user or not is_admin(admin_user.get('email')):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        from database import get_purchase_history
+        history = get_purchase_history(user_id)
+        return {'success': True, 'history': history, 'has_history': len(history) > 0}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin get billing history error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+@app.route('/api/admin/user/<int:user_id>/plan-status', methods=['GET'])
+def admin_get_user_plan_status(user_id):
+    """Get user's plan status including usage and reset info."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    # Get user from database and check if admin using database email
+    admin_user = get_user_by_discord_id(session['user']['id'])
+    if not admin_user or not is_admin(admin_user.get('email')):
+        return {'success': False, 'error': 'Unauthorized'}, 403
+
+    try:
+        from database import get_plan_status
+        plan_status = get_plan_status(user_id)
+        return {'success': True, 'plan_status': plan_status}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Admin get plan status error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+# =============================================================================
+# DISCORD OAUTH ACCOUNT LINKING ROUTES
+# =============================================================================
+
+def get_session_user_id():
+    """Get user_id from session, with fallback lookup if missing."""
+    if 'user_id' in session:
+        return session['user_id']
+
+    # Fallback: look up user_id from session['user']['id'] (discord_id)
+    if 'user' in session and 'id' in session['user']:
+        discord_id = session['user']['id']
+        print(f"[DEBUG] Looking up user by discord_id: {discord_id}")
+        user = get_user_by_discord_id(discord_id)
+        if user:
+            print(f"[DEBUG] Found user with id: {user['id']}")
+            session['user_id'] = user['id']  # Cache it for future requests
+            return user['id']
+        else:
+            print(f"[DEBUG] No user found for discord_id: {discord_id}")
+
+    print(f"[DEBUG] Session contents: {dict(session)}")
+    return None
+
+@app.route('/api/discord/auth-url')
+def discord_auth_url():
+    """Generate Discord OAuth2 authorization URL."""
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    if not DISCORD_CLIENT_ID:
+        return {'error': 'Discord OAuth not configured'}, 500
+
+    # Generate a random state parameter for CSRF protection
+    state = secrets.token_urlsafe(32)
+    session['discord_oauth_state'] = state
+
+    # Build OAuth2 authorization URL
+    params = {
+        'client_id': DISCORD_CLIENT_ID,
+        'redirect_uri': DISCORD_OAUTH_REDIRECT_URI,
+        'response_type': 'code',
+        'scope': 'identify',
+        'state': state
+    }
+
+    auth_url = f'https://discord.com/api/oauth2/authorize?{urlencode(params)}'
+    return {'success': True, 'auth_url': auth_url}
+
+
+@app.route('/discord/callback')
+def discord_oauth_callback():
+    """Handle Discord OAuth2 callback."""
+    user_id = get_session_user_id()
+    if not user_id:
+        return redirect(url_for('login_page'))
+
+    # Verify state parameter
+    state = request.args.get('state')
+    stored_state = session.pop('discord_oauth_state', None)
+
+    if not state or state != stored_state:
+        return render_template('settings.html', error='Invalid OAuth state. Please try again.')
+
+    # Check for error response
+    error = request.args.get('error')
+    if error:
+        return redirect(url_for('settings') + '?discord_error=Authorization%20cancelled')
+
+    # Get authorization code
+    code = request.args.get('code')
+    if not code:
+        return redirect(url_for('settings') + '?discord_error=No%20authorization%20code')
+
+    # Exchange code for access token
+    token_url = f'{DISCORD_API_BASE}/oauth2/token'
+    token_data = {
+        'client_id': DISCORD_CLIENT_ID,
+        'client_secret': DISCORD_CLIENT_SECRET,
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': DISCORD_OAUTH_REDIRECT_URI
+    }
+
+    try:
+        token_response = requests.post(token_url, data=token_data, timeout=10)
+
+        if token_response.status_code != 200:
+            print(f"[DISCORD OAUTH] Token exchange failed: {token_response.text}")
+            return redirect(url_for('settings') + '?discord_error=Failed%20to%20get%20access%20token')
+
+        token_json = token_response.json()
+        access_token = token_json.get('access_token')
+        refresh_token = token_json.get('refresh_token')
+        expires_in = token_json.get('expires_in', 604800)  # Default 7 days
+        expires_at = (datetime.now() + timedelta(seconds=expires_in)).isoformat()
+
+        # Get user info from Discord
+        user_response = requests.get(
+            f'{DISCORD_API_BASE}/users/@me',
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10
+        )
+
+        if user_response.status_code != 200:
+            print(f"[DISCORD OAUTH] Failed to get user info: {user_response.text}")
+            return redirect(url_for('settings') + '?discord_error=Failed%20to%20get%20user%20info')
+
+        discord_user = user_response.json()
+        discord_id = discord_user.get('id')
+        username = discord_user.get('username')
+        avatar = discord_user.get('avatar')
+
+        # Save OAuth data to database (user_id already retrieved at top of function)
+        save_discord_oauth(user_id, discord_id, username, avatar, access_token, refresh_token, expires_at)
+
+        # Redirect back to settings with success message
+        return redirect(url_for('settings') + '?discord_success=1')
+
+    except requests.exceptions.Timeout:
+        return redirect(url_for('settings') + '?discord_error=Connection%20timeout')
+    except Exception as e:
+        print(f"[DISCORD OAUTH] Error: {str(e)}")
+        return redirect(url_for('settings') + '?discord_error=An%20error%20occurred')
+
+
+@app.route('/api/discord/status')
+def discord_status():
+    """Get Discord OAuth linking status."""
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    oauth_info = get_discord_oauth_info(user_id)
+
+    if not oauth_info:
+        return {'error': 'User not found'}, 404
+
+    return {
+        'success': True,
+        'is_fully_linked': oauth_info['is_fully_linked'],
+        'has_oauth': oauth_info['has_oauth'],
+        'oauth_discord_id': oauth_info['oauth_discord_id'],
+        'oauth_username': oauth_info['oauth_username'],
+        'oauth_avatar': oauth_info['oauth_avatar'],
+        'linked_discord_id': oauth_info['linked_discord_id'],
+        'linked_username': oauth_info['linked_username'],
+        'linked_avatar': oauth_info['linked_avatar']
+    }
+
+
+@app.route('/api/discord/verify-token', methods=['POST'])
+@rate_limit('discord_token_verify')
+def discord_verify_token():
+    """Verify that provided token matches the OAuth account."""
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    data = request.get_json()
+    if not data:
+        return {'error': 'No data provided'}, 400
+
+    token = data.get('token', '').strip()
+    if not token:
+        return {'error': 'Token is required'}, 400
+
+    # Validate token format
+    if not validate_discord_token(token):
+        return {'error': 'Token must match the Discord account you authorized above'}, 400
+
+    # Get OAuth info to compare Discord IDs
+    oauth_info = get_discord_oauth_info(user_id)
+    if not oauth_info or not oauth_info['has_oauth']:
+        return {'error': 'Please complete Discord authorization first'}, 400
+
+    expected_discord_id = oauth_info['oauth_discord_id']
+
+    # Verify token against Discord API
+    try:
+        headers = {'Authorization': token}
+        response = requests.get(f'{DISCORD_API_BASE}/users/@me', headers=headers, timeout=10)
+
+        if response.status_code == 401:
+            return {'error': 'Invalid token'}, 400
+
+        if response.status_code != 200:
+            return {'error': 'Failed to verify token'}, 400
+
+        user_data = response.json()
+        token_discord_id = user_data.get('id')
+
+        # Check if token's Discord ID matches OAuth Discord ID
+        if token_discord_id != expected_discord_id:
+            return {
+                'error': f'Token does not match authorized account. Expected account: {oauth_info["oauth_username"]}',
+                'mismatch': True
+            }, 400
+
+        return {'success': True, 'message': 'Token verified successfully'}
+
+    except requests.exceptions.Timeout:
+        return {'error': 'Connection timeout'}, 500
+    except Exception as e:
+        print(f"[DISCORD TOKEN VERIFY] Error: {str(e)}")
+        return {'error': 'An error occurred'}, 500
+
+
+@app.route('/api/discord/link', methods=['POST'])
+@rate_limit('discord_link')
+def discord_link():
+    """Complete Discord account linking with verified token."""
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    data = request.get_json()
+    if not data:
+        return {'error': 'No data provided'}, 400
+
+    token = data.get('token', '').strip()
+    if not token:
+        return {'error': 'Token is required'}, 400
+
+    # Get OAuth info
+    oauth_info = get_discord_oauth_info(user_id)
+    if not oauth_info or not oauth_info['has_oauth']:
+        return {'error': 'Please complete Discord authorization first'}, 400
+
+    expected_discord_id = oauth_info['oauth_discord_id']
+
+    # Verify token one more time before linking
+    try:
+        headers = {'Authorization': token}
+        response = requests.get(f'{DISCORD_API_BASE}/users/@me', headers=headers, timeout=10)
+
+        if response.status_code != 200:
+            return {'error': 'Token verification failed'}, 400
+
+        user_data = response.json()
+        token_discord_id = user_data.get('id')
+
+        if token_discord_id != expected_discord_id:
+            return {'error': 'Token does not match authorized account'}, 400
+
+        # Complete the linking
+        success, error = complete_discord_link(user_id, token)
+        if not success:
+            return {'error': error or 'Failed to link account'}, 500
+
+        # Update session with new Discord info
+        session['user'] = {
+            'id': oauth_info['oauth_discord_id'],
+            'username': oauth_info['oauth_username'],
+            'avatar': oauth_info['oauth_avatar']
+        }
+        session.modified = True
+
+        return {'success': True, 'message': 'Discord account linked successfully'}
+
+    except requests.exceptions.Timeout:
+        return {'error': 'Connection timeout'}, 500
+    except Exception as e:
+        print(f"[DISCORD LINK] Error: {str(e)}")
+        return {'error': 'An error occurred'}, 500
+
+
+@app.route('/api/discord/unlink', methods=['POST'])
+def discord_unlink():
+    """Fully unlink Discord account."""
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    full_unlink_discord_account(user_id)
+
+    return {'success': True, 'message': 'Discord account unlinked successfully.'}
+
+
 @app.route('/logout')
 def logout():
     session.clear()
     response = app.make_response(render_template('logout.html'))
-    # Prevent caching to avoid going back to dashboard after logout
+    # Prevent caching to avoid going back to personal panel after logout
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Use environment variable for debug mode (default: False for production safety)
+    debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
+    app.run(debug=debug_mode)

@@ -96,24 +96,12 @@ def rate_limit(limit_type='general'):
     """
     Decorator for rate limiting endpoints.
     Usage: @rate_limit('login')
+    NOTE: Rate limiting disabled - passes through all requests.
     """
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            ip = get_client_ip()
-            max_requests, window = RATE_LIMITS.get(limit_type, RATE_LIMITS['general'])
-
-            is_limited, remaining, reset_time = rate_limiter.is_rate_limited(
-                f"{ip}:{limit_type}", max_requests, window
-            )
-
-            if is_limited:
-                retry_after = int(reset_time - time.time())
-                return {
-                    'error': 'Too many requests. Please slow down.',
-                    'retry_after': retry_after
-                }, 429
-
+            # Rate limiting disabled - pass through all requests
             return f(*args, **kwargs)
         return decorated_function
     return decorator

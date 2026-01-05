@@ -4,6 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ site_config.page_titles.home }}</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="{{ get_page_description('home') }}">
+
+    <!-- Open Graph / Facebook -->
+    {% set embed = get_page_embed('home') %}
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ embed.title }}">
+    <meta property="og:description" content="{{ embed.description }}">
+    {% if embed.image %}
+    <meta property="og:image" content="{{ url_for('static', filename=embed.image, _external=True) }}">
+    {% endif %}
+    <meta name="theme-color" content="{{ embed.color }}">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ embed.title }}">
+    <meta name="twitter:description" content="{{ embed.description }}">
+    {% if embed.image %}
+    <meta name="twitter:image" content="{{ url_for('static', filename=embed.image, _external=True) }}">
+    {% endif %}
+
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
@@ -30,6 +52,10 @@
             height: calc(100vh - 60px);
             pointer-events: none;
             z-index: 1;
+            /* Prevent mobile viewport shift issues */
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            will-change: transform;
         }
 
         .panel {
@@ -70,24 +96,12 @@
                         </svg>
                     </div>
                     <div class="navbar-text">
-                        <h1 class="navbar-title">{{ site_title }}</h1>
+                        <h1 class="navbar-title">Ad <span class="gradient-z">Z</span> send</h1>
                         <p class="navbar-subtitle">{{ site_subtitle }}</p>
                     </div>
                 </div>
                 <div class="nav-right">
-                    {% if session.get('user') %}
-                        <div class="user-info">
-                            {% if session['user'].avatar %}
-                                <img src="https://cdn.discordapp.com/avatars/{{ session['user'].id }}/{{ session['user'].avatar }}.png" alt="{{ session['user'].username }}" class="user-avatar">
-                            {% else %}
-                                <div class="user-avatar-placeholder">{{ session['user'].username[0].upper() }}</div>
-                            {% endif %}
-                            <div class="user-details">
-                                <div class="username">{{ session['user'].username }}</div>
-                                <div class="user-id">{{ session['user'].id }}</div>
-                            </div>
-                        </div>
-                    {% else %}
+                    {% if not session.get('user') %}
                         <div class="auth-buttons">
                             <a href="{{ url_for('login_page') }}" class="auth-btn login-btn">{{ auth_labels.login }}</a>
                             <a href="{{ url_for('signup_page') }}" class="auth-btn signup-btn">{{ auth_labels.signup }}</a>
@@ -101,14 +115,14 @@
                 <a href="{{ url_for('home') }}" class="dropdown-item">{{ nav_labels.home }}</a>
                 <a href="{{ url_for('purchase') }}" class="dropdown-item">{{ nav_labels.purchase }}</a>
                 {% if session.get('user') %}
-                    {% if plan_status and plan_status.has_plan and not (plan_status.plan_id and plan_status.plan_id.startswith('business_')) %}
+                    {% if not (plan_status and plan_status.plan_id and plan_status.plan_id.startswith('team_plan_')) %}
                         <a href="{{ url_for('panel') }}" class="dropdown-item">{{ nav_labels.panel }}</a>
                     {% endif %}
                     {% if has_business %}
                     {% if is_owner %}
-                    <a href="{{ url_for('business_management') }}" class="dropdown-item">{{ nav_labels.business_management }}</a>
+                    <a href="{{ url_for('team_management') }}" class="dropdown-item">{{ nav_labels.team_management }}</a>
                     {% endif %}
-                    <a href="{{ url_for('business_panel') }}" class="dropdown-item">{{ nav_labels.business_panel }}</a>
+                    <a href="{{ url_for('team_panel') }}" class="dropdown-item">{{ nav_labels.team_panel }}</a>
                     {% endif %}
                     <a href="{{ url_for('settings') }}" class="dropdown-item">{{ nav_labels.settings }}</a>
                     {% if is_admin_user %}
@@ -153,18 +167,68 @@
             <h2 class="about-title">{{ about_title }}</h2>
             <p class="about-description">{{ about_description }}</p>
         </section>
+
+        <!-- Why Discord Section -->
+        <section class="why-discord-section">
+            <!-- Wumpus Character - at top edge -->
+            <div class="wumpus-container">
+                <div class="wumpus-character">
+                    <div class="wumpus-leaf">
+                        <img src="{{ url_for('static', filename='WumpusLeaf.png') }}" alt="Leaf">
+                    </div>
+                    <img src="{{ url_for('static', filename='WumpusDiscord.png') }}" alt="Wumpus">
+                </div>
+            </div>
+
+            <h2 class="why-discord-title">{{ why_discord_title }}</h2>
+
+            <!-- Discord Branding - Logo only -->
+            <div class="discord-branding">
+                <img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord Logo" class="discord-logo">
+            </div>
+
+            <!-- Discord Stats -->
+            <div class="discord-stats">
+                {% for stat in why_discord_stats %}
+                <div class="discord-stat-item">
+                    <div class="stat-number" data-target="{{ stat.value }}">0</div>
+                    <div class="stat-label">{{ stat.label }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Benefits Grid -->
+            <div class="discord-benefits-grid">
+                {% for benefit in why_discord_benefits %}
+                <div class="benefit-card">
+                    <h3 class="benefit-title">{{ benefit.title }}</h3>
+                    <p class="benefit-description">{{ benefit.description }}</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Large Wordmark at bottom -->
+            <img src="{{ url_for('static', filename='Wordmark.svg') }}" alt="Discord" class="discord-wordmark-bottom">
+        </section>
     </div>
 
     <!-- Lightbox -->
     <div class="lightbox" id="lightbox" onclick="closeLightboxOnBackground(event)">
+        <!-- Close button - fixed position at top -->
+        <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+
+        <!-- Main content wrapper -->
         <div class="lightbox-content">
-            <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
             <button class="lightbox-nav lightbox-prev" onclick="prevImage(event)">&larr;</button>
-            <img id="lightbox-img" src="" alt="Panel Screenshot">
-            <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">&rarr;</button>
-            <div class="lightbox-counter">
-                <span id="current-index">1</span> / <span id="total-images">{{ gallery_images|length }}</span>
+            <div class="lightbox-image-wrapper">
+                <img id="lightbox-img" src="" alt="Panel Screenshot">
             </div>
+            <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">&rarr;</button>
+        </div>
+
+        <!-- Counter - fixed position at bottom center -->
+        <div class="lightbox-counter">
+            <span id="current-index">1</span> / <span id="total-images">{{ gallery_images|length }}</span>
         </div>
     </div>
 
@@ -226,6 +290,18 @@
 
         // Start slideshow
         requestAnimationFrame(slideshowLoop);
+
+        // Pause leaf animation when tab is hidden (matches slideshow behavior)
+        const wumpusLeaf = document.querySelector('.wumpus-leaf');
+        if (wumpusLeaf) {
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    wumpusLeaf.style.animationPlayState = 'paused';
+                } else {
+                    wumpusLeaf.style.animationPlayState = 'running';
+                }
+            });
+        }
 
         // Gallery Lightbox
         const images = [
@@ -291,6 +367,66 @@
             }
         });
 
+        // Count-up animation for Discord stats (multiple items)
+        (function() {
+            const statNumbers = document.querySelectorAll('.stat-number[data-target]');
+            if (statNumbers.length === 0) return;
+
+            statNumbers.forEach(function(statNumber) {
+                let hasAnimated = false;
+                const targetValue = statNumber.dataset.target; // e.g., "250M+"
+
+                // Parse the numeric part and suffix
+                const match = targetValue.match(/^(\d+(?:\.\d+)?)(.*)/);
+                if (!match) {
+                    statNumber.textContent = targetValue;
+                    return;
+                }
+
+                const numericValue = parseFloat(match[1]);
+                const suffix = match[2]; // e.g., "M+"
+
+                function animateCount() {
+                    if (hasAnimated) return;
+                    hasAnimated = true;
+
+                    const duration = 1800; // 1.8 seconds for smoother animation
+                    const startTime = performance.now();
+
+                    function update(currentTime) {
+                        const elapsed = currentTime - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+
+                        // Smooth ease-out with less aggressive deceleration
+                        const easeOut = 1 - Math.pow(1 - progress, 2);
+                        const currentValue = Math.round(numericValue * easeOut);
+
+                        statNumber.textContent = currentValue + suffix;
+
+                        if (progress < 1) {
+                            requestAnimationFrame(update);
+                        } else {
+                            statNumber.textContent = targetValue; // Ensure final value is exact
+                        }
+                    }
+
+                    requestAnimationFrame(update);
+                }
+
+                // Use Intersection Observer to trigger animation when visible
+                const observer = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting) {
+                            animateCount();
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.5 }); // Trigger when 50% visible
+
+                observer.observe(statNumber);
+            });
+        })();
+
         // Liquid push effect
         (function() {
             const canvas = document.getElementById('ripple-canvas');
@@ -300,6 +436,8 @@
             let mouseX = -1000;
             let mouseY = -1000;
             let particles = [];
+            let isScrolling = false;
+            let scrollTimeout = null;
 
             // Detect mobile and reduce particle count for performance
             const isMobile = window.innerWidth <= 768;
@@ -308,11 +446,74 @@
             const pushStrength = 0.15;
             const connectionDistance = isMobile ? 40 : 60;
 
+            // Get proper viewport dimensions accounting for mobile browsers
+            function getViewportHeight() {
+                // Use visualViewport if available (better for mobile)
+                if (window.visualViewport) {
+                    return window.visualViewport.height;
+                }
+                return window.innerHeight;
+            }
+
+            // Track last known dimensions and zoom level
+            let lastWidth = 0;
+            let lastHeight = 0;
+            let lastDpr = window.devicePixelRatio || 1;
+            let resizeTimeout = null;
+
             // Resize canvas to viewport size (fixed positioning)
             function resizeCanvas() {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight - navbarHeight;
+                // Get the CSS pixel dimensions
+                const cssWidth = window.innerWidth;
+                const cssHeight = getViewportHeight() - navbarHeight;
+                const currentDpr = window.devicePixelRatio || 1;
+
+                // Check if dimensions or zoom level actually changed
+                const dimensionsChanged = Math.abs(cssWidth - lastWidth) > 1 || Math.abs(cssHeight - lastHeight) > 1;
+                const zoomChanged = Math.abs(currentDpr - lastDpr) > 0.01;
+
+                if (!dimensionsChanged && !zoomChanged) {
+                    return;
+                }
+
+                const isFirstInit = lastWidth === 0;
+
+                lastWidth = cssWidth;
+                lastHeight = cssHeight;
+                lastDpr = currentDpr;
+
+                // Set canvas internal resolution to match CSS size
+                // Don't scale by devicePixelRatio - keeps particle sizes consistent
+                canvas.width = cssWidth;
+                canvas.height = cssHeight;
+
+                // Ensure canvas CSS dimensions match exactly
+                canvas.style.width = cssWidth + 'px';
+                canvas.style.height = cssHeight + 'px';
+
+                // Always reinitialize particles on resize/zoom to maintain consistent density
+                // This prevents clumping or spreading issues when zooming
                 initParticles();
+            }
+
+            // Debounced resize to prevent jitter during zoom
+            function debouncedResize() {
+                if (resizeTimeout) {
+                    clearTimeout(resizeTimeout);
+                }
+                resizeTimeout = setTimeout(resizeCanvas, 50);
+            }
+
+            // Force immediate resize when zoom ends (after debounce period)
+            function handleZoomEnd() {
+                if (resizeTimeout) {
+                    clearTimeout(resizeTimeout);
+                }
+                resizeTimeout = setTimeout(function() {
+                    // Force update by resetting lastDpr but keep particle scaling
+                    lastDpr = -1;
+                    resizeCanvas();
+                }, 200);
             }
 
             // Particle class
@@ -402,8 +603,41 @@
             }
 
             resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
+            window.addEventListener('resize', debouncedResize);
             window.addEventListener('load', resizeCanvas);
+
+            // Listen for zoom changes via matchMedia (modern browsers)
+            // This catches zoom changes that don't trigger resize events
+            if (window.matchMedia) {
+                // Create a media query that detects resolution/zoom changes
+                const zoomMediaQuery = window.matchMedia('(resolution: ' + window.devicePixelRatio + 'dppx)');
+                zoomMediaQuery.addEventListener('change', handleZoomEnd);
+            }
+
+            // Use visualViewport resize event for mobile if available
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', debouncedResize);
+                window.visualViewport.addEventListener('scroll', debouncedResize);
+            }
+
+            // Track scrolling state to disable interactions during scroll on mobile
+            if (isMobile) {
+                window.addEventListener('scroll', function() {
+                    isScrolling = true;
+                    mouseX = -1000;
+                    mouseY = -1000;
+
+                    // Clear previous timeout
+                    if (scrollTimeout) {
+                        clearTimeout(scrollTimeout);
+                    }
+
+                    // Re-enable interactions after scrolling stops
+                    scrollTimeout = setTimeout(function() {
+                        isScrolling = false;
+                    }, 150);
+                }, { passive: true });
+            }
 
             // Track mouse movement (only below navbar)
             document.addEventListener('mousemove', function(e) {
@@ -416,8 +650,11 @@
                 }
             });
 
-            // Track touch movement for mobile
+            // Track touch movement for mobile (disabled during scrolling)
             document.addEventListener('touchmove', function(e) {
+                // Don't update particle interaction during scrolling
+                if (isScrolling) return;
+
                 const touch = e.touches[0];
                 if (touch.clientY > navbarHeight) {
                     mouseX = touch.clientX;
@@ -426,6 +663,9 @@
             }, { passive: true });
 
             document.addEventListener('touchstart', function(e) {
+                // Don't update particle interaction during scrolling
+                if (isScrolling) return;
+
                 const touch = e.touches[0];
                 if (touch.clientY > navbarHeight) {
                     mouseX = touch.clientX;

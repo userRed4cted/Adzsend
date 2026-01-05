@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Management - Adzsend</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
+    {% include 'partials/config_styles.html' %}
+    <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
+    <script src="{{ url_for('static', filename='status_polling.js') }}"></script>
+    <script>
+        window.DB_VERSION = {{ db_version }};
+        window.DB_WIPE_MESSAGE = "{{ db_wipe_message }}";
+    </script>
+    <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
+    <script src="{{ url_for('static', filename='custom_modals.js') }}"></script>
+</head>
+<body>
+    <div class="panel">
+        <nav class="navbar">
+            <div class="navbar-content">
+                <div class="navbar-left">
+                    <div class="menu-icon" id="menu-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </div>
+                    <div class="navbar-text">
+                        <h1 class="navbar-title">Ad <span class="gradient-z">Z</span> send</h1>
+                        <p class="navbar-subtitle">Manage your team and set a message for your team to use</p>
+                    </div>
+                </div>
+                <div class="nav-right"></div>
+            </div>
+
+            <!-- Dropdown Menu -->
+            <div class="dropdown-menu" id="dropdown-menu">
+                <a href="{{ url_for('home') }}" class="dropdown-item">Home</a>
+                <a href="{{ url_for('purchase') }}" class="dropdown-item">Purchase</a>
+                {% if not (plan_status and plan_status.plan_id and plan_status.plan_id.startswith('team_plan_')) %}
+                <a href="{{ url_for('panel') }}" class="dropdown-item">Personal Panel</a>
+                {% endif %}
+                {% if has_business %}
+                {% if is_owner %}
+                <a href="{{ url_for('team_management') }}" class="dropdown-item">Team Management</a>
+                {% endif %}
+                <a href="{{ url_for('team_panel') }}" class="dropdown-item">Team Panel</a>
+                {% endif %}
+                <a href="{{ url_for('settings') }}" class="dropdown-item">Settings</a>
+                {% if is_admin_user %}
+                <a href="{{ url_for('admin_panel') }}" class="dropdown-item">Admin</a>
+                {% endif %}
+                <div class="dropdown-divider"></div>
+                <a href="https://discord.gg/KWt6rvCukp" target="_blank" class="dropdown-item discord-item">Discord Server</a>
+                <a href="{{ url_for('logout') }}" class="dropdown-item logout-item">Logout</a>
+            </div>
+        </nav>
+
+        <div class="panel-container">
+            {% if is_banned %}
+            <!-- Banned User Overlay -->
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1000; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1rem;">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#991a35" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                </svg>
+                <h2 style="color: #991a35; margin: 0;">Account Banned</h2>
+                <p style="color: #949BA4; margin: 0; text-align: center; max-width: 400px;">Your account has been banned from using the panel. If you believe this is a mistake, please contact support.</p>
+            </div>
+            {% endif %}
+
+            <div class="main-layout">
+                <!-- Left Panel: Team Members -->
+                <div class="selection-panel">
+                    <div class="unified-header">
+                        <div class="header-section">
+                            <div class="panel-header">Team Members ({{ active_member_count }}/{{ team.max_members }})</div>
+                        </div>
+                    </div>
+
+                    <!-- Add Member Section -->
+                    <div style="padding: 0.75rem 1rem; flex-shrink: 0;">
+                        <div class="panel-subheader" style="margin-bottom: 0.5rem; color: #dcddde;">Add Team Member</div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="email" id="member-email" class="search-input" placeholder="Enter member's email address..." style="flex: 1;">
+                            <button id="add-member-btn" class="send-button" style="padding: 0 1rem; height: 40px; min-width: 80px;">Add</button>
+                        </div>
+                    </div>
+
+                    <!-- Team Members List -->
+                    <div class="channels-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding-top: 0;">
+                        <div class="panel-header" style="padding: 0 1rem; margin-bottom: 0.5rem; margin-top: 0;">Team Members</div>
+                        <div id="members-list" class="channels-list">
+                            {% if members|length == 0 %}
+                                <div class="no-selection">No team members yet</div>
+                            {% else %}
+                                {% for member in members %}
+                                    <div class="team-member-item" data-discord-id="{{ member.member_discord_id }}">
+                                        <div class="member-avatar">
+                                            {% if member.member_avatar %}
+                                                <img src="https://cdn.discordapp.com/avatars/{{ member.member_discord_id }}/{{ member.member_avatar }}.png" alt="{{ member.member_username }}">
+                                            {% else %}
+                                                <div class="member-avatar-placeholder">{{ member.member_username[0].upper() if member.member_username else '?' }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="member-info">
+                                            <div class="member-username">{{ member.member_username or 'Unknown User' }}</div>
+                                            <div class="member-email">{{ member.member_email or 'No email' }}</div>
+                                        </div>
+                                        {% set status = member.invitation_status or 'pending' %}
+                                        {% if status == 'pending' %}
+                                            <span class="status-tag status-pending">Pending</span>
+                                        {% elif status == 'accepted' %}
+                                            <span class="status-tag status-accepted">Team member</span>
+                                        {% elif status == 'denied' %}
+                                            <span class="status-tag status-denied">Denied request</span>
+                                            <button class="member-remove-btn member-remove-from-list" data-member-id="{{ member.id }}">Remove from list</button>
+                                        {% elif status == 'owns_team' %}
+                                            <span class="status-tag status-owns-team">Owns Team</span>
+                                            <button class="member-remove-btn member-remove-from-list" data-member-id="{{ member.id }}">Remove from list</button>
+                                        {% elif status == 'left' %}
+                                            <span class="status-tag status-left">Left team</span>
+                                            <button class="member-remove-btn member-remove-from-list" data-member-id="{{ member.id }}">Remove from list</button>
+                                        {% elif status == 'banned' %}
+                                            <span class="status-tag status-banned">Banned</span>
+                                            <button class="member-remove-btn member-remove-from-list" data-member-id="{{ member.id }}">Remove from list</button>
+                                        {% endif %}
+                                        {% if status not in ['denied', 'left', 'banned', 'owns_team'] %}
+                                            <button class="member-remove-btn" data-discord-id="{{ member.member_discord_id }}">✕</button>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Team Message -->
+                <div class="action-panel">
+                    <div class="unified-header">
+                        <div class="header-section">
+                            <div class="panel-header">Team Advertisement Message</div>
+                        </div>
+                    </div>
+
+                    <!-- Message Section -->
+                    <div class="message-section" style="display: flex; flex-direction: column; padding: 1rem; gap: 1rem; flex: 0.5;">
+                        <div class="panel-subheader" style="margin-bottom: 0.5rem; color: #dcddde;">
+                            This message will be used by all team members when sending from Team Panel
+                        </div>
+                        <textarea id="team-message-input" class="message-input" placeholder="Enter the message your team will be using, leaving this empty or setting the team message whilst empty will result in team members not being able to send anything..." maxlength="2000" style="flex: 1; margin-bottom: 0.5rem;">{{ team.team_message or '' }}</textarea>
+                        <div class="message-footer">
+                            <span class="char-count"><span id="char-count">{{ (team.team_message or '')|length }}</span>/2000</span>
+                            <button id="set-message-btn" class="send-button">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                    <polyline points="7 3 7 8 15 8"></polyline>
+                                </svg>
+                                Set Team Message
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Member Statistics Section -->
+                    <div class="member-stats-section" style="display: flex; flex-direction: column; gap: 0.75rem; flex: 0.5; min-height: 0;">
+                        <div class="panel-header" style="padding: 0 1rem; margin-bottom: 0.5rem; margin-top: 0.75rem;">Team Member Statistics</div>
+                        <div id="member-stats-list" class="member-stats-list">
+                            {% if member_stats|length == 0 %}
+                                <div class="no-selection">No team members yet</div>
+                            {% else %}
+                                {% for stat in member_stats %}
+                                    <div class="member-stat-item">
+                                        <div class="member-stat-avatar">
+                                            {% if stat.member_avatar %}
+                                                <img src="https://cdn.discordapp.com/avatars/{{ stat.member_discord_id }}/{{ stat.member_avatar }}.png" alt="{{ stat.member_username }}">
+                                            {% else %}
+                                                <div class="member-avatar-placeholder">{{ stat.member_username[0].upper() if stat.member_username else '?' }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="member-stat-info">
+                                            <div class="member-stat-username">{{ stat.member_username or 'Unknown User' }}</div>
+                                            <div class="member-stat-id">ID: {{ stat.member_discord_id }}</div>
+                                        </div>
+                                        <div class="member-stat-usage">
+                                            <div class="stat-number">{{ stat.business_all_time_sent }}</div>
+                                            <div class="stat-label">Messages Sent</div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .team-member-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: #212227;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .team-member-item:hover {
+            background: #2a2b32;
+        }
+
+        .member-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .member-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .member-avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .member-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .member-username {
+            color: #dcddde;
+            font-weight: 500;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .member-email {
+            color: #949ba4;
+            font-size: 0.8rem;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .status-tag {
+            font-size: 0.65rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .status-pending {
+            background: #121215;
+            color: #949BA4;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .status-accepted {
+            background: rgba(51, 95, 255, 0.2);
+            color: #335FFF;
+            border: 1px solid rgba(51, 95, 255, 0.4);
+        }
+
+        .status-denied {
+            background: rgba(231, 76, 60, 0.2);
+            color: #E74C3C;
+            border: 1px solid rgba(231, 76, 60, 0.4);
+        }
+
+        .status-left {
+            background: rgba(231, 76, 60, 0.2);
+            color: #E74C3C;
+            border: 1px solid rgba(231, 76, 60, 0.4);
+        }
+
+        .status-banned {
+            background: rgba(192, 57, 43, 0.3);
+            color: #c0392b;
+            border: 1px solid rgba(192, 57, 43, 0.5);
+        }
+
+        .status-owns-team {
+            background: rgba(124, 67, 125, 0.2);
+            color: #15d8bc;
+            border: 1px solid rgba(124, 67, 125, 0.4);
+        }
+
+        .status-has-account {
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+            border: 1px solid rgba(46, 204, 113, 0.4);
+        }
+
+        .status-no-account {
+            background: rgba(149, 155, 164, 0.2);
+            color: #949ba4;
+            border: 1px solid rgba(149, 155, 164, 0.4);
+        }
+
+        .member-remove-btn {
+            padding: 0.4rem 0.75rem;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            color: #991a35;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            font-weight: 600;
+        }
+
+        .member-remove-btn:hover {
+            background: rgba(223, 40, 31, 0.2);
+            transform: scale(1.1);
+        }
+
+        .member-remove-from-list {
+            font-size: 0.65rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            background: rgba(231, 76, 60, 0.2);
+            color: #E74C3C;
+            border: 1px solid rgba(231, 76, 60, 0.4);
+        }
+
+        .member-remove-from-list:hover {
+            background: rgba(231, 76, 60, 0.3);
+            transform: none;
+        }
+
+        .panel-subheader {
+            font-size: 0.9rem;
+            color: #949ba4;
+        }
+
+        /* Member Statistics Styles */
+        .member-stats-list {
+            background: transparent;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            min-height: 0;
+        }
+
+        .member-stats-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .member-stats-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .member-stats-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .member-stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: #212227;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .member-stat-item:hover {
+            background: #2a2b32;
+        }
+
+        .member-stat-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .member-stat-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .member-stat-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .member-stat-username {
+            color: #dcddde;
+            font-weight: 500;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .member-stat-id {
+            color: #949ba4;
+            font-size: 0.8rem;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .member-stat-usage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: #121215;
+            border-radius: 6px;
+            min-width: 80px;
+        }
+
+        .stat-number {
+            color: #5865f2;
+            font-weight: 700;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        .stat-label {
+            color: #949ba4;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 0.25rem;
+        }
+    </style>
+
+    <script>
+        // Prevent page from being stored in cache
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuIcon = document.getElementById('menu-icon');
+            const dropdownMenu = document.getElementById('dropdown-menu');
+            const memberEmailInput = document.getElementById('member-email');
+            const addMemberBtn = document.getElementById('add-member-btn');
+            const membersList = document.getElementById('members-list');
+            const teamMessageInput = document.getElementById('team-message-input');
+            const setMessageBtn = document.getElementById('set-message-btn');
+            const charCount = document.getElementById('char-count');
+
+            const maxMembers = {{ team.max_members }};
+            let currentMemberCount = {{ active_member_count }};
+
+            // Dropdown menu toggle
+            if (menuIcon) {
+                menuIcon.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdownMenu.classList.toggle('show');
+                });
+            }
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (dropdownMenu && !dropdownMenu.contains(e.target) && menuIcon && !menuIcon.contains(e.target)) {
+                    dropdownMenu.classList.remove('show');
+                }
+            });
+
+            // Character count for team message
+            if (teamMessageInput && charCount) {
+                teamMessageInput.addEventListener('input', function() {
+                    charCount.textContent = this.value.length;
+                });
+            }
+
+            // Add team member
+            if (addMemberBtn && memberEmailInput) {
+                addMemberBtn.addEventListener('click', async function() {
+                    const email = memberEmailInput.value.trim().toLowerCase();
+
+                    if (!email) {
+                        showAlert('Please enter an email address', 'Input Required');
+                        return;
+                    }
+
+                    // Validate email format
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(email)) {
+                        showAlert('Please enter a valid email address', 'Invalid Format');
+                        return;
+                    }
+
+                    if (currentMemberCount >= maxMembers) {
+                        showAlert(`Team is full. Maximum ${maxMembers} members allowed for your plan.`, 'Team Full');
+                        return;
+                    }
+
+                    addMemberBtn.disabled = true;
+                    addMemberBtn.textContent = 'Adding...';
+
+                    try {
+                        const response = await fetch('/api/team/add-member', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({
+                                email: email
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
+                            window.location.reload();
+                        } else {
+                            showAlert(data.error || 'Failed to add team member', 'Error');
+                        }
+                    } catch (error) {
+                        console.error('Error adding member:', error);
+                        showAlert('Failed to add team member. Please try again.', 'Error');
+                    } finally {
+                        addMemberBtn.disabled = false;
+                        addMemberBtn.textContent = 'Add';
+                    }
+                });
+
+                // Allow Enter key to add member
+                memberEmailInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        addMemberBtn.click();
+                    }
+                });
+            }
+
+            // Remove team member
+            document.querySelectorAll('.member-remove-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const discordId = this.dataset.discordId;
+                    const memberId = this.dataset.memberId;
+                    const isRemoveFromList = this.classList.contains('member-remove-from-list');
+
+                    this.disabled = true;
+
+                    try {
+                        let endpoint, bodyData;
+
+                        if (isRemoveFromList && memberId) {
+                            // Remove denied/left member from list
+                            endpoint = `/api/team/member/remove/${memberId}`;
+                            bodyData = {};
+                        } else if (discordId) {
+                            // Regular removal (pending or accepted members)
+                            endpoint = '/api/team/remove-member';
+                            bodyData = { discord_id: discordId };
+                        }
+
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify(bodyData)
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
+                            window.location.reload();
+                        } else {
+                            showAlert(data.error || 'Failed to remove team member', 'Error');
+                            this.disabled = false;
+                        }
+                    } catch (error) {
+                        console.error('Error removing member:', error);
+                        showAlert('Failed to remove team member. Please try again.', 'Error');
+                        this.disabled = false;
+                    }
+                });
+            });
+
+            // Set team message
+            if (setMessageBtn && teamMessageInput) {
+                setMessageBtn.addEventListener('click', async function() {
+                    const message = teamMessageInput.value.trim();
+
+                    // Check for filtered content before saving (only if message is not empty)
+                    if (message) {
+                        const filteredWords = {{ BLACKLISTED_WORDS|tojson }};
+                        const messageLower = message.toLowerCase();
+                        let foundWords = [];
+
+                        for (const word of filteredWords) {
+                            if (messageLower.includes(word.toLowerCase())) {
+                                foundWords.push(word);
+                            }
+                        }
+
+                        if (foundWords.length > 0) {
+                            // Flag the user for using banned words
+                            try {
+                                await fetch('/api/flag-self', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-Token': '{{ csrf_token }}'
+                                    },
+                                    body: JSON.stringify({ words: foundWords })
+                                });
+                            } catch (e) {
+                                console.error('Failed to report flagged content:', e);
+                            }
+
+                            showAlert(`Banned words used\n\nMessage contains prohibited content:\n• ${foundWords.join('\n• ')}\n\nPlease remove this content from your message before saving.`, 'Warning');
+                            return; // Stop execution
+                        }
+                    }
+
+                    setMessageBtn.disabled = true;
+                    const originalHtml = setMessageBtn.innerHTML;
+                    setMessageBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"></path></svg> Saving...';
+
+                    try {
+                        const response = await fetch('/api/team/set-team-message', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({
+                                message: message
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
+                            // Success - no alert needed
+                        } else {
+                            showAlert(data.error || 'Failed to update team message', 'Error');
+                        }
+                    } catch (error) {
+                        console.error('Error setting team message:', error);
+                        showAlert('Failed to update team message. Please try again.', 'Error');
+                    } finally {
+                        setMessageBtn.disabled = false;
+                        setMessageBtn.innerHTML = originalHtml;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

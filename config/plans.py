@@ -5,8 +5,8 @@
 # Each setting is documented with what it does and which UI element it affects.
 #
 # COLOR FORMATS:
-#   - Hex: '#7C437D', '#ffffff', '#335FFF'
-#   - RGBA: 'rgba(124, 67, 125, 0.6)' - last value is transparency (0-1)
+#   - Hex: '#15d8bc', '#ffffff', '#335FFF'
+#   - RGBA: 'rgba(21, 216, 188, 0.6)' - last value is transparency (0-1)
 #
 # PRICE FORMATS:
 #   - Whole numbers: 7, 15, 30 (displays as $7, $15, $30)
@@ -23,12 +23,63 @@
 SUBSCRIPTION_PLANS = {
 
     # -------------------------------------------------------------------------
-    # REGULAR PLAN
+    # FREE PLAN
     # -------------------------------------------------------------------------
-    'regular': {
+    'plan_free': {
         # PLAN NAME
         # Element: Title text at top of plan card
-        'name': 'Regular',
+        'name': 'Free',
+
+        # FEATURES LIST
+        # Element: Bullet points with checkmarks on plan card
+        # Each string is one feature line
+        'features': [
+            '30 messages per day',
+            '2 channels per server',
+            'Personal use',
+        ],
+
+        # MESSAGE LIMIT
+        # How many messages user can send
+        # -1 = unlimited, any positive number = that limit
+        'message_limit': 30,
+
+        # USAGE TYPE
+        # 'allowance' = limit resets after period (daily/weekly/monthly)
+        # 'amount' = fixed total, never resets
+        'usage_type': 'allowance',
+
+        # ALLOWANCE PERIOD (only used if usage_type is 'allowance')
+        # 'daily' = resets every day
+        # 'weekly' = resets every week
+        # 'monthly' = resets every month
+        # None = not applicable (for 'amount' type)
+        'allowance_period': 'daily',
+
+        # GLOW COLOR
+        # Element: Glowing border effect around plan card on hover
+        # Format: 'rgba(R, G, B, opacity)' where opacity is 0-1
+        'glow_color': 'rgba(255, 255, 255, 0.6)',
+
+        # BUTTON TEXT
+        # Element: Text on the purchase button at bottom of card
+        'button_text': 'Select',
+
+        # FEATURE FLAGS
+        # These control additional plan capabilities (no function yet - placeholder for future use)
+        'analytics_and_insights': False,
+        'multi_discord_accounts': False,
+        'multi_variation_message': False,
+        'max_channels_per_server': 2,  # -1 = unlimited
+    },
+
+    # -------------------------------------------------------------------------
+    # REGULAR PLAN
+    # -------------------------------------------------------------------------
+    'plan_1': {
+        # PLAN NAME
+        # Element: Title text at top of plan card
+        'name': 'Pro',
 
         # PRICING
         # Element: Large price number on plan card
@@ -41,8 +92,11 @@ SUBSCRIPTION_PLANS = {
         # Element: Bullet points with checkmarks on plan card
         # Each string is one feature line
         'features': [
-            '500 message posts per week limit',
-            'Personal use'
+            '500 message posts per week',
+            'Unlimited channel and server selections',
+            'Analytics and insights',
+            'Optional different messages for different channels',
+            'Personal use',
         ],
 
         # MESSAGE LIMIT
@@ -76,31 +130,47 @@ SUBSCRIPTION_PLANS = {
         # SAVINGS TEXT COLOR
         # Element: Color of the savings text
         # If empty/not set: uses default CSS color
-        'savings_color': '#7C437D',
+        'savings_color': '#15d8bc',
 
         # BUTTON TEXT
         # Element: Text on the purchase button at bottom of card
         'button_text': 'Subscribe',
+
+        # FEATURE FLAGS
+        'analytics_and_insights': True,
+        'multi_discord_accounts': False,
+        'multi_variation_message': True,
+        'max_channels_per_server': -1,  # -1 = unlimited
     },
 
     # -------------------------------------------------------------------------
     # PRO PLAN
     # -------------------------------------------------------------------------
-    'pro': {
-        'name': 'Pro',
+    'plan_2': {
+        'name': 'Max x3 & x5',
         'price_monthly': 15,
         'price_yearly': 160,
         'features': [
-            'Unlimited message posts',
-            'Personal use'
+            'x3 or x5 (of Pro) message posting',
+            'Unlimited channel and server selections',
+            'Analytics and insights',
+            'Optional different messages for different channels',
+            'Able to add multiple accounts for message posting',
+            'Personal use',
         ],
         'message_limit': -1,  # -1 = unlimited
         'usage_type': 'amount',
         'allowance_period': 'monthly',
-        'glow_color': 'rgba(124, 67, 125, 0.6)',
+        'glow_color': 'rgba(21, 216, 188, 0.6)',
         'savings_text': '$12.50 per month',
-        'savings_color': '#7C437D',
+        'savings_color': '#15d8bc',
         'button_text': 'Subscribe',
+
+        # FEATURE FLAGS
+        'analytics_and_insights': True,
+        'multi_discord_accounts': True,
+        'multi_variation_message': True,
+        'max_channels_per_server': -1,  # -1 = unlimited
     },
 }
 
@@ -116,7 +186,7 @@ ONE_TIME_PLANS = {
     # -------------------------------------------------------------------------
     # 1 DAY PASS
     # -------------------------------------------------------------------------
-    '1day': {
+    'plan_1day': {
         # PLAN NAME
         # Element: Title text at top of plan card
         'name': '1 Day',
@@ -157,12 +227,17 @@ ONE_TIME_PLANS = {
         # BUTTON TEXT
         # Element: Text on the purchase button
         'button_text': 'Purchase',
+
+        # MAX CHANNELS PER SERVER
+        # How many channels user can select from each server
+        # -1 = unlimited, any positive number = that limit
+        'max_channels_per_server': 2,
     },
 
     # -------------------------------------------------------------------------
     # 3 DAY PASS
     # -------------------------------------------------------------------------
-    '3day': {
+    'plan_3day': {
         'name': '3 Days',
         'price': 5,
         'features': [
@@ -176,12 +251,13 @@ ONE_TIME_PLANS = {
         'duration_days': 3,
         'glow_color': 'rgba(255, 255, 255, 0.6)',
         'button_text': 'Purchase',
+        'max_channels_per_server': 2,  # -1 = unlimited
     },
 
     # -------------------------------------------------------------------------
     # 7 DAY PASS
     # -------------------------------------------------------------------------
-    '7day': {
+    'plan_7day': {
         'name': '7 Days',
         'price': 7.50,
         'features': [
@@ -193,8 +269,9 @@ ONE_TIME_PLANS = {
         'usage_type': 'allowance',
         'allowance_period': 'daily',
         'duration_days': 7,
-        'glow_color': 'rgba(124, 67, 125, 0.6)',
+        'glow_color': 'rgba(21, 216, 188, 0.6)',
         'button_text': 'Purchase',
+        'max_channels_per_server': 2,  # -1 = unlimited
     },
 }
 
@@ -210,10 +287,10 @@ BUSINESS_PLANS = {
     # -------------------------------------------------------------------------
     # BUSINESS STARTER
     # -------------------------------------------------------------------------
-    'business_starter': {
+    'team_plan_1': {
         # PLAN NAME
         # Element: Title text at top of plan card
-        'name': 'Business Starter',
+        'name': 'Startup',
 
         # PRICING
         # Element: Large price number on plan card
@@ -224,7 +301,10 @@ BUSINESS_PLANS = {
         # Element: Bullet points with checkmarks on plan card
         'features': [
             '5000 message posts per week across all members',
-            'Up to 15 team members'
+            'Unlimited channel and server selections',
+            'Analytics and insights',
+            'Team message management + sync',
+            'Up to 15 team members',
         ],
 
         # MESSAGE LIMIT
@@ -245,31 +325,40 @@ BUSINESS_PLANS = {
 
         # SAVINGS TEXT & COLOR (shown when Yearly selected)
         'savings_text': '$16.25 per month',
-        'savings_color': '#7C437D',
+        'savings_color': '#15d8bc',
 
         # BUTTON TEXT
         # Element: Text on the purchase button
         'button_text': 'Subscribe',
+
+        # MAX CHANNELS PER SERVER
+        # How many channels user can select from each server
+        # -1 = unlimited, any positive number = that limit
+        'max_channels_per_server': -1,
     },
 
     # -------------------------------------------------------------------------
     # ENTERPRISE PLAN
     # -------------------------------------------------------------------------
-    'business_pro': {
-        'name': 'Enterprise',
+    'team_plan_2': {
+        'name': 'Premium',
         'price_monthly': 30,
-        'price_yearly': 300,
+        'price_yearly': 288,
         'features': [
-            'Unlimited message posts',
-            'Up to 40 team members'
+            'Unlimited message posting',
+            'Unlimited channel and server selections',
+            'Analytics and insights',
+            'Team message management + sync',
+            'Up to 40 team members',
         ],
         'message_limit': -1,  # -1 = unlimited
         'usage_type': 'amount',
         'allowance_period': 'monthly',
         'max_members': 40,
-        'glow_color': 'rgba(255, 165, 0, 0.8)',  # Orange-gold glow
-        'savings_text': '$25 per month',
-        'savings_color': '#7C437D',
+        'glow_color': 'rgba(21, 216, 188, 0.6)',  # Orange-gold glow
+        'savings_text': '$24 per month',
+        'savings_color': '#15d8bc',
         'button_text': 'Subscribe',
+        'max_channels_per_server': -1,  # -1 = unlimited
     },
 }

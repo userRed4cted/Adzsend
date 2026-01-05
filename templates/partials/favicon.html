@@ -1,0 +1,8 @@
+{#
+    Favicon Partial
+    Include this in the <head> of every template to add the favicon.
+
+    Usage: {% include 'partials/favicon.html' %}
+#}
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">

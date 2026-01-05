@@ -11,7 +11,7 @@ NAVBAR = {
     # ==========================================
     # Shown in the top-left of the navbar
     'branding': {
-        'title': "Borz Marketing Panel",
+        'title': "Ad Z send",
         'subtitle': "Welcome to your marketing automation hub",
     },
 
@@ -22,11 +22,11 @@ NAVBAR = {
     'menu': {
         'home': 'Home',
         'purchase': 'Purchase',
-        'panel': 'Panel',
+        'panel': 'Personal Panel',
         'settings': 'Settings',
         'admin': 'Admin',
-        'business_management': 'Business Management',
-        'business_panel': 'Business Panel',
+        'team_management': 'Team Management',
+        'team_panel': 'Team Panel',
         'discord': 'Discord Server',
         'logout': 'Logout',
     },

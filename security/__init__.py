@@ -10,4 +10,4 @@ from .auth import (
     ip_block_check, is_ip_blocked
 )
 
-from .content_filter import check_message_content, BLACKLISTED_WORDS
+from .content_filter import check_message_content, BLACKLISTED_WORDS, PHRASE_EXCEPTIONS

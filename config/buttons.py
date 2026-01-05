@@ -51,9 +51,9 @@ BUTTONS = {
     # Used in: Homepage hero section
     # CSS class: .view-pricing-btn
     'view_pricing': {
-        'background': 'linear-gradient(to bottom, #754075, #3E2B40)',
+        'background': 'linear-gradient(to bottom, #15d8bc, #006e59)',
         'color': '#ffffff',
-        'border': '2px solid #7C437D',
+        'border': '2px solid #15d8bc',
         'border_radius': '8px',
         'padding': '0.75rem 2rem',
         'font_weight': '700',
@@ -69,22 +69,22 @@ BUTTONS = {
     # Used in: Settings page - Account section
     # CSS class: .delete-account-btn
     'delete_account': {
-        'background': '#e74c3c',
+        'background': 'linear-gradient(to bottom, #991a35, #3b0b15)',
         'color': '#ffffff',
         'border': 'none',
         'border_radius': '6px',
         'padding': '0.75rem 1.5rem',
         'font_weight': '600',
         'font_size': '0.95rem',
-        'hover_background': '#c0392b',
+        'hover_background': 'linear-gradient(to bottom, #7a152b, #2d0810)',
         'hover_transform': 'scale(1.02)',
         'requires_confirmation': True,  # Shows "Are you sure?" dialog
     },
 
     # ==========================================
-    # SEND MESSAGE BUTTON (dashboard panel)
+    # SEND MESSAGE BUTTON (personal panel)
     # ==========================================
-    # Used in: Dashboard - Message sending panel
+    # Used in: Personal Panel - Message sending panel
     # CSS class: .send-button
     'send_message': {
         'background': '#335FFF',  # var(--primary)
@@ -101,7 +101,7 @@ BUTTONS = {
     # PRIMARY BUTTON (general use)
     # ==========================================
     # Used in: Various places - submit buttons, CTA buttons
-    # CSS class: .submit-btn, .clear-all-btn, .return-dashboard-btn
+    # CSS class: .submit-btn, .clear-all-btn, .return-panel-btn
     'primary': {
         'background': '#335FFF',
         'color': '#ffffff',
@@ -139,15 +139,15 @@ BUTTONS = {
     # Used in: Settings page, some panel areas
     # CSS class: .logout-btn, .logout-btn-settings
     'logout': {
-        'background': 'rgba(223, 40, 31, 0.2)',
+        'background': 'rgba(153, 26, 53, 0.2)',
         'color': '#ffffff',
-        'border': '2px solid #DF281F',
+        'border': '2px solid #991a35',
         'border_radius': '8px',
         'padding': '0.75rem 1.5rem',
         'font_weight': '600',
         'font_size': '0.95rem',
         'letter_spacing': '0.5px',
-        'box_shadow': '0 0 15px rgba(223, 40, 31, 0.4)',
+        'box_shadow': '0 0 15px rgba(153, 26, 53, 0.4)',
         'hover_transform': 'scale(1.015)',
         'requires_confirmation': False,
     },
@@ -191,9 +191,9 @@ BUTTONS = {
     },
 
     # ==========================================
-    # CLEAR ALL BUTTON (dashboard)
+    # CLEAR ALL BUTTON (personal panel)
     # ==========================================
-    # Used in: Dashboard - Clear selected channels
+    # Used in: Personal Panel - Clear selected channels
     # CSS class: .clear-all-btn
     'clear_all': {
         'background': '#335FFF',

@@ -38,13 +38,13 @@ LINE_HEIGHT = 1.5
 # Basic site information used in various places
 
 # Site name - used in page titles, emails, etc.
-SITE_NAME = 'Borz Marketing Panel'
+SITE_NAME = 'Ad Z send'
 
 # Site description - used for SEO meta tags
 SITE_DESCRIPTION = 'Discord marketing automation panel'
 
 # Copyright text - shown in footer
-COPYRIGHT_TEXT = '2024 Borz Marketing Panel'
+COPYRIGHT_TEXT = '2024 Ad Z send'
 
 
 # -----------------------------------------------------------------------------

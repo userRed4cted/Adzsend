@@ -21,9 +21,10 @@ HOMEPAGE = {
         # These messages cycle automatically based on interval setting
         # Add/remove as many as you want
         'slideshow_messages': [
-            "The first marketing tool to send multiple advertisements all across different discord servers with one click",
-            "Tired of expensive and untrustworthy marketing services where you cant monitor, customise, or have control over your marketing?",
-            "What used to take hours, now takes seconds with Borz Marketing"
+            "Stop wasting time copy and pasting messages, time is money",
+            "Tired of expensive marketing services where you cant monitor, customise, or have control over your marketing?",
+            "Lazy? Not a problem",
+            "What used to take hours, now takes seconds with Adzsend"
         ],
 
         # SLIDESHOW TIMING
@@ -71,7 +72,7 @@ HOMEPAGE = {
         'images': [
             "PanelImage1.png",
             "PanelImage2.png",
-            "PanelImage3.png"
+           # "PanelImage3.png"
         ],
     },
 
@@ -91,6 +92,59 @@ HOMEPAGE = {
         # DESCRIPTION TEXT
         # Element: Paragraph text explaining your service
         # Can be as long as needed - will wrap automatically
-        'description': "Introducing the first marketing tool that lets you send ads across multiple Discord servers at once, saving time, cutting costs, and giving you total control. No more waiting on marketing teams or wasting money on marketing services. Send ads instantly, track results in real time, and remove underperformers from your workflow. Do it yourself with a single click, or upgrade to our Business Plan to manage a team using our panel, assign ads, and gain detailed insights on each members performance. Marketing, simplified, powerful, and designed to deliver results.",
+        'description': "Introducing the only marketing system you will ever need, allowing you send ads across multiple Discord servers at once, saving time, cutting costs, and giving you total control. No more waiting on marketing teams or wasting money on marketing services. Send ads instantly, track results in real time, and remove underperformers from your workflow. Do it yourself with a single click, or upgrade to our Team Plans to manage a team using our panel, assign messages, and gain detailed insights on each members performance. Marketing, simplified, powerful, and designed to deliver results.",
+    },
+
+
+    # =========================================================================
+    # WHY DISCORD SECTION (Why use Discord to market?)
+    # =========================================================================
+    # Element: Section explaining benefits of Discord marketing with stats
+    # File: templates/home.html - why discord section
+
+    'why_discord': {
+
+        # SECTION TITLE
+        # Element: Heading text for the section
+        'title': "Why use Discord for marketing?",
+
+        # DISCORD STATISTICS
+        # Element: Stats displayed in a row showing Discord's reach
+        'stats': [
+            {
+                'value': "250M+",
+                'label': "Monthly Active Users",
+            },
+            {
+                'value': "21M+",
+                'label': "Active Servers",
+            },
+            {
+                'value': "650M+",
+                'label': "Registered Accounts",
+            },
+        ],
+
+        # BENEFITS LIST
+        # Element: List of key benefits displayed as cards/points
+        # Each item has a title and description
+        'benefits': [
+            {
+                'title': "Engaged Communities",
+                'description': "Discord servers are highly engaged communities where members actively participate in discussions."
+            },
+            {
+                'title': "Targeted Audiences",
+                'description': "Reach specific niches and demographics through specialized servers related to your product or service."
+            },
+            {
+                'title': "Direct Communication",
+                'description': "Connect directly with potential customers without algorithmic barriers or paid promotion requirements."
+            },
+            {
+                'title': "Growing Platform",
+                'description': "Discord continues to grow rapidly, expanding beyond gaming into business, education, and social communities."
+            }
+        ],
     },
 }

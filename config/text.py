@@ -7,9 +7,9 @@
 
 TEXT = {
     # ==========================================
-    # DASHBOARD PAGE
+    # PERSONAL PANEL PAGE
     # ==========================================
-    'dashboard': {
+    'personal_panel': {
         # Panel headers
         'servers_header': 'Your Servers',
         'channels_header': 'Channels',

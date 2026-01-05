@@ -8,13 +8,23 @@ from .models import (
     validate_user_session, save_user_data, get_user_data,
     get_all_users_for_admin, get_user_admin_details, ban_user, unban_user,
     flag_user, unflag_user, delete_user_account_admin,
-    get_decrypted_token, delete_user, update_user_profile,
+    get_decrypted_token, delete_user, delete_user_by_email, update_user_profile,
     get_business_team_by_owner, get_business_team_by_member, get_team_members,
     get_team_member_stats, update_team_member_info, get_team_member_count,
     add_team_member, remove_team_member, update_team_message,
     create_business_team, is_business_plan_owner, is_business_team_member,
-    cancel_subscription, get_business_plan_status, increment_business_usage,
+    cancel_subscription, activate_free_plan, get_business_plan_status, increment_business_usage,
     get_team_invitations, accept_team_invitation, deny_team_invitation,
     clear_all_invitations, leave_team, get_current_team_for_member,
-    remove_team_member_from_list
+    remove_team_member_from_list, auto_deny_pending_invitations,
+    # Email authentication functions
+    get_user_by_email, create_user_with_email, create_verification_code,
+    verify_code, get_resend_status, resend_verification_code, clear_rate_limit,
+    is_code_rate_limited, update_user_email, has_active_verification_code,
+    # Discord OAuth account linking functions
+    save_discord_oauth, get_discord_oauth_status, get_discord_oauth_info,
+    complete_discord_link, unlink_discord_oauth, is_discord_linked,
+    get_user_by_internal_id, full_unlink_discord_account,
+    # Admin functions
+    get_purchase_history
 )

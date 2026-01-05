@@ -3,8 +3,14 @@ import json
 import os
 import base64
 import hashlib
+import secrets
 from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
+
+
+def generate_verification_code():
+    """Generate a random 6-digit verification code."""
+    return ''.join([str(secrets.randbelow(10)) for _ in range(6)])
 
 DATABASE = 'marketing_panel.db'
 
@@ -84,11 +90,97 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Add flag_count column if it doesn't exist (migration)
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN flag_count INTEGER DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Add session_id column if it doesn't exist (migration for session management)
     try:
         cursor.execute('ALTER TABLE users ADD COLUMN session_id TEXT')
     except sqlite3.OperationalError:
         pass  # Column already exists
+
+    # Add email column if it doesn't exist (migration for email auth)
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN email TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Add Discord OAuth columns (migration for Discord account linking)
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN discord_oauth_linked INTEGER DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN discord_oauth_access_token TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN discord_oauth_refresh_token TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN discord_oauth_expires_at TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN discord_oauth_linked_at TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN discord_oauth_discord_id TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN discord_oauth_username TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN discord_oauth_avatar TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Verification codes table for email authentication
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS verification_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            code TEXT NOT NULL,
+            purpose TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            used INTEGER DEFAULT 0,
+            resend_count INTEGER DEFAULT 0,
+            last_resend_at TEXT,
+            wrong_attempts INTEGER DEFAULT 0
+        )
+    ''')
+
+    # Migration: Add wrong_attempts column to verification_codes if it doesn't exist
+    try:
+        cursor.execute('ALTER TABLE verification_codes ADD COLUMN wrong_attempts INTEGER DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Auth rate limiting table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS auth_rate_limits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            purpose TEXT NOT NULL,
+            blocked_until TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    ''')
 
     # Subscriptions table
     cursor.execute('''
@@ -204,6 +296,48 @@ def init_db():
     # Note: max_members is set when business team is created
     # Changing config.py values won't affect existing teams to preserve user data
 
+    # ==========================================
+    # DATABASE INDEXES FOR QUERY OPTIMIZATION
+    # ==========================================
+    # These indexes significantly improve query performance for common lookups
+
+    # Users table indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_discord_id ON users(discord_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_discord_oauth_discord_id ON users(discord_oauth_discord_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_banned ON users(banned)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_flagged ON users(flagged)')
+
+    # Subscriptions table indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_subscriptions_is_active ON subscriptions(is_active)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_subscriptions_plan_id ON subscriptions(plan_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_subscriptions_user_active ON subscriptions(user_id, is_active)')
+
+    # Usage table indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_usage_user_id ON usage(user_id)')
+
+    # Verification codes indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_verification_codes_email ON verification_codes(email)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_verification_codes_email_purpose ON verification_codes(email, purpose)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_verification_codes_used ON verification_codes(used)')
+
+    # Auth rate limits indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_email ON auth_rate_limits(email)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_auth_rate_limits_email_purpose ON auth_rate_limits(email, purpose)')
+
+    # Business teams indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_business_teams_owner ON business_teams(owner_user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_business_teams_subscription ON business_teams(subscription_id)')
+
+    # Business team members indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON business_team_members(team_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_team_members_discord_id ON business_team_members(member_discord_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_team_members_status ON business_team_members(invitation_status)')
+
+    # User data indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_data_user_id ON user_data(user_id)')
+
     conn.commit()
     conn.close()
 
@@ -234,11 +368,17 @@ def create_user(discord_id, username, avatar, discord_token, signup_ip):
         ''', (user_id, datetime.now().isoformat()))
 
         conn.commit()
+        conn.close()
+
+        # Auto-activate free plan for new users
+        activate_free_plan(user_id)
+
         return user_id
     except sqlite3.IntegrityError:
         return None
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 def get_user_by_discord_id(discord_id):
     conn = get_db()
@@ -379,12 +519,13 @@ def delete_user(discord_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    # Get user_id first
-    cursor.execute('SELECT id FROM users WHERE discord_id = ?', (discord_id,))
+    # Get user_id and email first
+    cursor.execute('SELECT id, email FROM users WHERE discord_id = ?', (discord_id,))
     user = cursor.fetchone()
 
     if user:
         user_id = user[0]
+        user_email = user[1]
 
         # Delete business team if user owns one
         cursor.execute('SELECT id FROM business_teams WHERE owner_user_id = ?', (user_id,))
@@ -408,7 +549,12 @@ def delete_user(discord_id):
         # Delete all user data (saved channels, drafts, etc.)
         cursor.execute('DELETE FROM user_data WHERE user_id = ?', (user_id,))
 
-        # Finally delete the user record (includes encrypted token)
+        # Delete email verification codes (for new login system)
+        if user_email:
+            cursor.execute('DELETE FROM verification_codes WHERE email = ?', (user_email.lower(),))
+            cursor.execute('DELETE FROM auth_rate_limits WHERE email = ?', (user_email.lower(),))
+
+        # Finally delete the user record (includes encrypted token and OAuth data)
         cursor.execute('DELETE FROM users WHERE discord_id = ?', (discord_id,))
 
         conn.commit()
@@ -418,6 +564,58 @@ def delete_user(discord_id):
         cursor.execute('VACUUM')
 
     conn.close()
+
+
+def delete_user_by_email(email):
+    """
+    Delete a user by email address. Fallback for when discord_id lookup fails.
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+
+    email_lower = email.lower()
+
+    # Get user by email
+    cursor.execute('SELECT id, discord_id FROM users WHERE email = ?', (email_lower,))
+    user = cursor.fetchone()
+
+    if user:
+        user_id = user[0]
+        discord_id = user[1]
+
+        # Delete business team if user owns one
+        cursor.execute('SELECT id FROM business_teams WHERE owner_user_id = ?', (user_id,))
+        team = cursor.fetchone()
+        if team:
+            team_id = team[0]
+            cursor.execute('DELETE FROM business_team_members WHERE team_id = ?', (team_id,))
+            cursor.execute('DELETE FROM business_teams WHERE id = ?', (team_id,))
+
+        # Remove user from any business teams they're a member of
+        if discord_id:
+            cursor.execute('DELETE FROM business_team_members WHERE member_discord_id = ?', (discord_id,))
+
+        # Delete all subscriptions
+        cursor.execute('DELETE FROM subscriptions WHERE user_id = ?', (user_id,))
+
+        # Delete all usage data
+        cursor.execute('DELETE FROM usage WHERE user_id = ?', (user_id,))
+
+        # Delete all user data
+        cursor.execute('DELETE FROM user_data WHERE user_id = ?', (user_id,))
+
+        # Delete email verification codes
+        cursor.execute('DELETE FROM verification_codes WHERE email = ?', (email_lower,))
+        cursor.execute('DELETE FROM auth_rate_limits WHERE email = ?', (email_lower,))
+
+        # Delete the user record
+        cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+
+        conn.commit()
+        cursor.execute('VACUUM')
+
+    conn.close()
+
 
 def get_active_subscription(user_id):
     conn = get_db()
@@ -497,6 +695,59 @@ def cancel_subscription(user_id):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('UPDATE subscriptions SET is_active = 0 WHERE user_id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+
+    # Auto-activate free plan after cancelling
+    activate_free_plan(user_id)
+
+def activate_free_plan(user_id):
+    """Activate the free plan for a user (used when no plan or after cancellation)."""
+    from config import SUBSCRIPTION_PLANS
+
+    free_plan_config = SUBSCRIPTION_PLANS.get('plan_free')
+    if not free_plan_config:
+        return  # Free plan not configured
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Check if user already has an active free plan
+    cursor.execute('''
+        SELECT id FROM subscriptions
+        WHERE user_id = ? AND plan_id = 'plan_free' AND is_active = 1
+    ''', (user_id,))
+    existing = cursor.fetchone()
+
+    if existing:
+        conn.close()
+        return  # Already on free plan
+
+    # Deactivate any other plans (shouldn't be any, but just in case)
+    cursor.execute('UPDATE subscriptions SET is_active = 0 WHERE user_id = ?', (user_id,))
+
+    # Create free plan subscription (no end date - runs indefinitely)
+    start_date = datetime.now()
+    cursor.execute('''
+        INSERT INTO subscriptions (
+            user_id, plan_type, plan_id, plan_name, billing_period,
+            message_limit, usage_type, allowance_period,
+            start_date, end_date, is_active
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    ''', (
+        user_id,
+        'subscription',
+        'plan_free',
+        free_plan_config.get('name'),
+        'monthly',  # Free plan is perpetual
+        free_plan_config.get('message_limit'),
+        free_plan_config.get('usage_type'),
+        free_plan_config.get('allowance_period'),
+        start_date.isoformat(),
+        None  # No end date for free plan
+    ))
+
     conn.commit()
     conn.close()
 
@@ -624,38 +875,50 @@ def get_plan_status(user_id):
     subscription = get_active_subscription(user_id)
 
     if not subscription:
-        usage = get_usage(user_id)
-        all_time_sent = usage['all_time_sent'] if usage else 0
-        return {
-            'has_plan': False,
-            'plan_name': 'No Plan',
-            'message_limit': 0,
-            'messages_sent': 0,
-            'all_time_sent': all_time_sent,
-            'messages_remaining': 0,
-            'is_unlimited': False,
-            'expires_at': None,
-            'next_reset': None
-        }
+        # Auto-activate free plan for users without a subscription
+        activate_free_plan(user_id)
+        subscription = get_active_subscription(user_id)
 
-    # Check if expired
-    if subscription['end_date']:
-        end_date = datetime.fromisoformat(subscription['end_date'])
-        if datetime.now() > end_date:
-            cancel_subscription(user_id)
+        # If still no subscription (free plan not configured), return fallback
+        if not subscription:
             usage = get_usage(user_id)
             all_time_sent = usage['all_time_sent'] if usage else 0
             return {
                 'has_plan': False,
-                'plan_name': 'Expired',
+                'plan_name': 'No Plan',
                 'message_limit': 0,
                 'messages_sent': 0,
                 'all_time_sent': all_time_sent,
                 'messages_remaining': 0,
                 'is_unlimited': False,
                 'expires_at': None,
-                'next_reset': None
+                'next_reset': None,
+                'max_channels_per_server': 2  # Default limit
             }
+
+    # Check if expired (skip for free plan which is perpetual)
+    if subscription['end_date'] and subscription['plan_id'] != 'plan_free':
+        end_date = datetime.fromisoformat(subscription['end_date'])
+        if datetime.now() > end_date:
+            cancel_subscription(user_id)
+            # Activate free plan immediately instead of returning "Expired"
+            activate_free_plan(user_id)
+            subscription = get_active_subscription(user_id)
+            if not subscription:
+                usage = get_usage(user_id)
+                all_time_sent = usage['all_time_sent'] if usage else 0
+                return {
+                    'has_plan': False,
+                    'plan_name': 'No Plan',
+                    'message_limit': 0,
+                    'messages_sent': 0,
+                    'all_time_sent': all_time_sent,
+                    'messages_remaining': 0,
+                    'is_unlimited': False,
+                    'expires_at': None,
+                    'next_reset': None,
+                    'max_channels_per_server': 2  # Default limit
+                }
 
     # Check and reset allowance if needed
     check_and_reset_allowance(user_id, subscription)
@@ -684,6 +947,19 @@ def get_plan_status(user_id):
             # Next reset is 30 days after last reset
             next_reset = (last_reset + timedelta(days=30)).isoformat()
 
+    # Get max_channels_per_server from plan config
+    from config import SUBSCRIPTION_PLANS, ONE_TIME_PLANS, BUSINESS_PLANS
+    plan_id = subscription['plan_id']
+    max_channels_per_server = 2  # Default
+
+    # Look up in appropriate plan dictionary
+    if plan_id in SUBSCRIPTION_PLANS:
+        max_channels_per_server = SUBSCRIPTION_PLANS[plan_id].get('max_channels_per_server', -1)
+    elif plan_id in ONE_TIME_PLANS:
+        max_channels_per_server = ONE_TIME_PLANS[plan_id].get('max_channels_per_server', 2)
+    elif plan_id in BUSINESS_PLANS:
+        max_channels_per_server = BUSINESS_PLANS[plan_id].get('max_channels_per_server', -1)
+
     return {
         'has_plan': True,
         'plan_type': subscription['plan_type'],
@@ -699,7 +975,8 @@ def get_plan_status(user_id):
         'allowance_period': subscription['allowance_period'],
         'expires_at': subscription['end_date'],
         'started_at': subscription['start_date'],
-        'next_reset': next_reset
+        'next_reset': next_reset,
+        'max_channels_per_server': max_channels_per_server
     }
 
 def get_business_plan_status(team_id, owner_user_id):
@@ -804,13 +1081,13 @@ def get_business_team_by_owner(user_id):
     return dict(team) if team else None
 
 def get_business_team_by_member(discord_id):
-    """Get business team where user is a member."""
+    """Get business team where user is an accepted member."""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
         SELECT bt.* FROM business_teams bt
         JOIN business_team_members btm ON bt.id = btm.team_id
-        WHERE btm.member_discord_id = ?
+        WHERE btm.member_discord_id = ? AND btm.invitation_status = 'accepted'
         ORDER BY bt.id DESC LIMIT 1
     ''', (discord_id,))
     team = cursor.fetchone()
@@ -871,7 +1148,7 @@ def get_team_members(team_id):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT btm.*, u.id as user_id
+        SELECT btm.*, u.id as user_id, u.email as member_email
         FROM business_team_members btm
         LEFT JOIN users u ON u.discord_id = btm.member_discord_id
         WHERE btm.team_id = ?
@@ -1069,7 +1346,7 @@ def get_all_users_for_admin(filters=None):
 
     query = '''
         SELECT u.*,
-               (SELECT COUNT(*) FROM subscriptions WHERE user_id = u.id AND is_active = 1) as has_plan
+               (SELECT COUNT(*) FROM subscriptions WHERE user_id = u.id AND is_active = 1 AND plan_id != 'plan_free') as has_paid_plan
         FROM users u
         WHERE 1=1
     '''
@@ -1079,13 +1356,18 @@ def get_all_users_for_admin(filters=None):
     if filters:
         conditions = []
         if 'non_plan' in filters:
-            conditions.append('(SELECT COUNT(*) FROM subscriptions WHERE user_id = u.id AND is_active = 1) = 0')
+            # Free plan = user only has plan_free subscription (no paid plans)
+            conditions.append('(SELECT COUNT(*) FROM subscriptions WHERE user_id = u.id AND is_active = 1 AND plan_id != \'plan_free\') = 0')
         if 'plan' in filters:
-            conditions.append('(SELECT COUNT(*) FROM subscriptions WHERE user_id = u.id AND is_active = 1) > 0')
+            # Paid plan = user has at least one active subscription that is NOT plan_free
+            conditions.append('(SELECT COUNT(*) FROM subscriptions WHERE user_id = u.id AND is_active = 1 AND plan_id != \'plan_free\') > 0')
         if 'banned' in filters:
             conditions.append('u.banned = 1')
         if 'flagged' in filters:
             conditions.append('u.flagged = 1')
+        if 'no_discord' in filters:
+            # Users with no linked Discord (discord_oauth_discord_id is NULL or empty)
+            conditions.append('(u.discord_oauth_discord_id IS NULL OR u.discord_oauth_discord_id = \'\')')
 
         if conditions:
             query += ' AND (' + ' OR '.join(conditions) + ')'
@@ -1098,7 +1380,7 @@ def get_all_users_for_admin(filters=None):
     # Add is_admin flag for each user
     from config import is_admin
     for user in users:
-        user['is_admin'] = is_admin(user['discord_id'])
+        user['is_admin'] = is_admin(user.get('email'))
 
     conn.close()
     return users
@@ -1120,7 +1402,7 @@ def get_user_admin_details(user_id):
 
     # Check if user is admin
     from config import is_admin
-    user['is_admin'] = is_admin(user['discord_id'])
+    user['is_admin'] = is_admin(user.get('email'))
 
     # Get active subscriptions
     cursor.execute('''
@@ -1129,22 +1411,24 @@ def get_user_admin_details(user_id):
     ''', (user_id,))
     user['subscriptions'] = [dict(row) for row in cursor.fetchall()]
 
-    # Check if user is business team owner
+    # Check if user is business team owner (with active subscription)
     cursor.execute('''
-        SELECT * FROM business_teams
-        WHERE owner_user_id = ?
+        SELECT bt.* FROM business_teams bt
+        JOIN subscriptions s ON bt.subscription_id = s.id
+        WHERE bt.owner_user_id = ? AND s.is_active = 1
     ''', (user_id,))
     team = cursor.fetchone()
     user['is_business_owner'] = team is not None
     if team:
         user['business_team'] = dict(team)
 
-    # Check if user is business team member
+    # Check if user is business team member (with owner's active subscription)
     cursor.execute('''
         SELECT bt.*, btm.member_discord_id
         FROM business_team_members btm
         JOIN business_teams bt ON btm.team_id = bt.id
-        WHERE btm.member_discord_id = ? AND btm.invitation_status = 'accepted'
+        JOIN subscriptions s ON bt.subscription_id = s.id
+        WHERE btm.member_discord_id = ? AND btm.invitation_status = 'accepted' AND s.is_active = 1
     ''', (user['discord_id'],))
     team_member = cursor.fetchone()
     user['is_business_member'] = team_member is not None
@@ -1205,7 +1489,12 @@ def flag_user(user_id, reason=None):
     conn = get_db()
     cursor = conn.cursor()
     flagged_at = datetime.now().isoformat()
-    cursor.execute('UPDATE users SET flagged = 1, flag_reason = ?, flagged_at = ? WHERE id = ?', (reason, flagged_at, user_id))
+    # Increment flag_count each time user is flagged
+    cursor.execute('''
+        UPDATE users
+        SET flagged = 1, flag_reason = ?, flagged_at = ?, flag_count = COALESCE(flag_count, 0) + 1
+        WHERE id = ?
+    ''', (reason, flagged_at, user_id))
     conn.commit()
     conn.close()
 
@@ -1224,6 +1513,12 @@ def delete_user_account_admin(user_id):
     conn = get_db()
     cursor = conn.cursor()
 
+    # Get user's email and discord_id first
+    cursor.execute('SELECT discord_id, email FROM users WHERE id = ?', (user_id,))
+    user_data = cursor.fetchone()
+    user_discord_id = user_data[0] if user_data else None
+    user_email = user_data[1] if user_data else None
+
     # Delete user's subscriptions
     cursor.execute('DELETE FROM subscriptions WHERE user_id = ?', (user_id,))
 
@@ -1235,11 +1530,9 @@ def delete_user_account_admin(user_id):
         cursor.execute('DELETE FROM business_team_members WHERE team_id = ?', (team_id,))
         cursor.execute('DELETE FROM business_teams WHERE id = ?', (team_id,))
 
-    # Get user's discord_id to remove from business teams
-    cursor.execute('SELECT discord_id FROM users WHERE id = ?', (user_id,))
-    user_row = cursor.fetchone()
-    if user_row:
-        cursor.execute('DELETE FROM business_team_members WHERE member_discord_id = ?', (user_row[0],))
+    # Remove from business teams they're a member of
+    if user_discord_id:
+        cursor.execute('DELETE FROM business_team_members WHERE member_discord_id = ?', (user_discord_id,))
 
     # Delete user's saved data
     cursor.execute('DELETE FROM user_data WHERE user_id = ?', (user_id,))
@@ -1247,11 +1540,596 @@ def delete_user_account_admin(user_id):
     # Delete usage tracking
     cursor.execute('DELETE FROM usage WHERE user_id = ?', (user_id,))
 
-    # Finally delete the user
+    # Delete email verification codes (for new login system)
+    if user_email:
+        cursor.execute('DELETE FROM verification_codes WHERE email = ?', (user_email.lower(),))
+        cursor.execute('DELETE FROM auth_rate_limits WHERE email = ?', (user_email.lower(),))
+
+    # Finally delete the user (includes encrypted token and OAuth data)
     cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
 
     conn.commit()
+
+    # Run VACUUM to permanently remove deleted data from database file
+    cursor.execute('VACUUM')
+
     conn.close()
+
+
+def get_purchase_history(user_id):
+    """Get all purchase history for a user (all subscriptions, including inactive)."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT * FROM subscriptions
+        WHERE user_id = ?
+        ORDER BY start_date DESC
+    ''', (user_id,))
+    history = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return history
+
+
+def auto_deny_pending_invitations(discord_id):
+    """Auto-deny all pending team invitations for a user who becomes a business owner."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE business_team_members
+        SET invitation_status = 'owns_team'
+        WHERE member_discord_id = ? AND invitation_status = 'pending'
+    ''', (discord_id,))
+    count = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return count
+
+
+# =============================================================================
+# EMAIL AUTHENTICATION FUNCTIONS
+# =============================================================================
+
+def get_user_by_email(email):
+    """Get user by email address."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE email = ?', (email.lower(),))
+    user = cursor.fetchone()
+    conn.close()
+    return dict(user) if user else None
+
+
+def update_user_email(user_id, new_email):
+    """Update user's email address."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE users SET email = ? WHERE id = ?', (new_email.lower(), user_id))
+    conn.commit()
+    conn.close()
+
+
+def create_user_with_email(email, signup_ip):
+    """Create a new user with email (no Discord connection yet)."""
+    import hashlib
+    conn = get_db()
+    cursor = conn.cursor()
+
+    signup_date = datetime.now().isoformat()
+    email_lower = email.lower()
+
+    # Generate a unique placeholder discord_id based on email hash
+    # This ensures each email-only user has a unique identifier
+    email_hash = hashlib.sha256(email_lower.encode()).hexdigest()[:16]
+    placeholder_discord_id = f'email_{email_hash}'
+
+    try:
+        cursor.execute('''
+            INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date, email)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            placeholder_discord_id,  # Unique placeholder until they connect Discord
+            email_lower.split('@')[0],  # Use email prefix as temporary username
+            None,
+            'pending',  # Placeholder token
+            signup_ip,
+            signup_date,
+            email_lower
+        ))
+
+        user_id = cursor.lastrowid
+
+        # Initialize usage tracking
+        cursor.execute('''
+            INSERT INTO usage (user_id, messages_sent, last_reset)
+            VALUES (?, 0, ?)
+        ''', (user_id, datetime.now().isoformat()))
+
+        conn.commit()
+        conn.close()
+
+        # Auto-activate free plan for new users
+        activate_free_plan(user_id)
+
+        return user_id
+    except sqlite3.IntegrityError:
+        conn.close()
+        return None
+
+
+def has_active_verification_code(email, purpose='login'):
+    """Check if there's already an active (unexpired, unused) verification code.
+    Returns (has_active, is_rate_limited) tuple."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    email_lower = email.lower()
+    now = datetime.now()
+
+    # First check if rate limited from wrong attempts
+    five_min_ago = (now - timedelta(minutes=5)).isoformat()
+    cursor.execute('''
+        SELECT wrong_attempts FROM verification_codes
+        WHERE email = ? AND purpose = ? AND wrong_attempts >= 3 AND created_at > ?
+        ORDER BY created_at DESC LIMIT 1
+    ''', (email_lower, purpose, five_min_ago))
+
+    if cursor.fetchone():
+        conn.close()
+        return False, True  # No active code usable, is rate limited
+
+    # Check for active unexpired code
+    cursor.execute('''
+        SELECT id FROM verification_codes
+        WHERE email = ? AND purpose = ? AND used = 0 AND expires_at > ?
+        ORDER BY created_at DESC LIMIT 1
+    ''', (email_lower, purpose, now.isoformat()))
+
+    active_code = cursor.fetchone()
+    conn.close()
+
+    return active_code is not None, False
+
+
+def create_verification_code(email, purpose='login'):
+    """Create a verification code for email auth. Returns the code or None if rate limited."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    email_lower = email.lower()
+    now = datetime.now()
+
+    # Check if currently rate limited from wrong attempts on ANY recent code (used or unused)
+    # This prevents bypass by going back and requesting a new code
+    five_min_ago = (now - timedelta(minutes=5)).isoformat()
+    cursor.execute('''
+        SELECT wrong_attempts, created_at FROM verification_codes
+        WHERE email = ? AND purpose = ? AND wrong_attempts >= 3 AND created_at > ?
+        ORDER BY created_at DESC LIMIT 1
+    ''', (email_lower, purpose, five_min_ago))
+
+    rate_limited_code = cursor.fetchone()
+    if rate_limited_code:
+        # There's a recent code with 3+ wrong attempts - still rate limited
+        conn.close()
+        return None
+
+    code = generate_verification_code()
+    created_at = now
+    expires_at = created_at + timedelta(minutes=10)  # Code valid for 10 minutes
+
+    # Invalidate any existing unused codes for this email/purpose
+    cursor.execute('''
+        UPDATE verification_codes
+        SET used = 1
+        WHERE email = ? AND purpose = ? AND used = 0
+    ''', (email_lower, purpose))
+
+    # Create new code
+    cursor.execute('''
+        INSERT INTO verification_codes (email, code, purpose, created_at, expires_at, resend_count)
+        VALUES (?, ?, ?, ?, ?, 0)
+    ''', (email_lower, code, purpose, created_at.isoformat(), expires_at.isoformat()))
+
+    conn.commit()
+    conn.close()
+
+    return code
+
+
+def verify_code(email, code, purpose='login'):
+    """Verify a code. Returns (success, error_message, code_rate_limited)."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    email_lower = email.lower()
+    now = datetime.now()
+
+    # First, get the active verification code record for this email
+    cursor.execute('''
+        SELECT * FROM verification_codes
+        WHERE email = ? AND purpose = ? AND used = 0
+        ORDER BY created_at DESC LIMIT 1
+    ''', (email_lower, purpose))
+
+    active_record = cursor.fetchone()
+
+    if not active_record:
+        conn.close()
+        return False, "No active verification code. Please request a new one.", False
+
+    active_record = dict(active_record)
+
+    # Check if already rate limited (3+ wrong attempts)
+    wrong_attempts = active_record.get('wrong_attempts', 0) or 0
+    if wrong_attempts >= 3:
+        conn.close()
+        return False, "Too many incorrect attempts. Please try again later.", True
+
+    # Check if expired
+    expires_at = datetime.fromisoformat(active_record['expires_at'])
+    if now > expires_at:
+        conn.close()
+        return False, "Verification code has expired. Please request a new one.", False
+
+    # Check if the code matches
+    if active_record['code'] != code:
+        # Increment wrong attempts
+        new_wrong_attempts = wrong_attempts + 1
+        cursor.execute('UPDATE verification_codes SET wrong_attempts = ? WHERE id = ?',
+                      (new_wrong_attempts, active_record['id']))
+        conn.commit()
+        conn.close()
+
+        if new_wrong_attempts >= 3:
+            return False, "Too many incorrect attempts. Please try again later.", True
+        else:
+            remaining = 3 - new_wrong_attempts
+            return False, f"Invalid verification code. {remaining} attempt{'s' if remaining > 1 else ''} remaining.", False
+
+    # Code is correct - mark as used
+    cursor.execute('UPDATE verification_codes SET used = 1 WHERE id = ?', (active_record['id'],))
+    conn.commit()
+    conn.close()
+
+    return True, None, False
+
+
+def get_resend_status(email, purpose='login'):
+    """Get resend status for an email. Returns (can_resend, seconds_until_resend, attempts_remaining)."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    email_lower = email.lower()
+
+    # Check if rate limited
+    cursor.execute('''
+        SELECT blocked_until FROM auth_rate_limits
+        WHERE email = ? AND purpose = ?
+        ORDER BY created_at DESC LIMIT 1
+    ''', (email_lower, purpose))
+
+    rate_limit = cursor.fetchone()
+    if rate_limit:
+        blocked_until = datetime.fromisoformat(rate_limit[0])
+        if datetime.now() < blocked_until:
+            seconds_remaining = int((blocked_until - datetime.now()).total_seconds())
+            conn.close()
+            return False, seconds_remaining, 0
+
+    # Get current verification code record
+    cursor.execute('''
+        SELECT resend_count, last_resend_at FROM verification_codes
+        WHERE email = ? AND purpose = ? AND used = 0
+        ORDER BY created_at DESC LIMIT 1
+    ''', (email_lower, purpose))
+
+    record = cursor.fetchone()
+    conn.close()
+
+    if not record:
+        return True, 0, 3  # No active code, can send first one
+
+    resend_count = record[0] or 0
+    last_resend_at = record[1]
+
+    # Check cooldown (1 minute between resends)
+    if last_resend_at:
+        last_resend = datetime.fromisoformat(last_resend_at)
+        cooldown_end = last_resend + timedelta(minutes=1)
+        if datetime.now() < cooldown_end:
+            seconds_remaining = int((cooldown_end - datetime.now()).total_seconds())
+            return False, seconds_remaining, 3 - resend_count
+
+    attempts_remaining = 3 - resend_count
+    return attempts_remaining > 0, 0, attempts_remaining
+
+
+def resend_verification_code(email, purpose='login'):
+    """Resend verification code. Returns (success, code_or_error, seconds_blocked)."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    email_lower = email.lower()
+
+    # Get current code record
+    cursor.execute('''
+        SELECT id, resend_count FROM verification_codes
+        WHERE email = ? AND purpose = ? AND used = 0
+        ORDER BY created_at DESC LIMIT 1
+    ''', (email_lower, purpose))
+
+    record = cursor.fetchone()
+
+    if not record:
+        conn.close()
+        # No existing code, create new one
+        code = create_verification_code(email, purpose)
+        return True, code, 0
+
+    record_id = record[0]
+    resend_count = record[1] or 0
+
+    # Check if max resends reached
+    if resend_count >= 3:
+        # Rate limit for 5 minutes
+        blocked_until = datetime.now() + timedelta(minutes=5)
+        cursor.execute('''
+            INSERT INTO auth_rate_limits (email, purpose, blocked_until, created_at)
+            VALUES (?, ?, ?, ?)
+        ''', (email_lower, purpose, blocked_until.isoformat(), datetime.now().isoformat()))
+        conn.commit()
+        conn.close()
+        return False, "Too many attempts. Please try again in 5 minutes.", 300
+
+    # Update resend count and generate new code
+    new_code = generate_verification_code()
+    expires_at = datetime.now() + timedelta(minutes=10)
+
+    cursor.execute('''
+        UPDATE verification_codes
+        SET code = ?, resend_count = resend_count + 1, last_resend_at = ?, expires_at = ?
+        WHERE id = ?
+    ''', (new_code, datetime.now().isoformat(), expires_at.isoformat(), record_id))
+
+    conn.commit()
+    conn.close()
+
+    return True, new_code, 0
+
+
+def clear_rate_limit(email, purpose='login'):
+    """Clear rate limit for an email (called after successful verification)."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM auth_rate_limits WHERE email = ? AND purpose = ?', (email.lower(), purpose))
+    conn.commit()
+    conn.close()
+
+
+def is_code_rate_limited(email, purpose='login'):
+    """Check if code verification is rate limited (3+ wrong attempts within 5 min cooldown)."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    now = datetime.now()
+
+    # Check for ANY code with 3+ wrong attempts created in the last 5 minutes
+    # This prevents bypass by creating a new code after being rate limited
+    five_min_ago = (now - timedelta(minutes=5)).isoformat()
+    cursor.execute('''
+        SELECT wrong_attempts, created_at FROM verification_codes
+        WHERE email = ? AND purpose = ? AND wrong_attempts >= 3 AND created_at > ?
+        ORDER BY created_at DESC LIMIT 1
+    ''', (email.lower(), purpose, five_min_ago))
+
+    rate_limited_record = cursor.fetchone()
+    conn.close()
+
+    return rate_limited_record is not None
+
+
+# =============================================================================
+# DISCORD OAUTH ACCOUNT LINKING FUNCTIONS
+# =============================================================================
+
+def save_discord_oauth(user_id, discord_id, username, avatar, access_token, refresh_token, expires_at):
+    """Save Discord OAuth tokens after successful authorization."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Encrypt the tokens
+    encrypted_access = encrypt_token(access_token) if access_token else None
+    encrypted_refresh = encrypt_token(refresh_token) if refresh_token else None
+
+    cursor.execute('''
+        UPDATE users SET
+            discord_oauth_discord_id = ?,
+            discord_oauth_username = ?,
+            discord_oauth_avatar = ?,
+            discord_oauth_access_token = ?,
+            discord_oauth_refresh_token = ?,
+            discord_oauth_expires_at = ?
+        WHERE id = ?
+    ''', (discord_id, username, avatar, encrypted_access, encrypted_refresh, expires_at, user_id))
+
+    conn.commit()
+    conn.close()
+
+
+def get_discord_oauth_status(user_id):
+    """Get Discord OAuth linking status for a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT discord_oauth_linked, discord_oauth_discord_id, discord_oauth_username,
+               discord_oauth_avatar, discord_oauth_linked_at
+        FROM users WHERE id = ?
+    ''', (user_id,))
+
+    result = cursor.fetchone()
+    conn.close()
+
+    if not result:
+        return None
+
+    return {
+        'is_linked': bool(result[0]),
+        'discord_id': result[1],
+        'username': result[2],
+        'avatar': result[3],
+        'linked_at': result[4]
+    }
+
+
+def get_discord_oauth_info(user_id):
+    """Get full Discord OAuth info including whether OAuth was completed (but not token linked yet)."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT discord_oauth_linked, discord_oauth_discord_id, discord_oauth_username,
+               discord_oauth_avatar, discord_oauth_linked_at, discord_id, username, avatar
+        FROM users WHERE id = ?
+    ''', (user_id,))
+
+    result = cursor.fetchone()
+    conn.close()
+
+    if not result:
+        return None
+
+    return {
+        'is_fully_linked': bool(result[0]),
+        'oauth_discord_id': result[1],
+        'oauth_username': result[2],
+        'oauth_avatar': result[3],
+        'linked_at': result[4],
+        'has_oauth': result[1] is not None,  # True if OAuth was completed
+        # Current linked account info (after full linking)
+        'linked_discord_id': result[5],
+        'linked_username': result[6],
+        'linked_avatar': result[7]
+    }
+
+
+def complete_discord_link(user_id, discord_token):
+    """Complete Discord account linking after token is verified.
+    Updates the main discord_id, username, avatar, and token fields."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Get the OAuth info
+    cursor.execute('''
+        SELECT discord_oauth_discord_id, discord_oauth_username, discord_oauth_avatar
+        FROM users WHERE id = ?
+    ''', (user_id,))
+
+    result = cursor.fetchone()
+    if not result or not result[0]:
+        conn.close()
+        return False, "No Discord OAuth data found"
+
+    oauth_discord_id = result[0]
+    oauth_username = result[1]
+    oauth_avatar = result[2]
+
+    # Encrypt the Discord token
+    encrypted_token = encrypt_token(discord_token)
+
+    # Update the user with the linked Discord account
+    cursor.execute('''
+        UPDATE users SET
+            discord_id = ?,
+            username = ?,
+            avatar = ?,
+            discord_token = ?,
+            discord_oauth_linked = 1,
+            discord_oauth_linked_at = ?
+        WHERE id = ?
+    ''', (oauth_discord_id, oauth_username, oauth_avatar, encrypted_token, datetime.now().isoformat(), user_id))
+
+    conn.commit()
+    conn.close()
+
+    return True, None
+
+
+def unlink_discord_oauth(user_id):
+    """Clear Discord OAuth data (allows user to re-link a different account)."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        UPDATE users SET
+            discord_oauth_discord_id = NULL,
+            discord_oauth_username = NULL,
+            discord_oauth_avatar = NULL,
+            discord_oauth_access_token = NULL,
+            discord_oauth_refresh_token = NULL,
+            discord_oauth_expires_at = NULL
+        WHERE id = ?
+    ''', (user_id,))
+
+    conn.commit()
+    conn.close()
+
+
+def full_unlink_discord_account(user_id):
+    """Fully unlink Discord account - clears both OAuth data and linked status.
+    Called when token becomes invalid to reset the account to unlinked state."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Get user's email to preserve it
+    cursor.execute('SELECT email FROM users WHERE id = ?', (user_id,))
+    result = cursor.fetchone()
+    email = result[0] if result else None
+
+    # Reset all Discord-related fields while preserving email and account
+    cursor.execute('''
+        UPDATE users SET
+            discord_id = ?,
+            username = ?,
+            avatar = NULL,
+            discord_token = 'pending',
+            discord_oauth_linked = 0,
+            discord_oauth_linked_at = NULL,
+            discord_oauth_discord_id = NULL,
+            discord_oauth_username = NULL,
+            discord_oauth_avatar = NULL,
+            discord_oauth_access_token = NULL,
+            discord_oauth_refresh_token = NULL,
+            discord_oauth_expires_at = NULL
+        WHERE id = ?
+    ''', (f'pending_{email}' if email else f'pending_{user_id}',
+          email.split('@')[0] if email else 'User',
+          user_id))
+
+    conn.commit()
+    conn.close()
+
+
+def is_discord_linked(user_id):
+    """Quick check if user has fully linked their Discord account."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT discord_oauth_linked FROM users WHERE id = ?', (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+
+    return bool(result and result[0])
+
+
+def get_user_by_internal_id(user_id):
+    """Get user by their internal database ID."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+    return dict(user) if user else None
 
 
 # Initialize database on import

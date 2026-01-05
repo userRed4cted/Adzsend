@@ -15,15 +15,66 @@ BLACKLISTED_WORDS = [
     'discord nitro free',
     'free money',
     'free robux',
+    'molest',
+    'rape',
+    'rapist',
     'teen'
 
 ]
 
-# Whitelist - words that should be allowed even if they contain blacklisted substrings
-WHITELIST = [
-    # Add exceptions here
-    # Example: 'legitimate phrase',
-]
+# Phrase exceptions - if a blacklisted word appears within these phrases, it's allowed
+# Format: { 'blacklisted_word': ['exception1', 'exception2', ...] }
+PHRASE_EXCEPTIONS = {
+    'cp': ['scp', 'scpf'],
+    'sex': [],
+    'teen': ['canteen', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'],
+    'porn': [],  # No exceptions
+    'rapist': ['therapist'],
+}
+
+
+def is_word_in_exception(word, message_lower):
+    """
+    Check if a blacklisted word appears only within allowed exception phrases.
+    Returns True if the word should be allowed (it's part of an exception).
+    """
+    word_lower = word.lower()
+    exceptions = PHRASE_EXCEPTIONS.get(word_lower, [])
+
+    if not exceptions:
+        return False  # No exceptions defined, word is blocked
+
+    # Find all occurrences of the blacklisted word in the message
+    import re
+    pattern = re.escape(word_lower)
+
+    for match in re.finditer(pattern, message_lower):
+        start = match.start()
+        end = match.end()
+
+        # Check if this occurrence is part of any exception phrase
+        is_exception = False
+        for exception in exceptions:
+            exception_lower = exception.lower()
+            # Find the exception in the message
+            exc_start = message_lower.find(exception_lower)
+            while exc_start != -1:
+                exc_end = exc_start + len(exception_lower)
+                # Check if the blacklisted word occurrence falls within this exception
+                if exc_start <= start and end <= exc_end:
+                    is_exception = True
+                    break
+                exc_start = message_lower.find(exception_lower, exc_start + 1)
+
+            if is_exception:
+                break
+
+        # If any occurrence is NOT part of an exception, the word is blocked
+        if not is_exception:
+            return False
+
+    # All occurrences are within exceptions
+    return True
 
 
 def check_message_content(message, user_id=None):
@@ -37,16 +88,13 @@ def check_message_content(message, user_id=None):
 
     message_lower = message.lower()
 
-    # Check whitelist first
-    for whitelisted in WHITELIST:
-        if whitelisted.lower() in message_lower:
-            return True, None
-
     # Check blacklist - find ALL prohibited words
     found_words = []
     for word in BLACKLISTED_WORDS:
         if word.lower() in message_lower:
-            found_words.append(word)
+            # Check if this word is part of an exception phrase
+            if not is_word_in_exception(word, message_lower):
+                found_words.append(word)
 
     if found_words:
         # Create comprehensive flag reason with all prohibited words and full message

@@ -1,12 +1,19 @@
-# Admin Configuration
-# Add Discord User IDs of administrators here
+# =============================================================================
+# ADMIN CONFIGURATION
+# =============================================================================
+# Add admin email addresses here to grant administrator access.
+# Users with these emails will have access to the admin panel.
+# =============================================================================
 
-ADMIN_USER_IDS = [
-    '1042840778990440580'
-    # Add admin Discord IDs here
-    # Example: '123456789012345678',
+ADMIN_EMAILS = [
+    'admin@example.com',
+    # Add admin email addresses here
+    # Example: 'admin@yourdomain.com',
 ]
 
-def is_admin(discord_id):
-    """Check if a Discord ID belongs to an admin."""
-    return str(discord_id) in ADMIN_USER_IDS
+
+def is_admin(email):
+    """Check if an email address belongs to an admin."""
+    if not email:
+        return False
+    return email.lower() in [e.lower() for e in ADMIN_EMAILS]

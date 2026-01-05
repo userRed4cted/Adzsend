@@ -38,7 +38,7 @@ COLORS = {
     # Used for alerts, notifications, status indicators
     'success': '#43b581',           # Green - success messages
     'warning': '#FFC107',           # Yellow - warnings
-    'error': '#DF281F',             # Red - errors, danger
+    'error': '#991a35',             # Red - errors, danger
     'info': '#5865F6',              # Purple/Blue - info messages
 
     # ==========================================
@@ -53,7 +53,7 @@ COLORS = {
     # ==========================================
     # Unique colors for specific elements
     'discord': '#5662F6',           # Discord brand color
-    'logout_red': '#ff6b6b',        # Logout text color
+    'logout_red': '#991a35',        # Logout text color
     'admin_pink': '#ff0073',        # Admin text color
     'scroll': '#717688',            # Scrollbar color
 
@@ -61,7 +61,7 @@ COLORS = {
     # GALLERY GRADIENT
     # ==========================================
     # Used for the gallery section background
-    'gallery_gradient_start': '#754075',  # Purple
-    'gallery_gradient_end': '#3E2B40',    # Dark purple
-    'gallery_border': '#7C437D',          # Border accent
+    'gallery_gradient_start': '#15d8bc',  # Teal
+    'gallery_gradient_end': '#006e59',    # Dark teal
+    'gallery_border': '#15d8bc',          # Border accent
 }

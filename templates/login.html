@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ site_config.page_titles.signup }}</title>
+    <title>{{ site_config.page_titles.login }}</title>
 
     <!-- SEO Meta Tags -->
-    <meta name="description" content="{{ get_page_description('signup') }}">
+    <meta name="description" content="{{ get_page_description('login') }}">
 
     <!-- Open Graph / Facebook -->
-    {% set embed = get_page_embed('signup') %}
+    {% set embed = get_page_embed('login') %}
     <meta property="og:type" content="website">
     <meta property="og:title" content="{{ embed.title }}">
     <meta property="og:description" content="{{ embed.description }}">
@@ -68,12 +68,12 @@
             color: #949BA4;
         }
         /* Override submit button to use teal gradient */
-        #signup-btn {
+        #login-btn {
             background: linear-gradient(to bottom, #15d8bc, #006e59) !important;
             color: #121215 !important;
             border: none !important;
         }
-        #signup-btn:hover:not(:disabled) {
+        #login-btn:hover:not(:disabled) {
             background: linear-gradient(to bottom, #10b89e, #004e40) !important;
         }
     </style>
@@ -93,12 +93,12 @@
                     </div>
                     <div class="navbar-text">
                         <h1 class="navbar-title">Ad <span class="gradient-z">Z</span> send</h1>
-                        <p class="navbar-subtitle">Sign up to get started</p>
+                        <p class="navbar-subtitle">Login to your account</p>
                     </div>
                 </div>
                 <div class="nav-right">
                     <div class="auth-buttons">
-                        <a href="{{ url_for('login_page') }}" class="auth-btn login-btn">Login</a>
+                        <a href="{{ url_for('signup_page') }}" class="auth-btn signup-btn">Sign Up</a>
                     </div>
                 </div>
             </div>
@@ -115,21 +115,21 @@
         <div class="panel-container">
             <div class="login-container">
                 <div class="token-form">
-                    <h2 class="form-title">Sign Up</h2>
+                    <h2 class="form-title">Login</h2>
                     {% if error %}
                         <div class="error-message">{{ error }}</div>
                     {% endif %}
 
-                    <form method="POST" action="{{ url_for('signup_page') }}" id="signup-form">
+                    <form method="POST" action="{{ url_for('login_page') }}" id="login-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <div class="form-group-login">
                             <input type="email" name="email" class="email-input" placeholder="Enter your email address..." required>
-                            <button type="submit" class="submit-btn" id="signup-btn">Sign Up</button>
+                            <button type="submit" class="submit-btn" id="login-btn">Login</button>
                         </div>
                     </form>
 
                     <p style="margin-top: 1.5rem; color: #949BA4; font-size: 0.9rem; text-align: center;">
-                        Already have an account? <a href="{{ url_for('login_page') }}" style="color: #15d8bc;">Login here</a>
+                        Don't have an account? <a href="{{ url_for('signup_page') }}" style="color: #15d8bc;">Sign up here</a>
                     </p>
                 </div>
             </div>
@@ -155,23 +155,23 @@
             }
         });
 
-        // Signup form loading state
-        const signupForm = document.getElementById('signup-form');
-        const signupBtn = document.getElementById('signup-btn');
+        // Login form loading state
+        const loginForm = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
         let isSubmitting = false;
 
-        if (signupForm && signupBtn) {
-            signupForm.addEventListener('submit', function(e) {
+        if (loginForm && loginBtn) {
+            loginForm.addEventListener('submit', function(e) {
                 if (isSubmitting) {
                     e.preventDefault();
                     return false;
                 }
 
                 isSubmitting = true;
-                signupBtn.disabled = true;
-                signupBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"></path></svg> Sending Code...';
-                signupBtn.style.opacity = '0.7';
-                signupBtn.style.cursor = 'not-allowed';
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"></path></svg> Sending Code...';
+                loginBtn.style.opacity = '0.7';
+                loginBtn.style.cursor = 'not-allowed';
             });
         }
 

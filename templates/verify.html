@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - Adzsend</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
+    {% include 'partials/config_styles.html' %}
+    <script src="{{ url_for('static', filename='custom_modals.js') }}"></script>
+    <style>
+        #ripple-canvas {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 60px);
+            pointer-events: none;
+            z-index: 1;
+        }
+        .panel {
+            position: relative;
+            z-index: 2;
+        }
+        .navbar {
+            position: relative;
+            z-index: 1000;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .code-input-container {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .code-input {
+            width: 50px;
+            height: 60px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: #212227;
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+        }
+        .code-input:focus {
+            outline: none;
+        }
+        .code-input::placeholder {
+            color: #4a4a4a;
+        }
+        .resend-btn {
+            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            border: none;
+            color: #121215;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 400;
+            margin-top: 0.5rem;
+            transition: all 0.2s ease;
+            /* Match width of code input container: 6 inputs × 50px + 5 gaps × 0.5rem */
+            width: calc(6 * 50px + 5 * 0.5rem);
+        }
+        .resend-btn:hover:not(:disabled) {
+            background: linear-gradient(to bottom, #10b89e, #004e40);
+        }
+        .resend-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .email-display {
+            color: #15d8bc;
+            font-weight: 500;
+        }
+        .attempts-warning {
+            color: #991a35;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        .cooldown-timer {
+            color: #949BA4;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        /* Center all text in the form */
+        .token-form {
+            text-align: center;
+        }
+        .token-form p {
+            text-align: center;
+        }
+        /* Inline error message - no yellow box */
+        .verify-error {
+            color: #991a35;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .verify-error.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="ripple-canvas"></canvas>
+    <div class="panel">
+        <nav class="navbar">
+            <div class="navbar-content">
+                <div class="navbar-left">
+                    <div class="menu-icon" id="menu-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </div>
+                    <div class="navbar-text">
+                        <h1 class="navbar-title">Ad <span class="gradient-z">Z</span> send</h1>
+                        <p class="navbar-subtitle">Verify your email</p>
+                    </div>
+                </div>
+                <div class="nav-right">
+                    {% if purpose != 'email_change' %}
+                    <div class="auth-buttons">
+                        {% if purpose == 'login' %}
+                        <a href="{{ url_for('signup_page') }}" class="auth-btn signup-btn">Sign Up</a>
+                        {% else %}
+                        <a href="{{ url_for('login_page') }}" class="auth-btn login-btn">Login</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Dropdown Menu -->
+            <div class="dropdown-menu" id="dropdown-menu">
+                <a href="{{ url_for('home') }}" class="dropdown-item">Home</a>
+                <a href="{{ url_for('purchase') }}" class="dropdown-item">Purchase</a>
+                {% if purpose == 'email_change' %}
+                {% if not (plan_status and plan_status.plan_id and plan_status.plan_id.startswith('team_plan_')) %}
+                <a href="{{ url_for('panel') }}" class="dropdown-item">Personal Panel</a>
+                {% endif %}
+                {% if has_business %}
+                {% if is_owner %}
+                <a href="{{ url_for('team_management') }}" class="dropdown-item">Team Management</a>
+                {% endif %}
+                <a href="{{ url_for('team_panel') }}" class="dropdown-item">Team Panel</a>
+                {% endif %}
+                <a href="{{ url_for('settings') }}" class="dropdown-item">Settings</a>
+                {% if is_admin_user %}
+                <a href="{{ url_for('admin_panel') }}" class="dropdown-item">Admin</a>
+                {% endif %}
+                {% endif %}
+                <div class="dropdown-divider"></div>
+                <a href="https://discord.gg/KWt6rvCukp" target="_blank" class="dropdown-item discord-item">Discord Server</a>
+                {% if purpose == 'email_change' %}
+                <a href="{{ url_for('logout') }}" class="dropdown-item logout-item">Logout</a>
+                {% endif %}
+            </div>
+        </nav>
+
+        <div class="panel-container">
+            <div class="login-container">
+                <div class="token-form">
+                    <h2 class="form-title">Enter Verification Code</h2>
+
+                    <p style="color: #949BA4; margin-bottom: 1.5rem;">
+                        We sent a 6-digit code to <span class="email-display">{{ email }}</span>
+                    </p>
+
+                    <div class="verify-error" id="verify-error"></div>
+
+                    <div id="verify-form-container">
+                        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
+                        <input type="hidden" id="purpose-value" value="{{ purpose }}">
+                        <!-- SECURITY: Email is stored server-side in session only -->
+
+                        <div class="code-input-container">
+                            <input type="text" class="code-input" maxlength="1" data-index="0" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                            <input type="text" class="code-input" maxlength="1" data-index="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                            <input type="text" class="code-input" maxlength="1" data-index="2" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                            <input type="text" class="code-input" maxlength="1" data-index="3" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                            <input type="text" class="code-input" maxlength="1" data-index="4" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                            <input type="text" class="code-input" maxlength="1" data-index="5" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+                        </div>
+                    </div>
+
+                    <button type="button" class="resend-btn" id="resend-btn" {% if cooldown_seconds > 0 or code_rate_limited %}disabled{% endif %}>
+                        Resend Code
+                    </button>
+
+                    <div id="cooldown-timer" class="cooldown-timer" {% if cooldown_seconds <= 0 and not code_rate_limited %}style="display: none;"{% endif %}>
+                        {% if code_rate_limited %}
+                        <span style="color: #991a35;">Too many attempts. Please try again later.</span>
+                        {% elif cooldown_seconds > 0 %}
+                        Resend available in <span id="countdown">{{ cooldown_seconds }}</span>s
+                        {% endif %}
+                    </div>
+
+                    <p style="margin-top: 1.5rem; color: #949BA4; font-size: 0.9rem;">
+                        Wrong email? <a href="{% if purpose == 'email_change' %}{{ url_for('settings') }}{% elif purpose == 'login' %}{{ url_for('login_page') }}{% else %}{{ url_for('signup_page') }}{% endif %}" style="color: #15d8bc;">Go back</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dropdown menu toggle
+        const menuIcon = document.getElementById('menu-icon');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+
+        if (menuIcon) {
+            menuIcon.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdownMenu.classList.toggle('show');
+            });
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (dropdownMenu && !dropdownMenu.contains(e.target) && menuIcon && !menuIcon.contains(e.target)) {
+                dropdownMenu.classList.remove('show');
+            }
+        });
+
+        // Code input handling
+        const codeInputs = document.querySelectorAll('.code-input');
+        const verifyError = document.getElementById('verify-error');
+        const csrfToken = document.getElementById('csrf-token').value;
+        const purposeValue = document.getElementById('purpose-value').value;
+        // SECURITY: Email is stored server-side in session only - not sent from client
+        let isVerifying = false;
+
+        function getFullCode() {
+            let code = '';
+            codeInputs.forEach(input => {
+                code += input.value;
+            });
+            return code;
+        }
+
+        function clearInputs() {
+            codeInputs.forEach(input => {
+                input.value = '';
+            });
+            codeInputs[0].focus();
+        }
+
+        function showError(message) {
+            verifyError.textContent = message;
+            verifyError.classList.add('show');
+        }
+
+        function hideError() {
+            verifyError.classList.remove('show');
+        }
+
+        let isCodeRateLimited = {{ 'true' if code_rate_limited else 'false' }};
+
+        function disableAllInputs() {
+            codeInputs.forEach(input => {
+                input.disabled = true;
+                input.style.opacity = '0.5';
+            });
+            resendBtn.disabled = true;
+        }
+
+        function showRateLimitError() {
+            showError('Too many incorrect attempts. Please try again later.');
+            cooldownTimer.innerHTML = '<span style="color: #991a35;">Too many attempts. Please try again later.</span>';
+            cooldownTimer.style.display = 'block';
+            disableAllInputs();
+            isCodeRateLimited = true;
+        }
+
+        async function verifyCode(code) {
+            if (isVerifying || isCodeRateLimited) return;
+            isVerifying = true;
+            hideError();
+
+            try {
+                // SECURITY: Email is retrieved from session server-side
+                const response = await fetch('/api/verify-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        purpose: purposeValue
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Redirect on success
+                    window.location.href = result.redirect || '/panel';
+                } else if (result.code_rate_limited) {
+                    // Code verification rate limited
+                    showRateLimitError();
+                    clearInputs();
+                } else {
+                    showError(result.error || 'Invalid verification code');
+                    clearInputs();
+                }
+            } catch (error) {
+                console.error('Verify error:', error);
+                showError('Verification failed. Please try again.');
+                clearInputs();
+            } finally {
+                isVerifying = false;
+            }
+        }
+
+        codeInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                const value = e.target.value;
+
+                // Only allow numbers
+                if (!/^\d*$/.test(value)) {
+                    e.target.value = '';
+                    return;
+                }
+
+                // Move to next input if digit entered
+                if (value && index < codeInputs.length - 1) {
+                    codeInputs[index + 1].focus();
+                }
+
+                // Auto-verify when all fields are filled
+                const fullCode = getFullCode();
+                if (fullCode.length === 6) {
+                    verifyCode(fullCode);
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                // Handle backspace
+                if (e.key === 'Backspace' && !input.value && index > 0) {
+                    codeInputs[index - 1].focus();
+                }
+
+                // Handle paste
+                if (e.key === 'v' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    navigator.clipboard.readText().then(text => {
+                        const digits = text.replace(/\D/g, '').slice(0, 6);
+                        digits.split('').forEach((digit, i) => {
+                            if (codeInputs[i]) {
+                                codeInputs[i].value = digit;
+                            }
+                        });
+                        const fullCode = getFullCode();
+                        if (fullCode.length === 6) {
+                            verifyCode(fullCode);
+                        }
+                    });
+                }
+            });
+
+            // Focus on first input on page load
+            if (index === 0) {
+                input.focus();
+            }
+        });
+
+        // Resend button and cooldown
+        const resendBtn = document.getElementById('resend-btn');
+        const cooldownTimer = document.getElementById('cooldown-timer');
+        let countdownSpan = document.getElementById('countdown');
+        let cooldownSeconds = {{ cooldown_seconds|default(0) }};
+
+        // Disable inputs on page load if already rate limited
+        if (isCodeRateLimited) {
+            disableAllInputs();
+        }
+
+        function updateCooldown() {
+            if (cooldownSeconds > 0) {
+                cooldownSeconds--;
+                if (countdownSpan) {
+                    countdownSpan.textContent = cooldownSeconds;
+                }
+
+                if (cooldownSeconds <= 0) {
+                    // Only re-enable if not code rate limited
+                    if (!isCodeRateLimited) {
+                        resendBtn.disabled = false;
+                        cooldownTimer.style.display = 'none';
+                    }
+                } else {
+                    setTimeout(updateCooldown, 1000);
+                }
+            }
+        }
+
+        if (cooldownSeconds > 0 && !isCodeRateLimited) {
+            setTimeout(updateCooldown, 1000);
+        }
+
+        resendBtn.addEventListener('click', async () => {
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'Sending...';
+
+            try {
+                // SECURITY: Email is retrieved from session server-side
+                const response = await fetch('/api/resend-code', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        purpose: '{{ purpose }}'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    cooldownSeconds = 60;
+                    cooldownTimer.innerHTML = 'Resend available in <span id="countdown">' + cooldownSeconds + '</span>s';
+                    countdownSpan = document.getElementById('countdown'); // Re-get the span after innerHTML change
+                    cooldownTimer.style.display = 'block';
+                    resendBtn.textContent = 'Resend Code';
+                    setTimeout(updateCooldown, 1000); // Start countdown after 1 second
+                } else {
+                    if (result.rate_limited) {
+                        // Rate limit reached - show error and keep button disabled
+                        cooldownTimer.innerHTML = '<span style="color: #991a35;">Rate limit reached</span>';
+                        cooldownTimer.style.display = 'block';
+                        resendBtn.textContent = 'Resend Code';
+                        // Button stays disabled
+                    } else if (result.blocked_seconds) {
+                        cooldownSeconds = result.blocked_seconds;
+                        cooldownTimer.innerHTML = 'Resend available in <span id="countdown">' + cooldownSeconds + '</span>s';
+                        countdownSpan = document.getElementById('countdown'); // Re-get the span after innerHTML change
+                        cooldownTimer.style.display = 'block';
+                        resendBtn.textContent = 'Resend Code';
+                        setTimeout(updateCooldown, 1000); // Start countdown after 1 second
+                    } else {
+                        showError(result.error || 'Failed to resend code');
+                        resendBtn.textContent = 'Resend Code';
+                        resendBtn.disabled = false;
+                    }
+                }
+            } catch (error) {
+                console.error('Resend error:', error);
+                await showAlert('Failed to resend code. Please try again.', 'Error');
+                resendBtn.disabled = false;
+                resendBtn.textContent = 'Resend Code';
+            }
+        });
+
+        // Liquid push effect
+        (function() {
+            const canvas = document.getElementById('ripple-canvas');
+            const ctx = canvas.getContext('2d');
+            const navbarHeight = 60;
+
+            let mouseX = -1000;
+            let mouseY = -1000;
+            let particles = [];
+
+            const isMobile = window.innerWidth <= 768;
+            const particleCount = isMobile ? 200 : 600;
+            const pushRadius = isMobile ? 60 : 80;
+            const pushStrength = 0.15;
+            const connectionDistance = isMobile ? 40 : 60;
+
+            // Get proper viewport dimensions accounting for mobile browsers
+            function getViewportHeight() {
+                if (window.visualViewport) {
+                    return window.visualViewport.height;
+                }
+                return window.innerHeight;
+            }
+
+            // Track last known dimensions and zoom level
+            let lastWidth = 0;
+            let lastHeight = 0;
+            let lastDpr = window.devicePixelRatio || 1;
+
+            function resizeCanvas() {
+                const cssWidth = window.innerWidth;
+                const cssHeight = getViewportHeight() - navbarHeight;
+                const currentDpr = window.devicePixelRatio || 1;
+
+                // Check if dimensions or zoom level actually changed
+                const dimensionsChanged = Math.abs(cssWidth - lastWidth) > 1 || Math.abs(cssHeight - lastHeight) > 1;
+                const zoomChanged = Math.abs(currentDpr - lastDpr) > 0.01;
+
+                if (!dimensionsChanged && !zoomChanged) {
+                    return;
+                }
+
+                lastWidth = cssWidth;
+                lastHeight = cssHeight;
+                lastDpr = currentDpr;
+
+                canvas.width = cssWidth;
+                canvas.height = cssHeight;
+                canvas.style.width = cssWidth + 'px';
+                canvas.style.height = cssHeight + 'px';
+
+                // Always reinitialize particles on resize/zoom
+                initParticles();
+            }
+
+            class Particle {
+                constructor() {
+                    this.reset();
+                }
+
+                reset() {
+                    this.x = Math.random() * canvas.width;
+                    this.y = Math.random() * canvas.height;
+                    this.originX = this.x;
+                    this.originY = this.y;
+                    this.vx = 0;
+                    this.vy = 0;
+                    this.radius = Math.random() * 2 + 1;
+                    this.opacity = Math.random() * 0.3 + 0.1;
+                }
+
+                update() {
+                    const dx = this.x - mouseX;
+                    const dy = this.y - mouseY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < pushRadius && distance > 0) {
+                        const force = (pushRadius - distance) / pushRadius;
+                        const angle = Math.atan2(dy, dx);
+                        this.vx += Math.cos(angle) * force * pushStrength;
+                        this.vy += Math.sin(angle) * force * pushStrength;
+                    }
+
+                    const returnSpeed = 0.02;
+                    this.vx += (this.originX - this.x) * returnSpeed;
+                    this.vy += (this.originY - this.y) * returnSpeed;
+
+                    this.vx *= 0.92;
+                    this.vy *= 0.92;
+
+                    this.x += this.vx;
+                    this.y += this.vy;
+                }
+
+                draw() {
+                    const displacement = Math.sqrt(
+                        Math.pow(this.x - this.originX, 2) +
+                        Math.pow(this.y - this.originY, 2)
+                    );
+                    const glowOpacity = Math.min(this.opacity + displacement * 0.01, 0.6);
+
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${glowOpacity})`;
+                    ctx.fill();
+
+                    if (!isMobile) {
+                        particles.forEach(other => {
+                            if (other === this) return;
+                            const dx = other.x - this.x;
+                            const dy = other.y - this.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+
+                            if (dist < connectionDistance) {
+                                ctx.beginPath();
+                                ctx.moveTo(this.x, this.y);
+                                ctx.lineTo(other.x, other.y);
+                                ctx.strokeStyle = `rgba(255, 255, 255, ${0.05 * (1 - dist / connectionDistance)})`;
+                                ctx.lineWidth = 0.5;
+                                ctx.stroke();
+                            }
+                        });
+                    }
+                }
+            }
+
+            function initParticles() {
+                particles = [];
+                for (let i = 0; i < particleCount; i++) {
+                    particles.push(new Particle());
+                }
+            }
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            window.addEventListener('load', resizeCanvas);
+
+            document.addEventListener('mousemove', function(e) {
+                if (e.clientY > navbarHeight) {
+                    mouseX = e.clientX;
+                    mouseY = e.clientY - navbarHeight;
+                } else {
+                    mouseX = -1000;
+                    mouseY = -1000;
+                }
+            });
+
+            document.addEventListener('touchmove', function(e) {
+                const touch = e.touches[0];
+                if (touch.clientY > navbarHeight) {
+                    mouseX = touch.clientX;
+                    mouseY = touch.clientY - navbarHeight;
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchstart', function(e) {
+                const touch = e.touches[0];
+                if (touch.clientY > navbarHeight) {
+                    mouseX = touch.clientX;
+                    mouseY = touch.clientY - navbarHeight;
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchend', function() {
+                mouseX = -1000;
+                mouseY = -1000;
+            });
+
+            document.addEventListener('mouseleave', function() {
+                mouseX = -1000;
+                mouseY = -1000;
+            });
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(particle => {
+                    particle.update();
+                    particle.draw();
+                });
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+        })();
+    </script>
+</body>
+</html>

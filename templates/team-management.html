@@ -85,7 +85,7 @@
                     <div style="padding: 0.75rem 1rem; flex-shrink: 0;">
                         <div class="panel-subheader" style="margin-bottom: 0.5rem; color: #dcddde;">Add Team Member</div>
                         <div style="display: flex; gap: 0.5rem;">
-                            <input type="email" id="member-email" class="search-input" placeholder="Enter member's email address..." style="flex: 1;">
+                            <input type="text" id="member-adzsend-id" class="search-input" placeholder="Enter member's Adzsend ID (18 digits)..." style="flex: 1;" maxlength="18" pattern="[0-9]{18}">
                             <button id="add-member-btn" class="send-button" style="padding: 0 1rem; height: 40px; min-width: 80px;">Add</button>
                         </div>
                     </div>
@@ -108,7 +108,7 @@
                                         </div>
                                         <div class="member-info">
                                             <div class="member-username">{{ member.member_username or 'Unknown User' }}</div>
-                                            <div class="member-email">{{ member.member_email or 'No email' }}</div>
+                                            <div class="member-id" style="color: #949ba4; font-size: 0.8rem; font-family: 'Roboto Mono', monospace;">{{ member.member_adzsend_id or 'No ID' }}</div>
                                         </div>
                                         {% set status = member.invitation_status or 'pending' %}
                                         {% if status == 'pending' %}
@@ -188,7 +188,7 @@
                                                     <span style="background: linear-gradient(to bottom, #15d8bc, #006e59); color: #121215; font-size: 0.6rem; padding: 0.15rem 0.4rem; border-radius: 3px; margin-left: 0.5rem; font-weight: 500;">Owner</span>
                                                 {% endif %}
                                             </div>
-                                            <div class="member-stat-id">ID: {{ stat.member_discord_id }}</div>
+                                            <div class="member-stat-id" style="font-family: 'Roboto Mono', monospace;">{{ stat.member_adzsend_id or 'No ID' }}</div>
                                         </div>
                                         <div class="member-stat-usage">
                                             <div class="stat-number">{{ stat.business_all_time_sent }}</div>
@@ -309,6 +309,18 @@
             color: #949ba4;
             font-size: 0.8rem;
             font-family: 'Roboto', sans-serif;
+        }
+
+        .member-email-only {
+            color: #dcddde;
+            font-size: 0.9rem;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .member-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .status-tag {
@@ -778,7 +790,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const menuIcon = document.getElementById('menu-icon');
             const dropdownMenu = document.getElementById('dropdown-menu');
-            const memberEmailInput = document.getElementById('member-email');
+            const memberAdzsendIdInput = document.getElementById('member-adzsend-id');
             const addMemberBtn = document.getElementById('add-member-btn');
             const membersList = document.getElementById('members-list');
             const teamMessageInput = document.getElementById('team-message-input');
@@ -810,20 +822,26 @@
                 });
             }
 
+            // Only allow numeric input for Adzsend ID
+            if (memberAdzsendIdInput) {
+                memberAdzsendIdInput.addEventListener('input', function(e) {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                });
+            }
+
             // Add team member
-            if (addMemberBtn && memberEmailInput) {
+            if (addMemberBtn && memberAdzsendIdInput) {
                 addMemberBtn.addEventListener('click', async function() {
-                    const email = memberEmailInput.value.trim().toLowerCase();
+                    const adzsendId = memberAdzsendIdInput.value.trim();
 
                     if (!email) {
-                        showAlert('Please enter an email address', 'Input Required');
+                        showAlert('Please enter an Adzsend ID', 'Input Required');
                         return;
                     }
 
-                    // Validate email format
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!emailRegex.test(email)) {
-                        showAlert('Please enter a valid email address', 'Invalid Format');
+                    // Validate Adzsend ID format (18 digits)
+                    if (!/^\d{18}$/.test(adzsendId)) {
+                        showAlert('Please enter a valid 18-digit Adzsend ID', 'Invalid Format');
                         return;
                     }
 
@@ -843,7 +861,7 @@
                                 'X-CSRF-Token': '{{ csrf_token }}'
                             },
                             body: JSON.stringify({
-                                email: email
+                                adzsend_id: adzsendId
                             })
                         });
 
@@ -864,7 +882,7 @@
                 });
 
                 // Allow Enter key to add member
-                memberEmailInput.addEventListener('keypress', (e) => {
+                memberAdzsendIdInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         addMemberBtn.click();
                     }

@@ -486,7 +486,7 @@
             <!-- Left Panel: Filters and User List -->
             <div class="admin-left-panel">
                 <div class="search-section">
-                    <input type="text" id="user-search" class="search-input" placeholder="Search by email or Discord user ID...">
+                    <input type="text" id="user-search" class="search-input" placeholder="Search by email, Adzsend ID, or Discord ID...">
                 </div>
 
                 <div class="admin-filters">
@@ -683,9 +683,10 @@
             const usersList = document.getElementById('users-list');
 
             try {
-                // Check if it looks like an email or Discord ID
+                // Check if it looks like an email, Adzsend ID (18 digits), or Discord ID
                 const isEmail = searchTerm.includes('@');
-                const queryParam = isEmail ? 'email' : 'discord_id';
+                const isAdzsendId = /^\d{18}$/.test(searchTerm);
+                const queryParam = isEmail ? 'email' : (isAdzsendId ? 'adzsend_id' : 'discord_id');
                 const response = await fetch(`/api/admin/search-user?${queryParam}=${encodeURIComponent(searchTerm)}`);
                 const data = await response.json();
 
@@ -726,8 +727,8 @@
                 const isSelected = currentUser && currentUser.id === user.id;
                 const selectedClass = isSelected ? ' selected' : '';
 
-                // Display Discord ID or "No linked Discord account"
-                const displayDiscordId = hasDiscordLinked ? user.discord_id : 'No linked Discord account';
+                // Display Adzsend ID in the list
+                const displayAdzsendId = user.adzsend_id || 'No ID';
 
                 return `
                 <div class="user-item${selectedClass}" onclick="selectUser(${user.id}, event)" data-user-id="${user.id}" data-avatar-url="${avatarUrl || ''}">
@@ -737,7 +738,7 @@
                     }
                     <div class="user-item-info">
                         <div class="user-item-name">${user.username || 'Unknown User'}</div>
-                        <div class="user-item-id">${displayDiscordId}</div>
+                        <div class="user-item-id">${displayAdzsendId}</div>
                     </div>
                     ${tags.length > 0 ? `<div class="user-item-tags">${tags.join('')}</div>` : ''}
                 </div>
@@ -853,8 +854,25 @@
                         <div class="detail-value">${user.signup_ip}</div>
                     </div>
                     <div class="detail-row">
-                        <div class="detail-label">Discord ID</div>
-                        <div class="detail-value">${(user.discord_id && !user.discord_id.startsWith('pending_') && user.discord_id !== 'no_discord_userid') ? user.discord_id : 'No linked Discord account'}</div>
+                        <div class="detail-label">Email</div>
+                        <div class="detail-value" style="display: flex; align-items: center; gap: 8px;">
+                            ${user.email || 'No email'}
+                            ${user.email ? \`<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" onclick="copyToClipboard('\${user.email}')">\` : ''}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Adzsend ID</div>
+                        <div class="detail-value" style="display: flex; align-items: center; gap: 8px;">
+                            ${user.adzsend_id || 'No ID'}
+                            ${user.adzsend_id ? \`<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" onclick="copyToClipboard('\${user.adzsend_id}')">\` : ''}
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Discord</div>
+                        <div class="detail-value" style="display: flex; align-items: center; gap: 8px;">
+                            ${(user.discord_id && !user.discord_id.startsWith('pending_') && !user.discord_id.startsWith('email_') && user.discord_id !== 'no_discord_userid') ? user.discord_id : 'No linked Discord'}
+                            ${(user.discord_id && !user.discord_id.startsWith('pending_') && !user.discord_id.startsWith('email_') && user.discord_id !== 'no_discord_userid') ? \`<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" onclick="copyToClipboard('\${user.discord_id}')">\` : ''}
+                        </div>
                     </div>
                     <div class="detail-row">
                         <div class="detail-label">Plans and Usage</div>
@@ -896,6 +914,13 @@
                     <button class="admin-btn delete" id="delete-btn" onclick="handleDelete()" ${disabledAttr}>Delete Account</button>
                 </div>
             `;
+        }
+
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('Copied to clipboard!', 'Success');
+            });
         }
 
         async function viewMessage() {

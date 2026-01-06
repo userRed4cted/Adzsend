@@ -144,40 +144,15 @@
                         <div class="settings-panel-header">Discord</div>
                         <div class="settings-panel-content" style="display: flex; flex-direction: column; gap: 1.5rem; flex: 1;">
                             {% if discord_oauth_info and discord_oauth_info.is_fully_linked %}
-                            <!-- Accounts scroll frame (when linked) -->
-                            <div style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 300px; overflow-y: auto;">
-                                <!-- Linked Discord Account -->
-                                <div style="background: #212227; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
-                                    <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
-                                        {% if discord_oauth_info.oauth_avatar %}
-                                            <img src="https://cdn.discordapp.com/avatars/{{ discord_oauth_info.oauth_discord_id }}/{{ discord_oauth_info.oauth_avatar }}.png"
-                                                 alt="Discord Avatar" style="width: 100%; height: 100%; object-fit: cover;">
-                                        {% else %}
-                                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #5865f2 0%, #15d8bc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.2rem;">
-                                                {{ discord_oauth_info.oauth_username[0].upper() if discord_oauth_info.oauth_username else '?' }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div style="flex: 1; min-width: 0;">
-                                        <div style="color: #dcddde; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ discord_oauth_info.oauth_username or 'Unknown User' }}</div>
-                                        <div style="color: #949BA4; font-size: 0.85rem;">ID: {{ discord_oauth_info.oauth_discord_id }}</div>
-                                    </div>
-                                    <button id="discord-unlink-btn" style="padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; font-size: 0.8rem; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(to bottom, #da373c, #a12d31); border: none; color: #fff; cursor: pointer; transition: all 0.2s;">
-                                        <img src="{{ url_for('static', filename='link.png') }}" alt="" style="width: 14px; height: 14px; filter: brightness(0) invert(1);">
-                                        Unlink
-                                    </button>
+                            <!-- Linked status with View button -->
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: #212227; border-radius: 8px; padding: 1rem;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div style="width: 12px; height: 12px; background: #15d8bc; border-radius: 50%;"></div>
+                                    <span style="color: #dcddde; font-size: 0.95rem;">Discord account linked</span>
                                 </div>
-
-                                <!-- Add another Discord account -->
-                                <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #1e1f22; border-radius: 8px; opacity: 0.6; cursor: not-allowed;">
-                                    <div style="width: 48px; height: 48px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #949BA4; font-size: 1.5rem; font-weight: 300;">
-                                        +
-                                    </div>
-                                    <div style="flex: 1; min-width: 0;">
-                                        <div style="color: #949BA4; font-size: 0.9rem;">Add another Discord account</div>
-                                        <div style="color: #15d8bc; font-size: 0.85rem;">$3</div>
-                                    </div>
-                                </div>
+                                <button onclick="openDiscordViewModal()" style="padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; font-size: 0.85rem; background: linear-gradient(to bottom, #15d8bc, #006e59); border: none; color: #121215; cursor: pointer; transition: all 0.2s;">
+                                    View
+                                </button>
                             </div>
                             {% else %}
                             <!-- Not linked yet - show linking flow -->
@@ -557,6 +532,17 @@
                                 </div>
                             </div>
 
+                            <!-- Adzsend ID Section -->
+                            <div class="setting-group" style="margin-top: 1rem;">
+                                <div class="setting-label">Adzsend ID</div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                                    <div style="flex: 1; position: relative; display: flex; align-items: center;">
+                                        <input type="text" id="adzsendIdInput" value="{{ adzsend_id or 'Loading...' }}" readonly style="width: 100%; padding: 0.6rem 2.5rem 0.6rem 0.75rem; background: #212227; border: none; border-radius: 6px; color: #717688; font-size: 0.9rem; outline: none; cursor: default;">
+                                        <img src="{{ url_for('static', filename='copy.png') }}" id="copyAdzsendIdBtn" alt="Copy" style="position: absolute; right: 0.75rem; width: 18px; height: 18px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9); transition: opacity 0.2s ease;" onclick="copyAdzsendId()">
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="setting-group" style="margin-top: auto;">
                                 <button class="delete-account-btn" id="deleteAccountBtn">Delete Account</button>
                             </div>
@@ -578,7 +564,62 @@
         </div>
     </div>
 
+
+    <!-- Discord View Modal -->
+    <div id="discord-view-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: #191A1F; border-radius: 12px; padding: 1.5rem; max-width: 450px; width: 90%; display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="color: #dcddde; margin: 0; font-size: 1.1rem;">Linked Accounts</h2>
+                <button onclick="closeDiscordViewModal()" style="background: none; border: none; color: #949BA4; font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1;">&times;</button>
+            </div>
+            <!-- Scrollable accounts list -->
+            <div id="discord-accounts-scroll" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 350px; overflow-y: auto; padding-right: 0.5rem;">
+                <!-- Discord Account Card -->
+                <div style="background: #212227; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                        {% if discord_oauth_info and discord_oauth_info.oauth_avatar %}
+                            <img src="https://cdn.discordapp.com/avatars/{{ discord_oauth_info.oauth_discord_id }}/{{ discord_oauth_info.oauth_avatar }}.png"
+                                 alt="Discord Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #5865f2 0%, #15d8bc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.2rem;">
+                                {{ discord_oauth_info.oauth_username[0].upper() if discord_oauth_info and discord_oauth_info.oauth_username else '?' }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="color: #dcddde; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ discord_oauth_info.oauth_username if discord_oauth_info else 'Unknown User' }}</div>
+                        <div style="color: #949BA4; font-size: 0.85rem; font-family: 'Roboto Mono', monospace;">{{ discord_oauth_info.oauth_discord_id if discord_oauth_info else '' }}</div>
+                    </div>
+                    <button id="discord-unlink-btn" style="padding: 0.5rem 0.75rem; border-radius: 6px; font-weight: 500; font-size: 0.75rem; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(to bottom, #da373c, #a12d31); border: none; color: #fff; cursor: pointer; transition: all 0.2s;">
+                        <img src="{{ url_for('static', filename='link.png') }}" alt="" style="width: 12px; height: 12px; filter: brightness(0) invert(1);">
+                        Unlink
+                    </button>
+                </div>
+                <!-- Future: More accounts or other items can be added here -->
+            </div>
+            <button class="grey-btn" onclick="closeDiscordViewModal()" style="padding: 0.6rem 1rem; width: 100%; font-size: 0.9rem;">
+                Close
+            </button>
+        </div>
+    </div>
+
     <script>
+        // Discord View Modal functions
+        function openDiscordViewModal() {
+            document.getElementById('discord-view-modal').style.display = 'flex';
+        }
+
+        function closeDiscordViewModal() {
+            document.getElementById('discord-view-modal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('discord-view-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDiscordViewModal();
+            }
+        });
+
         // Adjust Plan Dialog functions
         function showAdjustPlanDialog() {
             document.getElementById('adjust-plan-modal').style.display = 'flex';
@@ -594,6 +635,18 @@
                 closeAdjustPlanDialog();
             }
         });
+
+        // Copy Adzsend ID function
+        function copyAdzsendId() {
+            const adzsendIdInput = document.getElementById('adzsendIdInput');
+            const copyBtn = document.getElementById('copyAdzsendIdBtn');
+            navigator.clipboard.writeText(adzsendIdInput.value).then(() => {
+                copyBtn.style.opacity = '1';
+                setTimeout(() => {
+                    copyBtn.style.opacity = '0.6';
+                }, 1000);
+            });
+        }
 
         // Email editing functionality
         const emailInput = document.getElementById('emailInput');
@@ -992,7 +1045,7 @@
                                 infoDiv.style.cssText = 'flex: 1;';
                                 infoDiv.innerHTML = `
                                     <div style="color: #dcddde; font-weight: 500;">${invitation.owner_username}</div>
-                                    <div style="color: #949BA4; font-size: 0.85rem;">${invitation.owner_discord_id}</div>
+                                    <div style="color: #949BA4; font-size: 0.85rem;">${invitation.owner_adzsend_id || 'No ID'}</div>
                                 `;
 
                                 // Actions
@@ -1150,7 +1203,7 @@
                                 <div>${avatarHtml}</div>
                                 <div style="flex: 1;">
                                     <div style="color: #dcddde; font-weight: 500;">${owner.username || 'Unknown User'}</div>
-                                    <div style="color: #949BA4; font-size: 0.85rem;">${owner.discord_id}</div>
+                                    <div style="color: #949BA4; font-size: 0.85rem;">${owner.adzsend_id || 'No ID'}</div>
                                 </div>
                                 <div style="color: #15d8bc; font-size: 0.8rem; font-weight: 500;">Owner</div>
                             </div>
@@ -1173,7 +1226,7 @@
                                 <div>${avatarHtml}</div>
                                 <div style="flex: 1;">
                                     <div style="color: #dcddde; font-weight: 500;">${team.owner_username}</div>
-                                    <div style="color: #949BA4; font-size: 0.85rem;">${team.owner_discord_id}</div>
+                                    <div style="color: #949BA4; font-size: 0.85rem;">${team.owner_adzsend_id || 'No ID'}</div>
                                 </div>
                                 <button id="leaveTeamBtn" class="delete-account-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Leave</button>
                             </div>
@@ -1409,7 +1462,7 @@
                 tokenStatusText.textContent = 'Token must match the Discord account you authorized above';
                 tokenStatusIcon.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>';
             } else if (status === 'verifying') {
-                tokenStatusLabel.style.color = '#fee75c';
+                tokenStatusLabel.style.color = '#faa61a';
                 tokenStatusText.textContent = 'Verifying token...';
                 tokenStatusIcon.innerHTML = '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>';
             } else if (status === 'success') {

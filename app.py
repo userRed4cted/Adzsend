@@ -1485,6 +1485,7 @@ def settings():
                                                 purchase_history=purchase_history,
                                                 discord_oauth_info=discord_oauth_info,
                                                 user_email=user.get('email', ''),
+                                                adzsend_id=user.get('adzsend_id', ''),
                                                 blacklisted_email_domains=BLACKLISTED_EMAIL_DOMAINS,
                                                 allowed_email_tlds=ALLOWED_EMAIL_TLDS))
     # Prevent caching of settings page
@@ -1861,7 +1862,7 @@ def delete_account():
 @app.route('/api/team/add-member', methods=['POST'])
 @rate_limit('api')
 def add_team_member_api():
-    """Add a member to the team by email address."""
+    """Add a member to the team by Adzsend ID."""
     # CSRF protection
     csrf_error = check_csrf()
     if csrf_error:
@@ -1876,7 +1877,7 @@ def add_team_member_api():
             return {'success': False, 'error': 'User not found'}, 404
 
         # Check if user owns a business team
-        from database import get_business_team_by_owner, get_team_member_count, add_team_member, get_user_by_email
+        from database import get_business_team_by_owner, get_team_member_count, add_team_member, get_user_by_adzsend_id
         team = get_business_team_by_owner(user['id'])
 
         if not team:
@@ -1886,21 +1887,20 @@ def add_team_member_api():
         if not data:
             return {'success': False, 'error': 'Invalid request data'}, 400
 
-        member_email = data.get('email', '').strip().lower()
+        adzsend_id = data.get('adzsend_id', '').strip()
 
-        if not member_email:
-            return {'success': False, 'error': 'Email address required'}, 400
+        if not adzsend_id:
+            return {'success': False, 'error': 'Adzsend ID required'}, 400
 
-        # Basic email format validation
+        # Validate Adzsend ID format (18 digits)
         import re
-        email_regex = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-        if not email_regex.match(member_email):
-            return {'success': False, 'error': 'Invalid email format'}, 400
+        if not re.match(r'^\d{18}$', adzsend_id):
+            return {'success': False, 'error': 'Invalid Adzsend ID format'}, 400
 
-        # Look up the user by email - they must have an account
-        member_user = get_user_by_email(member_email)
+        # Look up the user by Adzsend ID - they must have an account
+        member_user = get_user_by_adzsend_id(adzsend_id)
         if not member_user:
-            return {'success': False, 'error': 'No account found with this email address'}, 404
+            return {'success': False, 'error': 'No account found with this Adzsend ID'}, 404
 
         # Get the member's discord_id (could be OAuth or email placeholder)
         member_discord_id = member_user.get('discord_id')
@@ -2218,12 +2218,14 @@ def get_current_team():
                 'owner_info': {
                     'username': user.get('username'),
                     'discord_id': user.get('discord_id'),
-                    'avatar': user.get('avatar')
+                    'avatar': user.get('avatar'),
+                    'adzsend_id': user.get('adzsend_id')
                 },
                 'team_members': [{
                     'username': m.get('member_username'),
                     'discord_id': m.get('member_discord_id'),
-                    'avatar': m.get('member_avatar')
+                    'avatar': m.get('member_avatar'),
+                    'adzsend_id': m.get('member_adzsend_id')
                 } for m in accepted_members]
             }, 200
 
@@ -2239,7 +2241,8 @@ def get_current_team():
             'team': {
                 'owner_username': team.get('owner_username'),
                 'owner_discord_id': team.get('owner_discord_id'),
-                'owner_avatar': team.get('owner_avatar')
+                'owner_avatar': team.get('owner_avatar'),
+                'owner_adzsend_id': team.get('owner_adzsend_id')
             }
         }, 200
 
@@ -2392,7 +2395,7 @@ def admin_get_users():
 @app.route('/api/admin/search-user', methods=['GET'])
 @rate_limit('api')
 def admin_search_user():
-    """Search for a user by Discord ID."""
+    """Search for a user by email, Adzsend ID, or Discord ID."""
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -2402,16 +2405,30 @@ def admin_search_user():
         return {'success': False, 'error': 'Unauthorized'}, 403
 
     try:
+        from database import get_user_by_email, get_user_by_adzsend_id
+
+        email = request.args.get('email')
+        adzsend_id = request.args.get('adzsend_id')
         discord_id = request.args.get('discord_id')
-        if not discord_id:
-            return {'success': False, 'error': 'Discord ID required'}, 400
 
-        # Validate Discord ID format
-        if not validate_discord_id(discord_id):
-            return {'success': False, 'error': 'Invalid Discord ID format'}, 400
+        user = None
 
-        # Search for user by discord_id
-        user = get_user_by_discord_id(discord_id)
+        if email:
+            user = get_user_by_email(email.strip().lower())
+        elif adzsend_id:
+            # Validate Adzsend ID format (18 digits)
+            import re
+            if not re.match(r'^\d{18}$', adzsend_id):
+                return {'success': False, 'error': 'Invalid Adzsend ID format'}, 400
+            user = get_user_by_adzsend_id(adzsend_id)
+        elif discord_id:
+            # Validate Discord ID format
+            if not validate_discord_id(discord_id):
+                return {'success': False, 'error': 'Invalid Discord ID format'}, 400
+            user = get_user_by_discord_id(discord_id)
+        else:
+            return {'success': False, 'error': 'Search term required'}, 400
+
         if not user:
             return {'success': False, 'error': 'User not found'}, 404
 

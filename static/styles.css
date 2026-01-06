@@ -1219,34 +1219,32 @@ body {
 }
 
 .selected-tag.failed-channel {
-    background: rgba(223, 40, 31, 0.2);
-    border: 2px solid #991a35;
-    box-shadow: 0 0 15px rgba(223, 40, 31, 0.4);
+    background: rgba(153, 26, 53, 0.3);
+    border: none;
 }
 
 .selected-tag.rate-limited {
-    background: rgba(255, 193, 7, 0.2);
-    border: 2px solid #FFC107;
-    box-shadow: 0 0 15px rgba(255, 193, 7, 0.4);
+    background: rgba(250, 166, 26, 0.3);
+    border: none;
 }
 
 .failure-label {
-    padding: 0.4rem 0.75rem;
+    padding: 0.3rem 0.6rem;
     border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    font-size: 0.7rem;
+    font-weight: 500;
     flex-shrink: 0;
+    border: none;
 }
 
 .failure-label.permission {
-    background: rgba(223, 40, 31, 0.3);
-    color: #991a35;
+    background: linear-gradient(to bottom, #991a35, #6b1226);
+    color: #ffffff;
 }
 
 .failure-label.ratelimit {
-    background: rgba(255, 193, 7, 0.3);
-    color: #ffd54f;
+    background: linear-gradient(to bottom, #faa61a, #c77800);
+    color: #121215;
 }
 
 @keyframes slideIn {

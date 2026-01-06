@@ -12,6 +12,10 @@ def generate_verification_code():
     """Generate a random 6-digit verification code."""
     return ''.join([str(secrets.randbelow(10)) for _ in range(6)])
 
+def generate_adzsend_id():
+    """Generate a unique 18-digit Adzsend ID (like Discord snowflake)."""
+    return ''.join([str(secrets.randbelow(10)) for _ in range(18)])
+
 DATABASE = 'marketing_panel.db'
 
 # Token Encryption Functions
@@ -148,6 +152,35 @@ def init_db():
         cursor.execute('ALTER TABLE users ADD COLUMN discord_oauth_avatar TEXT')
     except sqlite3.OperationalError:
         pass  # Column already exists
+
+    # Add adzsend_id column if it doesn't exist (unique user ID)
+    # Note: SQLite cannot add UNIQUE column to table with existing data, so we add without UNIQUE
+    # Uniqueness is enforced in code via generate_adzsend_id() collision checking
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN adzsend_id TEXT')
+        conn.commit()
+        print('[DB MIGRATION] Added adzsend_id column to users table')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Generate adzsend_id for existing users who don't have one
+    try:
+        cursor.execute('SELECT id FROM users WHERE adzsend_id IS NULL')
+        users_without_id = cursor.fetchall()
+        if users_without_id:
+            for user in users_without_id:
+                new_id = generate_adzsend_id()
+                # Ensure uniqueness
+                while True:
+                    cursor.execute('SELECT id FROM users WHERE adzsend_id = ?', (new_id,))
+                    if not cursor.fetchone():
+                        break
+                    new_id = generate_adzsend_id()
+                cursor.execute('UPDATE users SET adzsend_id = ? WHERE id = ?', (new_id, user[0]))
+            conn.commit()
+            print(f'[DB MIGRATION] Generated adzsend_id for {len(users_without_id)} existing users')
+    except sqlite3.OperationalError:
+        pass  # Column does not exist yet or other error
 
     # Verification codes table for email authentication
     cursor.execute('''
@@ -374,11 +407,19 @@ def create_user(discord_id, username, avatar, discord_token, signup_ip):
         print(f"[ERROR] Failed to encrypt token for user {discord_id}")
         return None
 
+    # Generate unique adzsend_id
+    adzsend_id = generate_adzsend_id()
+    while True:
+        cursor.execute('SELECT id FROM users WHERE adzsend_id = ?', (adzsend_id,))
+        if not cursor.fetchone():
+            break
+        adzsend_id = generate_adzsend_id()
+
     try:
         cursor.execute('''
-            INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (discord_id, username, avatar, encrypted_token, signup_ip, signup_date))
+            INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date, adzsend_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (discord_id, username, avatar, encrypted_token, signup_ip, signup_date, adzsend_id))
 
         user_id = cursor.lastrowid
 
@@ -405,6 +446,15 @@ def get_user_by_discord_id(discord_id):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM users WHERE discord_id = ?', (discord_id,))
+    user = cursor.fetchone()
+    conn.close()
+    return dict(user) if user else None
+
+def get_user_by_adzsend_id(adzsend_id):
+    """Get user by their Adzsend ID."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE adzsend_id = ?', (adzsend_id,))
     user = cursor.fetchone()
     conn.close()
     return dict(user) if user else None
@@ -1192,7 +1242,7 @@ def get_team_members(team_id):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT btm.*, u.id as user_id, u.email as member_email
+        SELECT btm.*, u.id as user_id, u.email as member_email, u.adzsend_id as member_adzsend_id
         FROM business_team_members btm
         LEFT JOIN users u ON u.discord_id = btm.member_discord_id
         WHERE btm.team_id = ? AND btm.invitation_status = 'accepted'
@@ -1241,7 +1291,7 @@ def get_team_member_stats(team_id):
 
     # First get the team owner
     cursor.execute('''
-        SELECT bt.owner_user_id, u.discord_id, u.username, u.avatar
+        SELECT bt.owner_user_id, u.discord_id, u.username, u.avatar, u.email, u.adzsend_id
         FROM business_teams bt
         JOIN users u ON u.id = bt.owner_user_id
         WHERE bt.id = ?
@@ -1256,6 +1306,8 @@ def get_team_member_stats(team_id):
             'member_discord_id': owner_row['discord_id'],
             'member_username': owner_row['username'],
             'member_avatar': owner_row['avatar'],
+            'member_email': owner_row['email'],
+            'member_adzsend_id': owner_row['adzsend_id'],
             'added_at': None,
             'user_id': owner_row['owner_user_id'],
             'is_owner': True
@@ -1281,7 +1333,9 @@ def get_team_member_stats(team_id):
             btm.member_username,
             btm.member_avatar,
             btm.added_at,
-            u.id as user_id
+            u.id as user_id,
+            u.email as member_email,
+            u.adzsend_id as member_adzsend_id
         FROM business_team_members btm
         LEFT JOIN users u ON u.discord_id = btm.member_discord_id
         WHERE btm.team_id = ? AND btm.invitation_status = 'accepted'
@@ -1325,7 +1379,7 @@ def get_team_invitations(discord_id):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT btm.*, bt.owner_user_id, u.username as owner_username, u.avatar as owner_avatar, u.discord_id as owner_discord_id
+        SELECT btm.*, bt.owner_user_id, u.username as owner_username, u.avatar as owner_avatar, u.discord_id as owner_discord_id, u.adzsend_id as owner_adzsend_id
         FROM business_team_members btm
         JOIN business_teams bt ON btm.team_id = bt.id
         JOIN users u ON bt.owner_user_id = u.id
@@ -1406,7 +1460,7 @@ def get_current_team_for_member(discord_id):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT bt.*, u.username as owner_username, u.discord_id as owner_discord_id, u.avatar as owner_avatar
+        SELECT bt.*, u.username as owner_username, u.discord_id as owner_discord_id, u.avatar as owner_avatar, u.adzsend_id as owner_adzsend_id
         FROM business_team_members btm
         JOIN business_teams bt ON btm.team_id = bt.id
         JOIN users u ON bt.owner_user_id = u.id
@@ -1703,10 +1757,18 @@ def create_user_with_email(email, signup_ip):
     email_hash = hashlib.sha256(email_lower.encode()).hexdigest()[:16]
     placeholder_discord_id = f'email_{email_hash}'
 
+    # Generate unique adzsend_id
+    adzsend_id = generate_adzsend_id()
+    while True:
+        cursor.execute('SELECT id FROM users WHERE adzsend_id = ?', (adzsend_id,))
+        if not cursor.fetchone():
+            break
+        adzsend_id = generate_adzsend_id()
+
     try:
         cursor.execute('''
-            INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date, email)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date, email, adzsend_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             placeholder_discord_id,  # Unique placeholder until they connect Discord
             email_lower.split('@')[0],  # Use email prefix as temporary username
@@ -1714,7 +1776,8 @@ def create_user_with_email(email, signup_ip):
             'pending',  # Placeholder token
             signup_ip,
             signup_date,
-            email_lower
+            email_lower,
+            adzsend_id
         ))
 
         user_id = cursor.lastrowid
@@ -2240,6 +2303,16 @@ def get_member_analytics(member_user_id, team_id):
     ''', (team_id, member_user_id))
     member_row = cursor.fetchone()
     joined_at = member_row[0] if member_row else None
+
+    # If no join date found, check if user is the team owner and use team creation date
+    if not joined_at:
+        cursor.execute('''
+            SELECT created_at FROM business_teams
+            WHERE id = ? AND owner_user_id = ?
+        ''', (team_id, member_user_id))
+        owner_row = cursor.fetchone()
+        if owner_row:
+            joined_at = owner_row[0]
 
     # Get team's total usage for percentage calculation
     cursor.execute('''

@@ -616,59 +616,7 @@
                 setTimeout(() => {
                     copyBtn.style.opacity = '0.6';
                 }, 1000);
-                // Show browser notification
-                showCopiedNotification();
             });
-        }
-
-        // Show copied to clipboard notification
-        function showCopiedNotification() {
-            // Remove any existing notification
-            const existing = document.querySelector('.copied-notification');
-            if (existing) existing.remove();
-
-            const notification = document.createElement('div');
-            notification.className = 'copied-notification';
-            notification.textContent = 'Copied to clipboard';
-            notification.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: #191A1F;
-                color: #dcddde;
-                padding: 12px 24px;
-                border-radius: 8px;
-                font-size: 14px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-                z-index: 10001;
-                animation: slideUp 0.3s ease;
-                border: 1px solid rgba(21, 216, 188, 0.3);
-            `;
-            document.body.appendChild(notification);
-
-            // Add animation keyframes if not already present
-            if (!document.querySelector('#copied-notification-styles')) {
-                const style = document.createElement('style');
-                style.id = 'copied-notification-styles';
-                style.textContent = `
-                    @keyframes slideUp {
-                        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-                        to { opacity: 1; transform: translateX(-50%) translateY(0); }
-                    }
-                    @keyframes fadeOut {
-                        from { opacity: 1; }
-                        to { opacity: 0; }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-
-            // Remove after 2 seconds
-            setTimeout(() => {
-                notification.style.animation = 'fadeOut 0.3s ease forwards';
-                setTimeout(() => notification.remove(), 300);
-            }, 2000);
         }
 
         // Email editing functionality

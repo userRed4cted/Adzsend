@@ -300,6 +300,19 @@
             cursor: not-allowed;
         }
 
+        .grey-btn {
+            background: linear-gradient(to bottom, #3a3a4d, #2a2a3d);
+            border: none;
+            color: #ffffff;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .grey-btn:hover {
+            background: linear-gradient(to bottom, #4a4a5d, #3a3a4d);
+        }
+
         /* Dialog styles */
         .dialog-overlay {
             display: none;
@@ -370,11 +383,11 @@
 
         .dialog-btn.primary {
             background: linear-gradient(to bottom, #15d8bc, #006e59);
-            color: #ffffff;
+            color: #121215;
         }
 
         .dialog-btn.primary:hover {
-            background: linear-gradient(to bottom, #12c4ab, #005a49);
+            background: linear-gradient(to bottom, #10b89e, #004e40);
         }
 
         .dialog-btn.secondary {
@@ -580,7 +593,7 @@
                 <!-- Discord account card will be populated here -->
             </div>
             <div class="dialog-actions">
-                <button class="dialog-btn secondary" onclick="closeDiscordViewDialog()">Close</button>
+                <button class="dialog-btn primary" onclick="closeDiscordViewDialog()">Close</button>
             </div>
         </div>
     </div>
@@ -872,21 +885,21 @@
                         <div class="detail-label">Email</div>
                         <div class="detail-value" style="display: flex; align-items: center; gap: 8px;">
                             ${user.email || 'No email'}
-                            ${user.email ? \`<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" onclick="copyToClipboard('\${user.email}')">\` : ''}
+                            ${user.email ? `<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" onclick="copyToClipboard('${user.email}')">` : ''}
                         </div>
                     </div>
                     <div class="detail-row">
                         <div class="detail-label">Adzsend ID</div>
                         <div class="detail-value" style="display: flex; align-items: center; gap: 8px;">
                             ${user.adzsend_id || 'No ID'}
-                            ${user.adzsend_id ? \`<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" onclick="copyToClipboard('\${user.adzsend_id}')">\` : ''}
+                            ${user.adzsend_id ? `<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" onclick="copyToClipboard('${user.adzsend_id}')">` : ''}
                         </div>
                     </div>
                     <div class="detail-row">
                         <div class="detail-label">Discord</div>
                         <div class="detail-value" style="display: flex; align-items: center; gap: 8px;">
                             ${(user.discord_id && !user.discord_id.startsWith('pending_') && !user.discord_id.startsWith('email_') && user.discord_id !== 'no_discord_userid') ? 'Linked' : 'Not linked'}
-                            ${(user.discord_id && !user.discord_id.startsWith('pending_') && !user.discord_id.startsWith('email_') && user.discord_id !== 'no_discord_userid') ? \`<button class="grey-btn" onclick="viewDiscordAccount()" style="margin-left: 6px; padding: 4px 10px; border-radius: 4px; font-size: 12px;">View</button>\` : ''}
+                            ${(user.discord_id && !user.discord_id.startsWith('pending_') && !user.discord_id.startsWith('email_') && user.discord_id !== 'no_discord_userid') ? `<button class="grey-btn" onclick="viewDiscordAccount()" style="margin-left: 6px; padding: 4px 10px; border-radius: 4px; font-size: 12px;">View</button>` : ''}
                         </div>
                     </div>
                     <div class="detail-row">
@@ -933,9 +946,7 @@
 
 
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                showAlert('Copied to clipboard!', 'Success');
-            });
+            navigator.clipboard.writeText(text);
         }
 
         async function viewMessage() {
@@ -1000,9 +1011,7 @@
         }
 
         function copyMessage() {
-            navigator.clipboard.writeText(currentMessageContent).then(() => {
-                showAlert('Message copied to clipboard!', 'Success');
-            });
+            navigator.clipboard.writeText(currentMessageContent);
         }
 
         function closeDialog() {

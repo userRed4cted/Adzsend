@@ -556,9 +556,9 @@
 
             <!-- Tab Navigation -->
             <div style="display: flex; gap: 0; margin: 0 -0.5rem;">
-                <button class="plans-tab-btn active" data-tab="plan-info" onclick="switchPlansTab('plan-info')" style="flex: 1; padding: 0.5rem; background: linear-gradient(to bottom, #3a3a4d, #2a2a3d); border: 1px solid #4a4a5d; border-radius: 6px 0 0 6px; color: #fff; font-weight: 500; cursor: pointer; font-size: 0.8rem;">Plan information</button>
-                <button class="plans-tab-btn" data-tab="invoices" onclick="switchPlansTab('invoices')" style="flex: 1; padding: 0.5rem; background: transparent; border: 1px solid #4a4a5d; border-left: none; color: #949BA4; font-weight: 500; cursor: pointer; font-size: 0.8rem;">Invoices</button>
-                <button class="plans-tab-btn" data-tab="usage" onclick="switchPlansTab('usage')" style="flex: 1; padding: 0.5rem; background: transparent; border: 1px solid #4a4a5d; border-left: none; border-radius: 0 6px 6px 0; color: #949BA4; font-weight: 500; cursor: pointer; font-size: 0.8rem;">Usage</button>
+                <button class="plans-tab-btn active" data-tab="plan-info" onclick="switchPlansTab('plan-info')" style="flex: 1; padding: 0.5rem; background: linear-gradient(to bottom, #3a3a4d, #2a2a3d); border: 1px solid transparent; border-radius: 6px 0 0 6px; color: #fff; font-weight: 500; cursor: pointer; font-size: 0.8rem; box-sizing: border-box;">Plan information</button>
+                <button class="plans-tab-btn" data-tab="invoices" onclick="switchPlansTab('invoices')" style="flex: 1; padding: 0.5rem; background: linear-gradient(to bottom, rgba(58, 58, 77, 0.3), rgba(42, 42, 61, 0.3)); border: 1px solid transparent; color: #949BA4; font-weight: 500; cursor: pointer; font-size: 0.8rem; box-sizing: border-box;">Invoices</button>
+                <button class="plans-tab-btn" data-tab="usage" onclick="switchPlansTab('usage')" style="flex: 1; padding: 0.5rem; background: linear-gradient(to bottom, rgba(58, 58, 77, 0.3), rgba(42, 42, 61, 0.3)); border: 1px solid transparent; border-radius: 0 6px 6px 0; color: #949BA4; font-weight: 500; cursor: pointer; font-size: 0.8rem; box-sizing: border-box;">Usage</button>
             </div>
 
             <!-- Tab Content -->
@@ -589,6 +589,16 @@
         let currentUser = null;
         let allUsers = [];
         let currentMessageContent = '';
+
+        // Format date as mm/dd/yy
+        function formatDate(dateStr) {
+            if (!dateStr) return 'Unknown';
+            const d = new Date(dateStr);
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const year = String(d.getFullYear()).slice(-2);
+            return `${month}/${day}/${year}`;
+        }
 
         // Extract dominant color from avatar image
         function getDominantColor(imgElement) {
@@ -1011,8 +1021,8 @@
                     let historyHtml = '';
                     if (data.history && data.history.length > 0) {
                         historyHtml = data.history.map(sub => {
-                            const startDate = new Date(sub.start_date).toLocaleString();
-                            const endDate = sub.end_date ? new Date(sub.end_date).toLocaleString() : 'No expiry';
+                            const startDate = formatDate(sub.start_date);
+                            const endDate = sub.end_date ? formatDate(sub.end_date) : 'No expiry';
                             const status = sub.is_active ? '<span style="color: #57f287;">Active</span>' : '<span style="color: #949BA4;">Inactive</span>';
                             return `<div style="padding: 10px; background: #1a1a1d; border-radius: 6px; margin-bottom: 8px;">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -1022,8 +1032,8 @@
                                 <div style="font-size: 12px; color: #949BA4;">
                                     <div>Type: ${sub.plan_type || 'subscription'}</div>
                                     <div>Billing: ${sub.billing_period || 'N/A'}</div>
-                                    <div>Started: ${startDate}</div>
-                                    <div>Expires: ${endDate}</div>
+                                    <div>Started (mm/dd/yy): ${startDate}</div>
+                                    <div>Expires (mm/dd/yy): ${endDate}</div>
                                     <div>Message limit: ${sub.message_limit === -1 ? 'Unlimited' : sub.message_limit}</div>
                                 </div>
                             </div>`;
@@ -1127,7 +1137,7 @@
                     btn.style.color = '#fff';
                 } else {
                     btn.classList.remove('active');
-                    btn.style.background = 'transparent';
+                    btn.style.background = 'linear-gradient(to bottom, rgba(58, 58, 77, 0.3), rgba(42, 42, 61, 0.3))';
                     btn.style.color = '#949BA4';
                 }
             });
@@ -1164,8 +1174,8 @@
                             ` : ''}
                             ${sub.started_at ? `
                             <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                                <span style="color: #949BA4;">Plan started</span>
-                                <span style="color: #dcddde;">${new Date(sub.started_at).toLocaleDateString()}</span>
+                                <span style="color: #949BA4;">Plan started (mm/dd/yy)</span>
+                                <span style="color: #dcddde;">${formatDate(sub.started_at)}</span>
                             </div>
                             ` : ''}
                         </div>
@@ -1196,7 +1206,7 @@
                                 <div>
                                     <div style="color: #dcddde; font-weight: 500;">${item.plan_name || item.plan_id}</div>
                                     <div style="color: #949BA4; font-size: 0.8rem; margin-top: 0.25rem;">
-                                        ${item.billing_period ? item.billing_period.charAt(0).toUpperCase() + item.billing_period.slice(1) : 'One-time'} • Started: ${new Date(item.start_date).toLocaleDateString()}
+                                        ${item.billing_period ? item.billing_period.charAt(0).toUpperCase() + item.billing_period.slice(1) : 'One-time'} • Started (mm/dd/yy): ${formatDate(item.start_date)}
                                     </div>
                                 </div>
                                 <div style="color: ${item.is_active ? '#57f287' : '#949BA4'}; font-size: 0.8rem;">${item.is_active ? 'Active' : 'Expired'}</div>

@@ -100,11 +100,7 @@
                                 {% for member in members %}
                                     <div class="team-member-item" data-discord-id="{{ member.member_discord_id }}">
                                         <div class="member-avatar">
-                                            {% if member.member_avatar %}
-                                                <img src="https://cdn.discordapp.com/avatars/{{ member.member_discord_id }}/{{ member.member_avatar }}.png" alt="{{ member.member_username }}">
-                                            {% else %}
-                                                <div style="width: 100%; height: 100%; border-radius: 50%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord" style="width: 20px; height: 20px; object-fit: contain; opacity: 0.5;"></div>
-                                            {% endif %}
+                                            <div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #15d8bc, #006e59); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 0.9rem;">{{ (member.member_adzsend_id or '??')[:2] }}</div>
                                         </div>
                                         <div class="member-info">
                                             <div class="member-username" style="font-family: 'Roboto Mono', monospace;">{{ member.member_adzsend_id or 'No ID' }}</div>
@@ -172,13 +168,9 @@
                                 <div class="no-selection">No team members yet</div>
                             {% else %}
                                 {% for stat in member_stats %}
-                                    <div class="member-stat-item" data-member-id="{{ stat.user_id }}" data-member-name="{{ stat.member_username or 'Unknown User' }}">
+                                    <div class="member-stat-item" data-member-id="{{ stat.user_id }}" data-member-name="{{ stat.member_adzsend_id or 'No ID' }}">
                                         <div class="member-stat-avatar">
-                                            {% if stat.member_avatar %}
-                                                <img src="https://cdn.discordapp.com/avatars/{{ stat.member_discord_id }}/{{ stat.member_avatar }}.png" alt="{{ stat.member_username }}">
-                                            {% else %}
-                                                <div style="width: 100%; height: 100%; border-radius: 50%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord" style="width: 20px; height: 20px; object-fit: contain; opacity: 0.5;"></div>
-                                            {% endif %}
+                                            <div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #15d8bc, #006e59); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 0.9rem;">{{ (stat.member_adzsend_id or '??')[:2] }}</div>
                                         </div>
                                         <div class="member-stat-info">
                                             <div class="member-stat-username" style="font-family: 'Roboto Mono', monospace;">
@@ -832,7 +824,7 @@
                 addMemberBtn.addEventListener('click', async function() {
                     const adzsendId = memberAdzsendIdInput.value.trim();
 
-                    if (!email) {
+                    if (!adzsendId) {
                         showAlert('Please enter an Adzsend ID', 'Input Required');
                         return;
                     }
@@ -1079,7 +1071,14 @@
 
                 if (data.success) {
                     const analytics = data.analytics;
-                    const joinedDate = analytics.joined_at ? new Date(analytics.joined_at).toLocaleDateString() : 'Unknown';
+                    // Format date as mm/dd/yy
+                    const joinedDate = analytics.joined_at ? (() => {
+                        const d = new Date(analytics.joined_at);
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const year = String(d.getFullYear()).slice(-2);
+                        return `${month}/${day}/${year}`;
+                    })() : 'Unknown';
 
                     // Store dates for calendar restrictions
                     memberJoinDate = analytics.joined_at ? analytics.joined_at.split('T')[0] : null;
@@ -1110,7 +1109,7 @@
                             <span class="analytics-stat-value">${analytics.current_cycle.toLocaleString()}</span>
                         </div>
                         <div class="analytics-stat-row">
-                            <span class="analytics-stat-label">Joined team</span>
+                            <span class="analytics-stat-label">Joined team (mm/dd/yy)</span>
                             <span class="analytics-stat-value">${joinedDate}</span>
                         </div>
                         <div class="analytics-stat-row" style="flex-direction: column; align-items: stretch;">

@@ -766,11 +766,20 @@ def set_subscription(user_id, plan_type, plan_id, plan_config, billing_period=No
         end_date
     ))
 
-    # Update last_reset timestamp but preserve messages_sent count
-    # This ensures that changing plans doesn't reset user's usage progress
-    cursor.execute('''
-        UPDATE usage SET last_reset = ? WHERE user_id = ?
-    ''', (start_date.isoformat(), user_id))
+    # Update last_reset timestamp and reset messages_sent for new plans
+    # For business/team plans, also reset business usage counters
+    if plan_id.startswith('team_plan_'):
+        # Reset both personal and business usage for team plans
+        cursor.execute('''
+            UPDATE usage SET messages_sent = 0, last_reset = ?,
+            business_messages_sent = 0, business_last_reset = ?
+            WHERE user_id = ?
+        ''', (start_date.isoformat(), start_date.isoformat(), user_id))
+    else:
+        # For non-team plans, reset personal usage
+        cursor.execute('''
+            UPDATE usage SET messages_sent = 0, last_reset = ? WHERE user_id = ?
+        ''', (start_date.isoformat(), user_id))
 
     conn.commit()
     conn.close()
@@ -1420,14 +1429,31 @@ def get_team_invitations(discord_id):
 
 
 def accept_team_invitation(member_id):
-    """Accept a team invitation."""
+    """Accept a team invitation and reset business usage counters."""
     conn = get_db()
     cursor = conn.cursor()
+
+    # Get the member's discord_id to find their user_id
+    cursor.execute('SELECT member_discord_id FROM business_team_members WHERE id = ?', (member_id,))
+    member_row = cursor.fetchone()
+
     cursor.execute('''
         UPDATE business_team_members
         SET invitation_status = 'accepted'
         WHERE id = ?
     ''', (member_id,))
+
+    # Reset business usage for this member when they join a team
+    if member_row:
+        discord_id = member_row[0]
+        cursor.execute('SELECT id FROM users WHERE discord_id = ?', (discord_id,))
+        user_row = cursor.fetchone()
+        if user_row:
+            cursor.execute('''
+                UPDATE usage SET business_messages_sent = 0, business_last_reset = ?
+                WHERE user_id = ?
+            ''', (datetime.now().isoformat(), user_row[0]))
+
     conn.commit()
     conn.close()
 

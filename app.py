@@ -539,10 +539,10 @@ def verify_code_page():
     session['user_session_id'] = session_id
     session.permanent = True
 
-    # Redirect - signup goes to purchase, login goes to panel
+    # Redirect - signup goes to purchase, login goes to settings
     if purpose == 'signup':
         return redirect(url_for('purchase'))
-    return redirect(url_for('panel'))
+    return redirect(url_for('settings'))
 
 @app.route('/purchase')
 def purchase():
@@ -768,8 +768,8 @@ def verify_code_api():
     session.permanent = True
 
     # Return success with redirect URL
-    # Signup goes to purchase page, login goes to panel
-    redirect_url = url_for('purchase') if purpose == 'signup' else url_for('panel')
+    # Signup goes to purchase page, login goes to settings
+    redirect_url = url_for('purchase') if purpose == 'signup' else url_for('settings')
     return jsonify({'success': True, 'redirect': redirect_url})
 
 @app.route('/api/set-plan', methods=['POST'])

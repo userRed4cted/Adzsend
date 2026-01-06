@@ -278,8 +278,6 @@
             let currentServerColor = 'rgba(21, 216, 188, 0.6)'; // Current server's dominant color
             let isSending = false; // Track if messages are being sent
             let failedChannels = new Map(); // Track channels that failed to send with failure type
-            let isConfirmState = false; // Track if send button is in confirmation state
-            let confirmTimeout = null; // Timeout for auto-reset confirmation
             let viewMode = 'servers'; // 'servers' or 'channels'
             let channelsOnlySearchText = ''; // Search filter for channels-only mode
             let channelsOnlySearchTags = []; // Search filter tags for channels-only mode
@@ -1276,23 +1274,6 @@
             function updateSendButton() {
                 if (sendBtn && messageInput) {
                     sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
-                    // Reset confirmation state when channels or message changes
-                    resetConfirmState();
-                }
-            }
-
-            // Reset confirmation state
-            function resetConfirmState() {
-                if (isConfirmState) {
-                    isConfirmState = false;
-                    if (confirmTimeout) {
-                        clearTimeout(confirmTimeout);
-                        confirmTimeout = null;
-                    }
-                    // Restore original send button text
-                    if (sendBtn) {
-                        sendBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg> Send';
-                    }
                 }
             }
             
@@ -1383,27 +1364,10 @@
                             return; // Stop execution
                         }
 
-                        // First click: change to confirmation state
-                        if (!isConfirmState) {
-                            isConfirmState = true;
-                            const channelCount = selectedChannels.length;
-                            sendBtn.innerHTML = `Confirm sending ${channelCount} message${channelCount !== 1 ? 's' : ''}?`;
-
-                            // Auto-reset after 3 seconds
-                            confirmTimeout = setTimeout(() => {
-                                resetConfirmState();
-                            }, 3000);
-
-                            return; // Don't send yet, wait for second click
-                        }
-
-                        // Second click: proceed with sending
-                        // Clear the confirmation timeout since user confirmed
-                        if (confirmTimeout) {
-                            clearTimeout(confirmTimeout);
-                            confirmTimeout = null;
-                        }
-                        isConfirmState = false;
+                        // Show confirmation popup
+                        const channelCount = selectedChannels.length;
+                        const confirmed = await showConfirm(`Send message to ${channelCount} channel${channelCount !== 1 ? 's' : ''}?`, 'Send Message', { confirmText: 'Send' });
+                        if (!confirmed) return;
 
                         // Clear previous failed channels
                         failedChannels.clear();

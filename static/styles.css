@@ -406,6 +406,7 @@ body {
     background: #121215;
     border-bottom: 1px solid #ffffff;
     z-index: 100;
+    position: relative;
 }
 
 .navbar-content {

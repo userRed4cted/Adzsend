@@ -351,7 +351,7 @@
                                         0%
                                     {% endif %}
                                 </div>
-                                <div class="usage-progress-bar">
+                                <div class="usage-progress-bar" style="margin-top: 0.5rem;">
                                     <div class="usage-progress-fill" style="width: {% if plan_status.is_unlimited %}0{% elif plan_status.has_plan and plan_status.message_limit > 0 %}{{ ((plan_status.messages_sent / plan_status.message_limit) * 100)|round(0)|int }}{% else %}0{% endif %}%;"></div>
                                 </div>
                             </div>
@@ -402,7 +402,7 @@
                                         0%
                                     {% endif %}
                                 </div>
-                                <div class="usage-progress-bar">
+                                <div class="usage-progress-bar" style="margin-top: 0.5rem;">
                                     <div class="usage-progress-fill" style="width: {% if business_plan_status.is_unlimited %}0{% elif business_plan_status.message_limit > 0 %}{{ ((business_plan_status.messages_sent / business_plan_status.message_limit) * 100)|round(0)|int }}{% else %}0{% endif %}%;"></div>
                                 </div>
                             </div>
@@ -422,8 +422,8 @@
 
                         <!-- Plan information / Invoices Toggle -->
                         <div style="display: flex; gap: 0; padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            <button class="billing-view-btn active" data-view="plan-info" style="flex: 1; padding: 0.5rem 1rem; background: linear-gradient(to bottom, #15d8bc, #006e59); border: 2px solid transparent; border-radius: 6px 0 0 6px; color: #121215; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box; position: relative; z-index: 1;">Plan information</button>
-                            <button class="billing-view-btn" data-view="invoices" style="flex: 1; padding: 0.5rem 1rem; background: transparent; border: 2px solid #444; border-radius: 0 6px 6px 0; color: #949BA4; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box; margin-left: -2px; position: relative; z-index: 0;">Invoices</button>
+                            <button class="billing-view-btn active" data-view="plan-info" style="flex: 1; padding: 0.5rem 1rem; background: linear-gradient(to bottom, #15d8bc, #006e59); border: 1px solid transparent; border-radius: 6px 0 0 6px; color: #121215; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box;">Plan information</button>
+                            <button class="billing-view-btn" data-view="invoices" style="flex: 1; padding: 0.5rem 1rem; background: linear-gradient(to bottom, rgba(21, 216, 188, 0.15), rgba(0, 110, 89, 0.15)); border: 1px solid transparent; border-radius: 0 6px 6px 0; color: #15d8bc; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box;">Invoices</button>
                         </div>
 
                         <div class="settings-panel-content" style="display: flex; flex-direction: column; flex: 1;">
@@ -454,7 +454,7 @@
                                         <!-- Plan started (only for paid plans) -->
                                         {% if plan_status.plan_id != 'plan_free' %}
                                         <div class="usage-stat">
-                                            <div class="usage-label">Plan started</div>
+                                            <div class="usage-label">Plan started (mm/dd/yy)</div>
                                             <div class="usage-value">{{ plan_status.started_at|format_date }}</div>
                                         </div>
                                         {% endif %}
@@ -462,7 +462,7 @@
                                         <!-- Next Billing Date or Plan Expires (not for free plan) -->
                                         {% if plan_status.expires_at and plan_status.plan_id != 'plan_free' %}
                                             <div class="usage-stat">
-                                                <div class="usage-label">{% if plan_status.plan_type == 'subscription' %}Next billing date{% else %}Plan expires{% endif %}</div>
+                                                <div class="usage-label">{% if plan_status.plan_type in ['subscription', 'business'] %}Next billing date (mm/dd/yy){% else %}Plan expires (mm/dd/yy){% endif %}</div>
                                                 <div class="usage-value">{{ plan_status.expires_at|format_date }}</div>
                                             </div>
                                         {% endif %}
@@ -490,7 +490,7 @@
                             <div id="billing-invoices" style="display: none; flex: 1; flex-direction: column; padding-top: 1rem;">
                                 <!-- Column Headers -->
                                 <div style="display: flex; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); color: #949BA4; font-size: 0.85rem; font-weight: 500;">
-                                    <div style="flex: 1.5;">Date</div>
+                                    <div style="flex: 1.5;">Date (mm/dd/yy)</div>
                                     <div style="flex: 1;">Total</div>
                                     <div style="flex: 1;">Status</div>
                                     <div style="flex: 0.8; text-align: right;">Actions</div>
@@ -500,7 +500,7 @@
                                     {% if purchase_history and purchase_history|length > 0 %}
                                         {% for invoice in purchase_history %}
                                         <div style="display: flex; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: center;">
-                                            <div style="flex: 1.5; color: #dcddde; font-size: 0.9rem;">{{ invoice.start_date[:10] }}</div>
+                                            <div style="flex: 1.5; color: #dcddde; font-size: 0.9rem;">{{ invoice.start_date[5:7] }}/{{ invoice.start_date[8:10] }}/{{ invoice.start_date[2:4] }}</div>
                                             <div style="flex: 1; color: #dcddde; font-size: 0.9rem;">${{ invoice.price }}</div>
                                             <div style="flex: 1;">
                                                 <span style="background: rgba(21, 216, 188, 0.2); color: #15d8bc; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">Paid</span>
@@ -1055,20 +1055,17 @@
                                 const invitationCard = document.createElement('div');
                                 invitationCard.style.cssText = 'background: #191A1F; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;';
 
-                                // Avatar
+                                // Avatar - show initials from adzsend_id
                                 const avatarDiv = document.createElement('div');
-                                if (invitation.owner_avatar) {
-                                    avatarDiv.innerHTML = `<img src="https://cdn.discordapp.com/avatars/${invitation.owner_discord_id}/${invitation.owner_avatar}.png" style="width: 40px; height: 40px; border-radius: 50%;">`;
-                                } else {
-                                    avatarDiv.innerHTML = `<div style="width: 40px; height: 40px; border-radius: 50%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" style="width: 24px; height: 24px; object-fit: contain; opacity: 0.5;"></div>`;
-                                }
+                                const initials = (invitation.owner_adzsend_id || '??').substring(0, 2);
+                                avatarDiv.innerHTML = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #15d8bc, #006e59); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 0.9rem;">${initials}</div>`;
 
-                                // Info
+                                // Info - show adzsend_id only
                                 const infoDiv = document.createElement('div');
                                 infoDiv.style.cssText = 'flex: 1;';
                                 infoDiv.innerHTML = `
-                                    <div style="color: #dcddde; font-weight: 500;">${invitation.owner_username}</div>
-                                    <div style="color: #949BA4; font-size: 0.85rem;">${invitation.owner_adzsend_id || 'No ID'}</div>
+                                    <div style="color: #dcddde; font-weight: 500; font-family: 'Roboto Mono', monospace;">${invitation.owner_adzsend_id || 'No ID'}</div>
+                                    <div style="color: #949BA4; font-size: 0.85rem;">Team invitation</div>
                                 `;
 
                                 // Actions
@@ -1187,8 +1184,6 @@
             }
         }
 
-        let leaveTeamConfirmed = false;
-
         function loadCurrentTeam() {
             fetch('/api/team/current')
                 .then(response => response.json())
@@ -1213,20 +1208,16 @@
                         }
 
                         // Show owner's own team card (like members see, but without leave button)
-                        let avatarHtml;
-                        if (owner.avatar) {
-                            avatarHtml = `<img src="https://cdn.discordapp.com/avatars/${owner.discord_id}/${owner.avatar}.png" style="width: 40px; height: 40px; border-radius: 50%;">`;
-                        } else {
-                            avatarHtml = `<div style="width: 40px; height: 40px; border-radius: 50%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" style="width: 24px; height: 24px; object-fit: contain; opacity: 0.5;"></div>`;
-                        }
+                        const ownerInitials = (owner.adzsend_id || '??').substring(0, 2);
+                        const avatarHtml = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #15d8bc, #006e59); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 0.9rem;">${ownerInitials}</div>`;
 
                         currentTeamContent.innerHTML = `
                             <div style="color: #949BA4; font-size: 0.85rem; margin-bottom: 0.75rem;">You're the team owner of</div>
                             <div style="background: #191A1F; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
                                 <div>${avatarHtml}</div>
                                 <div style="flex: 1;">
-                                    <div style="color: #dcddde; font-weight: 500;">${owner.username || 'Unknown User'}</div>
-                                    <div style="color: #949BA4; font-size: 0.85rem;">${owner.adzsend_id || 'No ID'}</div>
+                                    <div style="color: #dcddde; font-weight: 500; font-family: 'Roboto Mono', monospace;">${owner.adzsend_id || 'No ID'}</div>
+                                    <div style="color: #949BA4; font-size: 0.85rem;">Your team</div>
                                 </div>
                                 <span style="background: linear-gradient(to bottom, #15d8bc, #006e59); color: #121215; font-size: 0.6rem; padding: 0.15rem 0.4rem; border-radius: 3px; font-weight: 500; line-height: 1.2;">Owner</span>
                             </div>
@@ -1236,20 +1227,16 @@
                         acceptedInvitation = true;
 
                         // Create team owner card with leave button
-                        let avatarHtml;
-                        if (team.owner_avatar) {
-                            avatarHtml = `<img src="https://cdn.discordapp.com/avatars/${team.owner_discord_id}/${team.owner_avatar}.png" style="width: 40px; height: 40px; border-radius: 50%;">`;
-                        } else {
-                            avatarHtml = `<div style="width: 40px; height: 40px; border-radius: 50%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" style="width: 24px; height: 24px; object-fit: contain; opacity: 0.5;"></div>`;
-                        }
+                        const teamOwnerInitials = (team.owner_adzsend_id || '??').substring(0, 2);
+                        const avatarHtml = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #15d8bc, #006e59); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 0.9rem;">${teamOwnerInitials}</div>`;
 
                         currentTeamContent.innerHTML = `
                             <div style="color: #949BA4; font-size: 0.85rem; margin-bottom: 0.75rem;">You're a team member of</div>
                             <div style="background: #191A1F; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
                                 <div>${avatarHtml}</div>
                                 <div style="flex: 1;">
-                                    <div style="color: #dcddde; font-weight: 500;">${team.owner_username}</div>
-                                    <div style="color: #949BA4; font-size: 0.85rem;">${team.owner_adzsend_id || 'No ID'}</div>
+                                    <div style="color: #dcddde; font-weight: 500; font-family: 'Roboto Mono', monospace;">${team.owner_adzsend_id || 'No ID'}</div>
+                                    <div style="color: #949BA4; font-size: 0.85rem;">Team owner</div>
                                 </div>
                                 <button id="leaveTeamBtn" class="delete-account-btn" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Leave</button>
                             </div>
@@ -1271,49 +1258,29 @@
         async function handleLeaveTeam() {
             const leaveBtn = document.getElementById('leaveTeamBtn');
 
-            if (!leaveTeamConfirmed) {
-                const confirmed = await showConfirm('Leave your current team? You will need to accept a new invitation to join another team.', 'Leave Team', { danger: true, confirmText: 'Leave Team' });
-                if (confirmed) {
-                    leaveTeamConfirmed = true;
-                    leaveBtn.textContent = 'Confirm';
-                    leaveBtn.style.background = '#c0392b';
+            const confirmed = await showConfirm('Leave your current team? You will need to accept a new invitation to join another team.', 'Leave Team', { danger: true, confirmText: 'Leave Team' });
+            if (!confirmed) return;
 
-                    // Auto-reset after 3 seconds
-                    setTimeout(() => {
-                        if (leaveTeamConfirmed && document.getElementById('leaveTeamBtn')) {
-                            leaveTeamConfirmed = false;
-                            document.getElementById('leaveTeamBtn').textContent = 'Leave';
-                            document.getElementById('leaveTeamBtn').style.background = '';
-                        }
-                    }, 3000);
-                }
-            } else {
-                leaveBtn.textContent = 'Leaving...';
-                leaveBtn.disabled = true;
+            leaveBtn.textContent = 'Leaving...';
+            leaveBtn.disabled = true;
 
-                try {
-                    const response = await fetch('/api/team/leave', { method: 'POST', headers: { 'X-CSRF-Token': '{{ csrf_token }}' } });
-                    const data = await response.json();
-                    if (data.success) {
-                        await showAlert('Left team successfully', 'Success');
-                        leaveTeamConfirmed = false;
-                        acceptedInvitation = false;
-                        loadCurrentTeam();
-                        loadTeamInvitations();
-                    } else {
-                        await showAlert('Error: ' + data.error, 'Error');
-                        leaveTeamConfirmed = false;
-                        leaveBtn.textContent = 'Leave';
-                        leaveBtn.disabled = false;
-                        leaveBtn.style.background = '';
-                    }
-                } catch (error) {
-                    await showAlert('Error leaving team: ' + error, 'Error');
-                    leaveTeamConfirmed = false;
+            try {
+                const response = await fetch('/api/team/leave', { method: 'POST', headers: { 'X-CSRF-Token': '{{ csrf_token }}' } });
+                const data = await response.json();
+                if (data.success) {
+                    await showAlert('Left team successfully', 'Success');
+                    acceptedInvitation = false;
+                    loadCurrentTeam();
+                    loadTeamInvitations();
+                } else {
+                    await showAlert('Error: ' + data.error, 'Error');
                     leaveBtn.textContent = 'Leave';
                     leaveBtn.disabled = false;
-                    leaveBtn.style.background = '';
                 }
+            } catch (error) {
+                await showAlert('Error leaving team: ' + error, 'Error');
+                leaveBtn.textContent = 'Leave';
+                leaveBtn.disabled = false;
             }
         }
 
@@ -1354,14 +1321,10 @@
                         b.classList.add('active');
                         b.style.background = 'linear-gradient(to bottom, #15d8bc, #006e59)';
                         b.style.color = '#121215';
-                        b.style.border = '2px solid transparent';
-                        b.style.zIndex = '1';
                     } else {
                         b.classList.remove('active');
-                        b.style.background = 'transparent';
-                        b.style.color = '#949BA4';
-                        b.style.border = '2px solid #444';
-                        b.style.zIndex = '0';
+                        b.style.background = 'linear-gradient(to bottom, rgba(21, 216, 188, 0.15), rgba(0, 110, 89, 0.15))';
+                        b.style.color = '#15d8bc';
                     }
                 });
 

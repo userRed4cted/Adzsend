@@ -154,14 +154,19 @@ def init_db():
         pass  # Column already exists
 
     # Add adzsend_id column if it doesn't exist (unique user ID)
-    # Note: SQLite cannot add UNIQUE column to table with existing data, so we add without UNIQUE
-    # Uniqueness is enforced in code via generate_adzsend_id() collision checking
     try:
         cursor.execute('ALTER TABLE users ADD COLUMN adzsend_id TEXT')
         conn.commit()
         print('[DB MIGRATION] Added adzsend_id column to users table')
     except sqlite3.OperationalError:
         pass  # Column already exists
+
+    # Add unique index on adzsend_id to prevent race condition duplicates
+    try:
+        cursor.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_adzsend_id ON users(adzsend_id) WHERE adzsend_id IS NOT NULL')
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Index already exists
 
     # Generate adzsend_id for existing users who don't have one
     try:
@@ -396,9 +401,6 @@ def init_db():
     conn.close()
 
 def create_user(discord_id, username, avatar, discord_token, signup_ip):
-    conn = get_db()
-    cursor = conn.cursor()
-
     signup_date = datetime.now().isoformat()
 
     # Encrypt the token before storing
@@ -407,40 +409,51 @@ def create_user(discord_id, username, avatar, discord_token, signup_ip):
         print(f"[ERROR] Failed to encrypt token for user {discord_id}")
         return None
 
-    # Generate unique adzsend_id
-    adzsend_id = generate_adzsend_id()
-    while True:
-        cursor.execute('SELECT id FROM users WHERE adzsend_id = ?', (adzsend_id,))
-        if not cursor.fetchone():
-            break
+    # Retry loop to handle race conditions on adzsend_id collision
+    max_retries = 5
+    for attempt in range(max_retries):
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Generate unique adzsend_id
         adzsend_id = generate_adzsend_id()
+        while True:
+            cursor.execute('SELECT id FROM users WHERE adzsend_id = ?', (adzsend_id,))
+            if not cursor.fetchone():
+                break
+            adzsend_id = generate_adzsend_id()
 
-    try:
-        cursor.execute('''
-            INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date, adzsend_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (discord_id, username, avatar, encrypted_token, signup_ip, signup_date, adzsend_id))
+        try:
+            cursor.execute('''
+                INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date, adzsend_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (discord_id, username, avatar, encrypted_token, signup_ip, signup_date, adzsend_id))
 
-        user_id = cursor.lastrowid
+            user_id = cursor.lastrowid
 
-        # Initialize usage tracking
-        cursor.execute('''
-            INSERT INTO usage (user_id, messages_sent, last_reset)
-            VALUES (?, 0, ?)
-        ''', (user_id, datetime.now().isoformat()))
+            # Initialize usage tracking
+            cursor.execute('''
+                INSERT INTO usage (user_id, messages_sent, last_reset)
+                VALUES (?, 0, ?)
+            ''', (user_id, datetime.now().isoformat()))
 
-        conn.commit()
-        conn.close()
-
-        # Auto-activate free plan for new users
-        activate_free_plan(user_id)
-
-        return user_id
-    except sqlite3.IntegrityError:
-        return None
-    finally:
-        if conn:
+            conn.commit()
             conn.close()
+
+            # Auto-activate free plan for new users
+            activate_free_plan(user_id)
+
+            return user_id
+        except sqlite3.IntegrityError as e:
+            conn.close()
+            # If it's an adzsend_id collision (race condition), retry with new ID
+            if 'adzsend_id' in str(e) or 'idx_users_adzsend_id' in str(e):
+                if attempt < max_retries - 1:
+                    continue  # Retry with new adzsend_id
+            # For other integrity errors (like duplicate discord_id), return None
+            return None
+
+    return None  # Max retries exceeded
 
 def get_user_by_discord_id(discord_id):
     conn = get_db()
@@ -1761,8 +1774,6 @@ def update_user_email(user_id, new_email):
 def create_user_with_email(email, signup_ip):
     """Create a new user with email (no Discord connection yet)."""
     import hashlib
-    conn = get_db()
-    cursor = conn.cursor()
 
     signup_date = datetime.now().isoformat()
     email_lower = email.lower()
@@ -1772,47 +1783,60 @@ def create_user_with_email(email, signup_ip):
     email_hash = hashlib.sha256(email_lower.encode()).hexdigest()[:16]
     placeholder_discord_id = f'email_{email_hash}'
 
-    # Generate unique adzsend_id
-    adzsend_id = generate_adzsend_id()
-    while True:
-        cursor.execute('SELECT id FROM users WHERE adzsend_id = ?', (adzsend_id,))
-        if not cursor.fetchone():
-            break
+    # Retry loop to handle race conditions on adzsend_id collision
+    max_retries = 5
+    for attempt in range(max_retries):
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Generate unique adzsend_id
         adzsend_id = generate_adzsend_id()
+        while True:
+            cursor.execute('SELECT id FROM users WHERE adzsend_id = ?', (adzsend_id,))
+            if not cursor.fetchone():
+                break
+            adzsend_id = generate_adzsend_id()
 
-    try:
-        cursor.execute('''
-            INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date, email, adzsend_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            placeholder_discord_id,  # Unique placeholder until they connect Discord
-            email_lower.split('@')[0],  # Use email prefix as temporary username
-            None,
-            'pending',  # Placeholder token
-            signup_ip,
-            signup_date,
-            email_lower,
-            adzsend_id
-        ))
+        try:
+            cursor.execute('''
+                INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date, email, adzsend_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                placeholder_discord_id,  # Unique placeholder until they connect Discord
+                email_lower.split('@')[0],  # Use email prefix as temporary username
+                None,
+                'pending',  # Placeholder token
+                signup_ip,
+                signup_date,
+                email_lower,
+                adzsend_id
+            ))
 
-        user_id = cursor.lastrowid
+            user_id = cursor.lastrowid
 
-        # Initialize usage tracking
-        cursor.execute('''
-            INSERT INTO usage (user_id, messages_sent, last_reset)
-            VALUES (?, 0, ?)
-        ''', (user_id, datetime.now().isoformat()))
+            # Initialize usage tracking
+            cursor.execute('''
+                INSERT INTO usage (user_id, messages_sent, last_reset)
+                VALUES (?, 0, ?)
+            ''', (user_id, datetime.now().isoformat()))
 
-        conn.commit()
-        conn.close()
+            conn.commit()
+            conn.close()
 
-        # Auto-activate free plan for new users
-        activate_free_plan(user_id)
+            # Auto-activate free plan for new users
+            activate_free_plan(user_id)
 
-        return user_id
-    except sqlite3.IntegrityError:
-        conn.close()
-        return None
+            return user_id
+        except sqlite3.IntegrityError as e:
+            conn.close()
+            # If it's an adzsend_id collision (race condition), retry with new ID
+            if 'adzsend_id' in str(e) or 'idx_users_adzsend_id' in str(e):
+                if attempt < max_retries - 1:
+                    continue  # Retry with new adzsend_id
+            # For other integrity errors (like duplicate email), return None
+            return None
+
+    return None  # Max retries exceeded
 
 
 def has_active_verification_code(email, purpose='login'):
@@ -2387,8 +2411,17 @@ def get_member_daily_stats(member_user_id, team_id, start_date=None, end_date=No
     rows = cursor.fetchall()
     conn.close()
 
-    # Convert to list of dicts
-    stats = [{'date': row[0], 'count': row[1]} for row in rows]
+    # Create a dict of existing data
+    data_by_date = {row[0]: row[1] for row in rows}
+
+    # Fill in all dates in range with 0 for missing days
+    stats = []
+    current = datetime.strptime(start_date, '%Y-%m-%d')
+    end = datetime.strptime(end_date, '%Y-%m-%d')
+    while current <= end:
+        date_str = current.strftime('%Y-%m-%d')
+        stats.append({'date': date_str, 'count': data_by_date.get(date_str, 0)})
+        current += timedelta(days=1)
 
     # Calculate summary stats
     total = sum(s['count'] for s in stats)

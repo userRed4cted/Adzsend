@@ -490,7 +490,7 @@
                 </div>
 
                 <div class="admin-filters">
-                    <div class="filter-title">Filter Users</div>
+                    <div class="filter-title">Filter users</div>
                     <div class="filter-checkbox">
                         <input type="checkbox" id="filter-non-plan" value="non_plan">
                         <label for="filter-non-plan">Free plan members</label>
@@ -501,11 +501,11 @@
                     </div>
                     <div class="filter-checkbox">
                         <input type="checkbox" id="filter-banned" value="banned">
-                        <label for="filter-banned">Banned Users</label>
+                        <label for="filter-banned">Banned users</label>
                     </div>
                     <div class="filter-checkbox">
                         <input type="checkbox" id="filter-flagged" value="flagged">
-                        <label for="filter-flagged">Flagged Users</label>
+                        <label for="filter-flagged">Flagged users</label>
                     </div>
                     <div class="filter-checkbox">
                         <input type="checkbox" id="filter-no-discord" value="no_discord">
@@ -540,10 +540,10 @@
     <!-- Flagging Dialog -->
     <div class="dialog-overlay" id="flagging-dialog">
         <div class="dialog-box">
-            <div class="dialog-header">User Flagging Information</div>
+            <div class="dialog-header">User flagging information</div>
             <div class="dialog-content" id="flagging-reason"></div>
             <div class="dialog-actions">
-                <button class="dialog-btn primary" id="unflag-confirm-btn" onclick="confirmUnflag()">Unflag User</button>
+                <button class="dialog-btn primary" id="unflag-confirm-btn" onclick="confirmUnflag()">Unflag user</button>
                 <button class="dialog-btn secondary" onclick="closeFlaggingDialog()">Close</button>
             </div>
         </div>
@@ -556,7 +556,7 @@
 
             <!-- Tab Navigation -->
             <div style="display: flex; gap: 0; margin: 0 -0.5rem;">
-                <button class="plans-tab-btn active" data-tab="plan-info" onclick="switchPlansTab('plan-info')" style="flex: 1; padding: 0.5rem; background: linear-gradient(to bottom, #3a3a4d, #2a2a3d); border: 1px solid #4a4a5d; border-radius: 6px 0 0 6px; color: #fff; font-weight: 500; cursor: pointer; font-size: 0.8rem;">Plan Information</button>
+                <button class="plans-tab-btn active" data-tab="plan-info" onclick="switchPlansTab('plan-info')" style="flex: 1; padding: 0.5rem; background: linear-gradient(to bottom, #3a3a4d, #2a2a3d); border: 1px solid #4a4a5d; border-radius: 6px 0 0 6px; color: #fff; font-weight: 500; cursor: pointer; font-size: 0.8rem;">Plan information</button>
                 <button class="plans-tab-btn" data-tab="invoices" onclick="switchPlansTab('invoices')" style="flex: 1; padding: 0.5rem; background: transparent; border: 1px solid #4a4a5d; border-left: none; color: #949BA4; font-weight: 500; cursor: pointer; font-size: 0.8rem;">Invoices</button>
                 <button class="plans-tab-btn" data-tab="usage" onclick="switchPlansTab('usage')" style="flex: 1; padding: 0.5rem; background: transparent; border: 1px solid #4a4a5d; border-left: none; border-radius: 0 6px 6px 0; color: #949BA4; font-weight: 500; cursor: pointer; font-size: 0.8rem;">Usage</button>
             </div>
@@ -575,7 +575,7 @@
     <!-- Discord Account View Dialog -->
     <div class="dialog-overlay" id="discord-view-dialog">
         <div class="dialog-box" style="max-width: 450px;">
-            <div class="dialog-header">Linked Discord Account</div>
+            <div class="dialog-header">Linked Discord account</div>
             <div class="dialog-content" id="discord-account-content" style="padding: 0.5rem 0;">
                 <!-- Discord account card will be populated here -->
             </div>
@@ -728,12 +728,11 @@
             }
 
             usersList.innerHTML = users.map(user => {
-                // Check if user has linked Discord account
-                const hasDiscordLinked = user.discord_id && !user.discord_id.startsWith('pending_') && user.discord_id !== 'no_discord_userid';
-                const avatarUrl = (hasDiscordLinked && user.avatar)
-                    ? `https://cdn.discordapp.com/avatars/${user.discord_id}/${user.avatar}.png`
+                // Check if user has linked Discord account (for avatar color extraction)
+                const hasDiscordLinked = user.discord_oauth_discord_id && user.discord_oauth_discord_id.trim() !== '';
+                const avatarUrl = (hasDiscordLinked && user.discord_oauth_avatar)
+                    ? `https://cdn.discordapp.com/avatars/${user.discord_oauth_discord_id}/${user.discord_oauth_avatar}.png`
                     : null;
-                const defaultAvatarUrl = "{{ url_for('static', filename='DiscordLogo.png') }}";
 
                 const tags = [];
                 if (user.banned) tags.push('<span class="user-tag banned">Banned</span>');
@@ -744,18 +743,13 @@
                 const isSelected = currentUser && currentUser.id === user.id;
                 const selectedClass = isSelected ? ' selected' : '';
 
-                // Display Adzsend ID in the list
+                // Display only Adzsend ID in the list
                 const displayAdzsendId = user.adzsend_id || 'No ID';
 
                 return `
-                <div class="user-item${selectedClass}" onclick="selectUser(${user.id}, event)" data-user-id="${user.id}" data-avatar-url="${avatarUrl || ''}">
-                    ${avatarUrl
-                        ? `<div class="user-item-avatar"><img src="${avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;" crossorigin="anonymous"></div>`
-                        : `<div class="user-item-avatar default-avatar"><img src="${defaultAvatarUrl}"></div>`
-                    }
-                    <div class="user-item-info">
-                        <div class="user-item-name">${user.username || 'Unknown User'}</div>
-                        <div class="user-item-id">${displayAdzsendId}</div>
+                <div class="user-item${selectedClass}" onclick="selectUser(${user.id}, event)" data-user-id="${user.id}" data-avatar-url="${avatarUrl || ''}" data-has-discord="${hasDiscordLinked ? 'true' : 'false'}">
+                    <div class="user-item-info" style="padding-left: 4px;">
+                        <div class="user-item-id" style="font-size: 14px; color: #e0e0e0;">${displayAdzsendId}</div>
                     </div>
                     ${tags.length > 0 ? `<div class="user-item-tags">${tags.join('')}</div>` : ''}
                 </div>
@@ -774,23 +768,16 @@
             const selectedItem = document.querySelector(`.user-item[data-user-id="${currentUser.id}"]`);
             if (!selectedItem) return;
 
-            const avatarUrl = selectedItem.dataset.avatarUrl;
-            if (avatarUrl) {
-                const avatarImg = selectedItem.querySelector('.user-item-avatar img');
-                if (avatarImg) {
-                    // Wait for image to load before extracting color
-                    if (avatarImg.complete) {
-                        applyAvatarColorStyling(selectedItem, avatarImg);
-                    } else {
-                        avatarImg.addEventListener('load', () => {
-                            applyAvatarColorStyling(selectedItem, avatarImg);
-                        });
-                    }
-                }
+            // Only apply glow for users with linked Discord
+            const hasDiscord = selectedItem.dataset.hasDiscord === 'true';
+            if (hasDiscord) {
+                // Use teal color for linked Discord users
+                selectedItem.style.borderColor = 'rgba(21, 216, 188, 0.6)';
+                selectedItem.style.boxShadow = '0 0 15px rgba(21, 216, 188, 0.4)';
             } else {
-                // Use default purple color for users without avatars
-                selectedItem.style.borderColor = 'rgba(124, 67, 125, 0.6)';
-                selectedItem.style.boxShadow = '0 0 15px rgba(124, 67, 125, 0.4)';
+                // No glow for non-linked members - just a subtle border
+                selectedItem.style.borderColor = 'rgba(148, 155, 164, 0.3)';
+                selectedItem.style.boxShadow = 'none';
             }
         }
 
@@ -813,22 +800,16 @@
             const selectedItem = event.currentTarget;
             selectedItem.classList.add('selected');
 
-            // Extract color from avatar if it exists
-            const avatarUrl = selectedItem.dataset.avatarUrl;
-            if (avatarUrl) {
-                const avatarImg = selectedItem.querySelector('.user-item-avatar img');
-                if (avatarImg) {
-                    const dominantColor = getDominantColor(avatarImg);
-                    // Convert RGB to RGBA for glow effect
-                    const rgbaColor = dominantColor.replace('rgb', 'rgba').replace(')', ', 0.4)');
-                    const rgbaBorder = dominantColor.replace('rgb', 'rgba').replace(')', ', 0.6)');
-                    selectedItem.style.borderColor = rgbaBorder;
-                    selectedItem.style.boxShadow = `0 0 15px ${rgbaColor}`;
-                }
+            // Only apply glow for users with linked Discord
+            const hasDiscord = selectedItem.dataset.hasDiscord === 'true';
+            if (hasDiscord) {
+                // Use teal color for linked Discord users
+                selectedItem.style.borderColor = 'rgba(21, 216, 188, 0.6)';
+                selectedItem.style.boxShadow = '0 0 15px rgba(21, 216, 188, 0.4)';
             } else {
-                // Use default purple color for users without avatars
-                selectedItem.style.borderColor = 'rgba(124, 67, 125, 0.6)';
-                selectedItem.style.boxShadow = '0 0 15px rgba(124, 67, 125, 0.4)';
+                // No glow for non-linked members - just a subtle border
+                selectedItem.style.borderColor = 'rgba(148, 155, 164, 0.3)';
+                selectedItem.style.boxShadow = 'none';
             }
 
             // Show loading indicator while fetching user details
@@ -871,7 +852,7 @@
 
                 <div class="user-details-section">
                     <div class="detail-row">
-                        <div class="detail-label">Account Created</div>
+                        <div class="detail-label">Account created</div>
                         <div class="detail-value">${new Date(user.signup_date).toLocaleString()}</div>
                     </div>
                     <div class="detail-row">
@@ -895,7 +876,7 @@
                     <div class="detail-row">
                         <div class="detail-label">Discord</div>
                         <div class="detail-value" style="display: flex; align-items: center; gap: 8px;">
-                            ${(user.discord_id && !user.discord_id.startsWith('pending_') && !user.discord_id.startsWith('email_') && user.discord_id !== 'no_discord_userid') ? user.discord_id : 'No linked Discord'}
+                            ${(user.discord_id && !user.discord_id.startsWith('pending_') && !user.discord_id.startsWith('email_') && user.discord_id !== 'no_discord_userid') ? 'Linked' : 'Not linked'}
                             ${(user.discord_id && !user.discord_id.startsWith('pending_') && !user.discord_id.startsWith('email_') && user.discord_id !== 'no_discord_userid') ? \`<button class="grey-btn" onclick="viewDiscordAccount()" style="margin-left: 6px; padding: 4px 10px; border-radius: 4px; font-size: 12px;">View</button>\` : ''}
                         </div>
                     </div>
@@ -919,7 +900,7 @@
                         <div class="detail-value ${user.flagged ? 'flagged' : ''}">${user.flagged ? 'Yes' : 'No'} (${user.flag_count || 0} time${(user.flag_count || 0) !== 1 ? 's' : ''})</div>
                     </div>
                     <div class="detail-row">
-                        <div class="detail-label">Last Flagged</div>
+                        <div class="detail-label">Last flagged</div>
                         <div class="detail-value ${user.flagged_at ? 'flagged' : ''}">${user.flagged_at ? new Date(user.flagged_at).toLocaleString() : 'Never'}</div>
                     </div>
                     <div class="detail-row">
@@ -929,14 +910,14 @@
                 </div>
 
                 <div class="admin-actions">
-                    ${user.subscriptions.length > 0 ? `<button class="admin-btn" onclick="viewMessage()">View Saved Message</button>` : `<button class="admin-btn" onclick="viewMessage()" disabled style="opacity: 0.5; cursor: not-allowed;">View Saved Message</button>`}
-                    ${hasBusinessTeam ? `<button class="admin-btn" onclick="viewTeamMessage()">View Team Message</button>` : `<button class="admin-btn" onclick="viewTeamMessage()" disabled style="opacity: 0.5; cursor: not-allowed;">View Team Message</button>`}
+                    ${user.subscriptions.length > 0 ? `<button class="admin-btn" onclick="viewMessage()">View saved message</button>` : `<button class="admin-btn" onclick="viewMessage()" disabled style="opacity: 0.5; cursor: not-allowed;">View saved message</button>`}
+                    ${hasBusinessTeam ? `<button class="admin-btn" onclick="viewTeamMessage()">View team message</button>` : `<button class="admin-btn" onclick="viewTeamMessage()" disabled style="opacity: 0.5; cursor: not-allowed;">View team message</button>`}
                     <button class="admin-btn" onclick="viewFlagging()" ${!user.flagged ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>View Flagging</button>
                     ${user.banned ?
-                        `<button class="admin-btn ban" id="ban-btn" onclick="handleBanUnban()" ${disabledAttr}>Unban User</button>` :
-                        `<button class="admin-btn ban" id="ban-btn" onclick="handleBanUnban()" ${disabledAttr}>Ban User</button>`
+                        `<button class="admin-btn ban" id="ban-btn" onclick="handleBanUnban()" ${disabledAttr}>Unban user</button>` :
+                        `<button class="admin-btn ban" id="ban-btn" onclick="handleBanUnban()" ${disabledAttr}>Ban user</button>`
                     }
-                    <button class="admin-btn delete" id="delete-btn" onclick="handleDelete()" ${disabledAttr}>Delete Account</button>
+                    <button class="admin-btn delete" id="delete-btn" onclick="handleDelete()" ${disabledAttr}>Delete account</button>
                 </div>
             `;
         }
@@ -1043,7 +1024,7 @@
                                     <div>Billing: ${sub.billing_period || 'N/A'}</div>
                                     <div>Started: ${startDate}</div>
                                     <div>Expires: ${endDate}</div>
-                                    <div>Message Limit: ${sub.message_limit === -1 ? 'Unlimited' : sub.message_limit}</div>
+                                    <div>Message limit: ${sub.message_limit === -1 ? 'Unlimited' : sub.message_limit}</div>
                                 </div>
                             </div>`;
                         }).join('');
@@ -1172,25 +1153,25 @@
                                 <span style="color: #15d8bc;">Active</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #282930;">
-                                <span style="color: #949BA4;">Current Plan</span>
+                                <span style="color: #949BA4;">Current plan</span>
                                 <span style="color: #dcddde;">${sub.plan_name}</span>
                             </div>
                             ${sub.plan_type === 'subscription' && sub.billing_period ? `
                             <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #282930;">
-                                <span style="color: #949BA4;">Billing Period</span>
+                                <span style="color: #949BA4;">Billing period</span>
                                 <span style="color: #dcddde;">${sub.billing_period.charAt(0).toUpperCase() + sub.billing_period.slice(1)}</span>
                             </div>
                             ` : ''}
                             ${sub.started_at ? `
                             <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                                <span style="color: #949BA4;">Plan Started</span>
+                                <span style="color: #949BA4;">Plan started</span>
                                 <span style="color: #dcddde;">${new Date(sub.started_at).toLocaleDateString()}</span>
                             </div>
                             ` : ''}
                         </div>
                     `).join('');
                 } else {
-                    // Free plan - only show Status and Current Plan
+                    // Free plan - only show Status and Current plan
                     container.innerHTML = `
                         <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                             <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #282930;">
@@ -1198,7 +1179,7 @@
                                 <span style="color: #15d8bc;">Active</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                                <span style="color: #949BA4;">Current Plan</span>
+                                <span style="color: #949BA4;">Current plan</span>
                                 <span style="color: #dcddde;">Free</span>
                             </div>
                         </div>
@@ -1286,11 +1267,11 @@
                         let usageHtml = `
                             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                                 <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #282930;">
-                                    <span style="color: #949BA4;">Messages Sent</span>
+                                    <span style="color: #949BA4;">Messages sent</span>
                                     <span style="color: #dcddde;">${messagesSent}</span>
                                 </div>
                                 <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #282930;">
-                                    <span style="color: #949BA4;">Message Limit</span>
+                                    <span style="color: #949BA4;">Message limit</span>
                                     <span style="color: #dcddde;">${planStatus.is_unlimited ? 'Unlimited' : planStatus.message_limit}</span>
                                 </div>`;
 
@@ -1298,7 +1279,7 @@
                         if (planStatus.usage_type === 'allowance' && nextReset) {
                             usageHtml += `
                                 <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                                    <span style="color: #949BA4;">Limit Resets In${periodLabel ? ` (${periodLabel})` : ''}</span>
+                                    <span style="color: #949BA4;">Limit resets in${periodLabel ? ` (${periodLabel})` : ''}</span>
                                     <span style="color: #dcddde;">${resetCountdown}</span>
                                 </div>`;
                         }
@@ -1340,21 +1321,21 @@
                     } else {
                         await showAlert(data.error || 'Failed to unban user', 'Error');
                         banBtn.disabled = false;
-                        banBtn.textContent = 'Unban User';
+                        banBtn.textContent = 'Unban user';
                     }
                 } catch (error) {
                     console.error('Error unbanning user:', error);
                     await showAlert('Network error while unbanning user', 'Error');
                     banBtn.disabled = false;
-                    banBtn.textContent = 'Unban User';
+                    banBtn.textContent = 'Unban user';
                 }
             } else {
                 // Ban action - needs confirmation
                 if (!banConfirmed) {
-                    const confirmation = await showConfirm('Are you sure you want to ban this user? They will not be able to use any panels or be added to teams.', 'Ban User', { danger: true, confirmText: 'Ban User' });
+                    const confirmation = await showConfirm('Are you sure you want to ban this user? They will not be able to use any panels or be added to teams.', 'Ban user', { danger: true, confirmText: 'Ban user' });
                     if (confirmation) {
                         banConfirmed = true;
-                        banBtn.textContent = 'Confirm Ban';
+                        banBtn.textContent = 'Confirm ban';
                         banBtn.classList.add('confirm-ban');
                     }
                 } else {
@@ -1373,7 +1354,7 @@
                         } else {
                             await showAlert(data.error || 'Failed to ban user', 'Error');
                             banBtn.disabled = false;
-                            banBtn.textContent = 'Ban User';
+                            banBtn.textContent = 'Ban user';
                             banBtn.classList.remove('confirm-ban');
                             banConfirmed = false;
                         }
@@ -1381,7 +1362,7 @@
                         console.error('Error banning user:', error);
                         await showAlert('Network error while banning user', 'Error');
                         banBtn.disabled = false;
-                        banBtn.textContent = 'Ban User';
+                        banBtn.textContent = 'Ban user';
                         banBtn.classList.remove('confirm-ban');
                         banConfirmed = false;
                     }
@@ -1395,7 +1376,7 @@
             const deleteBtn = document.getElementById('delete-btn');
 
             if (!deleteConfirmed) {
-                const confirmation = await showConfirm('Are you sure you want to permanently delete this account? This action cannot be undone and will remove all user data.', 'Delete Account', { danger: true, confirmText: 'Delete Account' });
+                const confirmation = await showConfirm('Are you sure you want to permanently delete this account? This action cannot be undone and will remove all user data.', 'Delete account', { danger: true, confirmText: 'Delete account' });
                 if (confirmation) {
                     deleteConfirmed = true;
                     deleteBtn.textContent = 'Confirm Delete';
@@ -1418,7 +1399,7 @@
                     } else {
                         await showAlert(data.error || 'Failed to delete user', 'Error');
                         deleteBtn.disabled = false;
-                        deleteBtn.textContent = 'Delete Account';
+                        deleteBtn.textContent = 'Delete account';
                         deleteBtn.classList.remove('confirm-delete');
                         deleteConfirmed = false;
                     }
@@ -1426,7 +1407,7 @@
                     console.error('Error deleting user:', error);
                     await showAlert('Network error while deleting user', 'Error');
                     deleteBtn.disabled = false;
-                    deleteBtn.textContent = 'Delete Account';
+                    deleteBtn.textContent = 'Delete account';
                     deleteBtn.classList.remove('confirm-delete');
                     deleteConfirmed = false;
                 }
@@ -1502,9 +1483,8 @@
         }
 
         // Load users on page load (no filters = all users)
-        window.addEventListener('load', () => {
-            loadUsers();
-        });
+        // Call immediately since script is at end of body and DOM is ready
+        loadUsers();
     </script>
 </body>
 </html>

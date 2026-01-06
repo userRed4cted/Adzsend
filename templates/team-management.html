@@ -47,7 +47,7 @@
                 {% if is_owner %}
                 <a href="{{ url_for('team_management') }}" class="dropdown-item">Team Management</a>
                 {% endif %}
-                <a href="{{ url_for('team_panel') }}" class="dropdown-item">Team Panel</a>
+                <a href="{{ url_for('team_panel') }}" class="dropdown-item">Team panel</a>
                 {% endif %}
                 <a href="{{ url_for('settings') }}" class="dropdown-item">Settings</a>
                 {% if is_admin_user %}
@@ -77,13 +77,13 @@
                 <div class="selection-panel">
                     <div class="unified-header">
                         <div class="header-section">
-                            <div class="panel-header">Team Members ({{ active_member_count }}/{{ team.max_members }})</div>
+                            <div class="panel-header">Team members ({{ active_member_count }}/{{ team.max_members }})</div>
                         </div>
                     </div>
 
                     <!-- Add Member Section -->
                     <div style="padding: 0.75rem 1rem; flex-shrink: 0;">
-                        <div class="panel-subheader" style="margin-bottom: 0.5rem; color: #dcddde;">Add Team Member</div>
+                        <div class="panel-subheader" style="margin-bottom: 0.5rem; color: #dcddde;">Add team member</div>
                         <div style="display: flex; gap: 0.5rem;">
                             <input type="text" id="member-adzsend-id" class="search-input" placeholder="Enter member's Adzsend ID (18 digits)..." style="flex: 1;" maxlength="18" pattern="[0-9]{18}">
                             <button id="add-member-btn" class="send-button" style="padding: 0 1rem; height: 40px; min-width: 80px;">Add</button>
@@ -92,7 +92,7 @@
 
                     <!-- Team Members List -->
                     <div class="channels-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding-top: 0;">
-                        <div class="panel-header" style="padding: 0 1rem; margin-bottom: 0.5rem; margin-top: 0;">Team Members</div>
+                        <div class="panel-header" style="padding: 0 1rem; margin-bottom: 0.5rem; margin-top: 0;">Team members</div>
                         <div id="members-list" class="channels-list">
                             {% if members|length == 0 %}
                                 <div class="no-selection">No team members yet</div>
@@ -107,8 +107,7 @@
                                             {% endif %}
                                         </div>
                                         <div class="member-info">
-                                            <div class="member-username">{{ member.member_username or 'Unknown User' }}</div>
-                                            <div class="member-id" style="color: #949ba4; font-size: 0.8rem; font-family: 'Roboto Mono', monospace;">{{ member.member_adzsend_id or 'No ID' }}</div>
+                                            <div class="member-username" style="font-family: 'Roboto Mono', monospace;">{{ member.member_adzsend_id or 'No ID' }}</div>
                                         </div>
                                         {% set status = member.invitation_status or 'pending' %}
                                         {% if status == 'pending' %}
@@ -142,14 +141,14 @@
                 <div class="action-panel">
                     <div class="unified-header">
                         <div class="header-section">
-                            <div class="panel-header">Team Advertisement Message</div>
+                            <div class="panel-header">Team advertisement message</div>
                         </div>
                     </div>
 
                     <!-- Message Section -->
                     <div class="message-section" style="display: flex; flex-direction: column; padding: 1rem; gap: 1rem; flex: 0.5;">
                         <div class="panel-subheader" style="margin-bottom: 0.5rem; color: #dcddde;">
-                            This message will be used by all team members when sending from Team Panel
+                            This message will be used by all team members when sending from team panel
                         </div>
                         <textarea id="team-message-input" class="message-input" placeholder="Enter the message your team will be using, leaving this empty or setting the team message whilst empty will result in team members not being able to send anything..." maxlength="2000" style="flex: 1; margin-bottom: 0.5rem;">{{ team.team_message or '' }}</textarea>
                         <div class="message-footer">
@@ -160,7 +159,7 @@
                                     <polyline points="17 21 17 13 7 13 7 21"></polyline>
                                     <polyline points="7 3 7 8 15 8"></polyline>
                                 </svg>
-                                Set Team Message
+                                Set team message
                             </button>
                         </div>
                     </div>
@@ -182,19 +181,18 @@
                                             {% endif %}
                                         </div>
                                         <div class="member-stat-info">
-                                            <div class="member-stat-username">
-                                                {{ stat.member_username or 'Unknown User' }}
+                                            <div class="member-stat-username" style="font-family: 'Roboto Mono', monospace;">
+                                                {{ stat.member_adzsend_id or 'No ID' }}
                                                 {% if stat.is_owner %}
                                                     <span style="background: linear-gradient(to bottom, #15d8bc, #006e59); color: #121215; font-size: 0.6rem; padding: 0.2rem 0.4rem; border-radius: 3px; margin-left: 0.5rem; font-weight: 500; line-height: 1.2; display: inline-block; vertical-align: middle;">Owner</span>
                                                 {% endif %}
                                             </div>
-                                            <div class="member-stat-id" style="font-family: 'Roboto Mono', monospace;">{{ stat.member_adzsend_id or 'No ID' }}</div>
                                         </div>
                                         <div class="member-stat-usage">
                                             <div class="stat-number">{{ stat.business_all_time_sent }}</div>
                                             <div class="stat-label">Ads Sent</div>
                                         </div>
-                                        <button class="view-analytics-btn" onclick="openAnalyticsDialog({{ stat.user_id }}, '{{ stat.member_username or 'Unknown User' }}')">View</button>
+                                        <button class="view-analytics-btn" onclick="openAnalyticsDialog({{ stat.user_id }}, '{{ stat.member_adzsend_id or 'No ID' }}')">View</button>
                                     </div>
                                 {% endfor %}
                             {% endif %}
@@ -700,9 +698,9 @@
         }
 
         .apply-dates-btn {
-            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            background: transparent;
             border: none;
-            color: #121215;
+            color: #15d8bc;
             padding: 0.5rem 1rem;
             border-radius: 6px;
             cursor: pointer;
@@ -712,7 +710,7 @@
         }
 
         .apply-dates-btn:hover {
-            background: linear-gradient(to bottom, #10b89e, #004e40);
+            color: #10b89e;
         }
 
         /* Chart styles */
@@ -1104,20 +1102,20 @@
 
                     container.innerHTML = `
                         <div class="analytics-stat-row">
-                            <span class="analytics-stat-label">All-Time Ads Sent</span>
+                            <span class="analytics-stat-label">All-time ads sent</span>
                             <span class="analytics-stat-value">${analytics.all_time.toLocaleString()}</span>
                         </div>
                         <div class="analytics-stat-row">
-                            <span class="analytics-stat-label">Current Cycle Ads</span>
+                            <span class="analytics-stat-label">Current cycle ads</span>
                             <span class="analytics-stat-value">${analytics.current_cycle.toLocaleString()}</span>
                         </div>
                         <div class="analytics-stat-row">
-                            <span class="analytics-stat-label">Joined Team</span>
+                            <span class="analytics-stat-label">Joined team</span>
                             <span class="analytics-stat-value">${joinedDate}</span>
                         </div>
                         <div class="analytics-stat-row" style="flex-direction: column; align-items: stretch;">
                             <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                <span class="analytics-stat-label">Team Usage Contribution</span>
+                                <span class="analytics-stat-label">Team contribution</span>
                                 <span class="analytics-stat-value">${analytics.percentage}%</span>
                             </div>
                             <div class="analytics-progress-bar">

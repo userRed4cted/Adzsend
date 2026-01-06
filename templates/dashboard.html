@@ -45,9 +45,9 @@
                 {% endif %}
                 {% if has_business %}
                 {% if is_owner %}
-                <a href="{{ url_for('team_management') }}" class="dropdown-item">Team Management</a>
+                <a href="{{ url_for('team_management') }}" class="dropdown-item">Team management</a>
                 {% endif %}
-                <a href="{{ url_for('team_panel') }}" class="dropdown-item">Team Panel</a>
+                <a href="{{ url_for('team_panel') }}" class="dropdown-item">Team panel</a>
                 {% endif %}
                 <a href="{{ url_for('settings') }}" class="dropdown-item">Settings</a>
                 {% if is_admin_user %}
@@ -85,7 +85,7 @@
                         <!-- Unified Header for Left Panel (Servers Mode) -->
                         <div class="unified-header servers-mode-header">
                             <div class="header-section">
-                                <div class="panel-header" style="margin-top: 0.75rem;">Your Servers</div>
+                                <div class="panel-header" style="margin-top: 0.75rem;">Your servers</div>
                                 <div class="server-search-container">
                                     <input type="text" id="server-search" class="search-input" placeholder="Search servers...">
                                 </div>
@@ -96,7 +96,7 @@
                         <div class="unified-header channels-only-header" style="display: none;">
                             <div class="header-section">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; margin-bottom: 0.5rem;">
-                                    <div class="panel-header" style="margin: 0;">All Channels</div>
+                                    <div class="panel-header" style="margin: 0;">All channels</div>
                                     <span style="color: #72767d; font-size: 0.7rem; font-style: italic;">All channels shown regardless of permissions</span>
                                 </div>
                                 <div class="server-search-container">
@@ -144,7 +144,7 @@
                         <!-- Unified Header for Right Panel -->
                         <div class="unified-header">
                             <div class="header-section">
-                                <div class="panel-header">Selected Channels</div>
+                                <div class="panel-header">Selected channels</div>
                                 <div class="selected-search-container">
                                     <input type="text" id="selected-search" class="search-input" placeholder="Search selected channels...">
                                 </div>
@@ -201,7 +201,7 @@
     <!-- Tag Limit Popup Modal -->
     <div id="tag-limit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
         <div style="background: #191A1F; border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; text-align: center; display: flex; flex-direction: column; gap: 1rem;">
-            <h2 style="color: #dcddde; margin: 0; font-size: 1.25rem;">Tag Limit Reached</h2>
+            <h2 style="color: #dcddde; margin: 0; font-size: 1.25rem;">Tag limit reached</h2>
             <p style="color: #949BA4; margin: 0; font-size: 0.9rem;">Maximum 6 tags allowed. Please remove a tag before adding a new one.</p>
             <button class="grey-btn" onclick="closeTagLimitModal()" style="padding: 0.6rem 2rem;">OK</button>
         </div>
@@ -210,7 +210,7 @@
     <!-- Channel Limit Per Server Modal -->
     <div id="channel-limit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
         <div style="background: #191A1F; border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; text-align: center; display: flex; flex-direction: column; gap: 1rem;">
-            <h2 style="color: #dcddde; margin: 0; font-size: 1.25rem;">Channel Limit Reached</h2>
+            <h2 style="color: #dcddde; margin: 0; font-size: 1.25rem;">Channel limit reached</h2>
             <p id="channel-limit-message" style="color: #949BA4; margin: 0; font-size: 0.9rem;">You can only select up to X channels per server on your current plan.</p>
             <button class="grey-btn" onclick="closeChannelLimitModal()" style="padding: 0.6rem 2rem;">OK</button>
         </div>
@@ -1173,13 +1173,13 @@
                         tagElement.classList.add('rate-limited');
                         const label = document.createElement('span');
                         label.className = 'failure-label ratelimit';
-                        label.textContent = 'Rate Limited';
+                        label.textContent = 'Rate limited';
                         tagElement.insertBefore(label, tagElement.querySelector('.tag-remove'));
                     } else {
                         tagElement.classList.add('failed-channel');
                         const label = document.createElement('span');
                         label.className = 'failure-label permission';
-                        label.textContent = 'Missing Permission';
+                        label.textContent = 'Missing permission';
                         tagElement.insertBefore(label, tagElement.querySelector('.tag-remove'));
                     }
                 }
@@ -1215,10 +1215,10 @@
                             if (failureInfo) {
                                 if (failureInfo.type === 'ratelimit') {
                                     failedClass = ' rate-limited';
-                                    labelHtml = '<span class="failure-label ratelimit">Rate Limited</span>';
+                                    labelHtml = '<span class="failure-label ratelimit">Rate limited</span>';
                                 } else {
                                     failedClass = ' failed-channel';
-                                    labelHtml = '<span class="failure-label permission">Missing Permission</span>';
+                                    labelHtml = '<span class="failure-label permission">Missing permission</span>';
                                 }
                             }
 
@@ -1457,7 +1457,7 @@
                                     return; // Stop execution
                                 } else if (result.limit_reached) {
                                     // Usage limit reached - redirect to settings
-                                    await showAlert('Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to settings page...', 'Limit Reached');
+                                    await showAlert('Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to settings page...', 'Limit reached');
                                     window.location.href = '/settings';
                                     return; // Stop execution
                                 } else if (response.status === 429) {
@@ -1483,13 +1483,19 @@
                             }
 
                             // Show final summary
-                            let successMsg = `✅ Message sent to ${successCount} channel(s)`;
-
-                            if (failedList.length > 0) {
-                                successMsg += `\n\n⚠️ Failed (${failedList.length}):\n${failedList.map(f => `• ${f}`).join('\n')}`;
+                            if (successCount === 0 && failedList.length > 0) {
+                                // All failed
+                                let failMsg = `Failed to send to ${failedList.length} channel(s)\n\n${failedList.map(f => `• ${f}`).join('\n')}`;
+                                await showAlert(failMsg, 'Send failed', { icon: 'error' });
+                            } else if (failedList.length > 0) {
+                                // Some succeeded, some failed
+                                let mixedMsg = `Send succeeded: ${successCount} channel(s)\n\nFailed: ${failedList.length}\n${failedList.map(f => `• ${f}`).join('\n')}`;
+                                await showAlert(mixedMsg, 'Send complete', { icon: 'warning' });
+                            } else {
+                                // All succeeded
+                                let successMsg = `Send succeeded: ${successCount} channel(s)`;
+                                await showAlert(successMsg, 'Send complete', { icon: 'success' });
                             }
-
-                            await showAlert(successMsg, 'Send Complete');
                         } catch (error) {
                             console.error('Send error:', error);
                             await showAlert(`Error sending message: ${error.message}`, 'Error');

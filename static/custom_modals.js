@@ -8,6 +8,7 @@
     const modalHTML = `
         <div class="custom-modal-overlay" id="custom-alert-modal">
             <div class="custom-modal-box">
+                <div class="custom-modal-icon" id="custom-alert-icon" style="display: none; text-align: center; margin-bottom: 16px;"></div>
                 <div class="custom-modal-header" id="custom-alert-title">Notice</div>
                 <div class="custom-modal-content" id="custom-alert-message"></div>
                 <div class="custom-modal-actions">
@@ -135,16 +136,35 @@
     }
 
     // Alert function - returns a Promise
-    window.showAlert = function(message, title = 'Notice') {
+    // Options: { icon: 'success' | 'error' | 'warning' | 'none' }
+    window.showAlert = function(message, title = 'Notice', options = {}) {
         return new Promise((resolve) => {
             injectModals();
             const modal = document.getElementById('custom-alert-modal');
             const titleEl = document.getElementById('custom-alert-title');
             const messageEl = document.getElementById('custom-alert-message');
+            const iconEl = document.getElementById('custom-alert-icon');
             const okBtn = document.getElementById('custom-alert-ok');
 
             titleEl.textContent = title;
             messageEl.textContent = message;
+
+            // Handle icon display
+            const iconType = options.icon || 'none';
+            if (iconType === 'success') {
+                iconEl.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#15d8bc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9 12l2 2 4-4"></path></svg>';
+                iconEl.style.display = 'block';
+            } else if (iconType === 'error') {
+                iconEl.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#991a35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+                iconEl.style.display = 'block';
+            } else if (iconType === 'warning') {
+                iconEl.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FFC107" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+                iconEl.style.display = 'block';
+            } else {
+                iconEl.style.display = 'none';
+                iconEl.innerHTML = '';
+            }
+
             modal.classList.add('active');
 
             function handleOk() {

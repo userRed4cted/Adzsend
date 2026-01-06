@@ -422,7 +422,7 @@
 
                         <!-- Plan Information / Invoices Toggle -->
                         <div style="display: flex; gap: 0; padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            <button class="billing-view-btn active" data-view="plan-info" style="flex: 1; padding: 0.5rem 1rem; background: linear-gradient(to bottom, #15d8bc, #006e59); border: 2px solid transparent; border-radius: 6px 0 0 6px; color: #121215; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box; position: relative; z-index: 1;">Plan Information</button>
+                            <button class="billing-view-btn active" data-view="plan-info" style="flex: 1; padding: 0.5rem 1rem; background: linear-gradient(to bottom, #15d8bc, #006e59); border: none; border-radius: 6px 0 0 6px; color: #121215; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box; position: relative; z-index: 1;">Plan Information</button>
                             <button class="billing-view-btn" data-view="invoices" style="flex: 1; padding: 0.5rem 1rem; background: transparent; border: 2px solid #444; border-radius: 0 6px 6px 0; color: #949BA4; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box; margin-left: -2px; position: relative; z-index: 0;">Invoices</button>
                         </div>
 
@@ -984,7 +984,7 @@
                                 if (invitation.owner_avatar) {
                                     avatarDiv.innerHTML = `<img src="https://cdn.discordapp.com/avatars/${invitation.owner_discord_id}/${invitation.owner_avatar}.png" style="width: 40px; height: 40px; border-radius: 50%;">`;
                                 } else {
-                                    avatarDiv.innerHTML = `<div style="width: 40px; height: 40px; border-radius: 50%; background: #5865f2; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">${invitation.owner_username[0].toUpperCase()}</div>`;
+                                    avatarDiv.innerHTML = `<div style="width: 40px; height: 40px; border-radius: 50%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" style="width: 24px; height: 24px; object-fit: contain; opacity: 0.5;"></div>`;
                                 }
 
                                 // Info
@@ -1000,9 +1000,9 @@
                                 actionsDiv.style.cssText = 'display: flex; gap: 0.5rem;';
 
                                 const joinBtn = document.createElement('button');
-                                joinBtn.textContent = 'Join';
+                                joinBtn.innerHTML = '<img src="/static/tick.png" style="width: 16px; height: 16px; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);">';
                                 joinBtn.className = 'team-join-btn';
-                                joinBtn.style.cssText = 'padding: 0.5rem 1.25rem; font-size: 0.85rem; background: linear-gradient(to bottom, #15d8bc, #006e59); border: none; border-radius: 6px; color: #121215; font-weight: 500; cursor: pointer; transition: all 0.2s ease;';
+                                joinBtn.style.cssText = 'width: 28px; height: 28px; background: transparent; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;';
                                 joinBtn.dataset.memberId = invitation.id;
                                 joinBtn.dataset.confirmed = 'false';
 
@@ -1021,15 +1021,15 @@
                                 joinBtn.addEventListener('click', () => {
                                     if (joinBtn.dataset.confirmed === 'false') {
                                         joinBtn.dataset.confirmed = 'true';
-                                        joinBtn.textContent = 'Confirm';
-                                        joinBtn.style.background = '#c0392b';
+                                        joinBtn.innerHTML = '<img src="/static/tick.png" style="width: 14px; height: 14px; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);"><img src="/static/tick.png" style="width: 14px; height: 14px; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9); margin-left: -4px;">';
+                                        joinBtn.style.background = 'rgba(21, 216, 188, 0.2)';
 
                                         // Auto-reset after 3 seconds
                                         setTimeout(() => {
                                             if (joinBtn.dataset.confirmed === 'true') {
                                                 joinBtn.dataset.confirmed = 'false';
-                                                joinBtn.textContent = 'Join';
-                                                joinBtn.style.background = '';
+                                                joinBtn.innerHTML = '<img src="/static/tick.png" style="width: 16px; height: 16px; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);">';
+                                                joinBtn.style.background = 'transparent';
                                             }
                                         }, 3000);
                                     } else {
@@ -1037,6 +1037,18 @@
                                     }
                                 });
                                 denyBtn.addEventListener('click', () => denyInvitation(invitation.id));
+
+                                // Hover effect for join button
+                                joinBtn.addEventListener('mouseenter', () => {
+                                    joinBtn.style.background = 'rgba(21, 216, 188, 0.2)';
+                                    joinBtn.style.transform = 'scale(1.1)';
+                                });
+                                joinBtn.addEventListener('mouseleave', () => {
+                                    if (joinBtn.dataset.confirmed === 'false') {
+                                        joinBtn.style.background = 'transparent';
+                                    }
+                                    joinBtn.style.transform = 'scale(1)';
+                                });
 
                                 // Hover effect for deny button
                                 denyBtn.addEventListener('mouseenter', () => {
@@ -1129,7 +1141,7 @@
                         if (owner.avatar) {
                             avatarHtml = `<img src="https://cdn.discordapp.com/avatars/${owner.discord_id}/${owner.avatar}.png" style="width: 40px; height: 40px; border-radius: 50%;">`;
                         } else {
-                            avatarHtml = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">${(owner.username || 'U')[0].toUpperCase()}</div>`;
+                            avatarHtml = `<div style="width: 40px; height: 40px; border-radius: 50%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" style="width: 24px; height: 24px; object-fit: contain; opacity: 0.5;"></div>`;
                         }
 
                         currentTeamContent.innerHTML = `
@@ -1140,7 +1152,7 @@
                                     <div style="color: #dcddde; font-weight: 500;">${owner.username || 'Unknown User'}</div>
                                     <div style="color: #949BA4; font-size: 0.85rem;">${owner.discord_id}</div>
                                 </div>
-                                <div style="color: #5865f2; font-size: 0.8rem; font-weight: 500;">Owner</div>
+                                <div style="color: #15d8bc; font-size: 0.8rem; font-weight: 500;">Owner</div>
                             </div>
                         `;
                     } else if (data.success && data.in_team) {
@@ -1152,7 +1164,7 @@
                         if (team.owner_avatar) {
                             avatarHtml = `<img src="https://cdn.discordapp.com/avatars/${team.owner_discord_id}/${team.owner_avatar}.png" style="width: 40px; height: 40px; border-radius: 50%;">`;
                         } else {
-                            avatarHtml = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">${team.owner_username[0].toUpperCase()}</div>`;
+                            avatarHtml = `<div style="width: 40px; height: 40px; border-radius: 50%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" style="width: 24px; height: 24px; object-fit: contain; opacity: 0.5;"></div>`;
                         }
 
                         currentTeamContent.innerHTML = `
@@ -1266,7 +1278,7 @@
                         b.classList.add('active');
                         b.style.background = 'linear-gradient(to bottom, #15d8bc, #006e59)';
                         b.style.color = '#121215';
-                        b.style.border = '2px solid transparent';
+                        b.style.border = 'none';
                         b.style.zIndex = '1';
                     } else {
                         b.classList.remove('active');
@@ -1422,6 +1434,16 @@
                 completeLinkBtn.style.cursor = 'not-allowed';
 
                 const token = tokenInput.value.trim();
+
+                // Check for quotation marks in token
+                if (token.includes('"')) {
+                    tokenStatusLabel.style.display = 'flex';
+                    tokenStatusText.textContent = 'Remove the quotation marks (")';
+                    tokenStatusIcon.style.display = 'block';
+                    tokenStatusLabel.style.color = '#faa61a';
+                    return;
+                }
+
                 if (token.length < 50) {
                     updateTokenStatus('default');
                     return;

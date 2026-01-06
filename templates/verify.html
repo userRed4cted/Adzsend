@@ -379,26 +379,28 @@
         let countdownSpan = document.getElementById('countdown');
         let cooldownSeconds = {{ cooldown_seconds|default(0) }};
 
+        // Use timestamp-based countdown to survive tab switching
+        let cooldownEndTime = cooldownSeconds > 0 ? Date.now() + (cooldownSeconds * 1000) : 0;
+
         // Disable inputs on page load if already rate limited
         if (isCodeRateLimited) {
             disableAllInputs();
         }
 
         function updateCooldown() {
-            if (cooldownSeconds > 0) {
-                cooldownSeconds--;
-                if (countdownSpan) {
-                    countdownSpan.textContent = cooldownSeconds;
-                }
+            // Calculate remaining seconds from end time (survives tab switch)
+            const remaining = Math.ceil((cooldownEndTime - Date.now()) / 1000);
 
-                if (cooldownSeconds <= 0) {
-                    // Only re-enable if not code rate limited
-                    if (!isCodeRateLimited) {
-                        resendBtn.disabled = false;
-                        cooldownTimer.style.display = 'none';
-                    }
-                } else {
-                    setTimeout(updateCooldown, 1000);
+            if (remaining > 0) {
+                if (countdownSpan) {
+                    countdownSpan.textContent = remaining;
+                }
+                setTimeout(updateCooldown, 1000);
+            } else {
+                // Cooldown finished
+                if (!isCodeRateLimited) {
+                    resendBtn.disabled = false;
+                    cooldownTimer.style.display = 'none';
                 }
             }
         }
@@ -427,8 +429,8 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    cooldownSeconds = 60;
-                    cooldownTimer.innerHTML = 'Resend available in <span id="countdown">' + cooldownSeconds + '</span>s';
+                    cooldownEndTime = Date.now() + (60 * 1000); // 60 seconds from now
+                    cooldownTimer.innerHTML = 'Resend available in <span id="countdown">60</span>s';
                     countdownSpan = document.getElementById('countdown'); // Re-get the span after innerHTML change
                     cooldownTimer.style.display = 'block';
                     resendBtn.textContent = 'Resend Code';
@@ -441,8 +443,8 @@
                         resendBtn.textContent = 'Resend Code';
                         // Button stays disabled
                     } else if (result.blocked_seconds) {
-                        cooldownSeconds = result.blocked_seconds;
-                        cooldownTimer.innerHTML = 'Resend available in <span id="countdown">' + cooldownSeconds + '</span>s';
+                        cooldownEndTime = Date.now() + (result.blocked_seconds * 1000);
+                        cooldownTimer.innerHTML = 'Resend available in <span id="countdown">' + result.blocked_seconds + '</span>s';
                         countdownSpan = document.getElementById('countdown'); // Re-get the span after innerHTML change
                         cooldownTimer.style.display = 'block';
                         resendBtn.textContent = 'Resend Code';

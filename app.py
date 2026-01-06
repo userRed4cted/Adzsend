@@ -118,7 +118,8 @@ get_client_ip = security_get_client_ip
 # CSRF validation helper for API endpoints
 def check_csrf():
     """Check CSRF token from request headers or JSON body. Returns error response if invalid."""
-    token = request.headers.get('X-CSRF-Token')
+    # Check both header formats for compatibility
+    token = request.headers.get('X-CSRF-Token') or request.headers.get('X-CSRFToken')
     if not token and request.is_json:
         data = request.get_json(silent=True)
         if data:
@@ -1108,7 +1109,8 @@ def send_message_single():
                 # For business sends: update owner's usage (team pool) and member's business stats
                 from database import increment_business_usage
                 record_successful_send(owner_user_id)  # Owner's pool gets decremented
-                increment_business_usage(user['id'])   # Member's business stats get updated
+                team_id = team['id'] if team else None
+                increment_business_usage(user['id'], team_id)   # Member's business stats get updated
             else:
                 # For personal sends: update user's own usage
                 record_successful_send(user['id'])
@@ -1551,8 +1553,6 @@ def api_change_email():
 
         # Create verification code for the new email
         code = create_verification_code(new_email, 'email_change')
-
-        print(f"[EMAIL CHANGE] Verification code for {new_email}: {code}")
 
         # Return redirect URL to verification page
         return jsonify({
@@ -2022,6 +2022,68 @@ def set_team_message():
 
     except Exception as e:
         print(f"[ERROR] Set team message error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+
+# Team member analytics API endpoints
+
+@app.route('/api/team/member/<int:member_id>/analytics', methods=['GET'])
+@rate_limit('api')
+def get_team_member_analytics(member_id):
+    """Get analytics data for a specific team member."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    try:
+        user = get_user_by_discord_id(session['user']['id'])
+        if not user:
+            return {'success': False, 'error': 'User not found'}, 404
+
+        # Check if user owns a business team
+        from database import get_business_team_by_owner, get_member_analytics
+        team = get_business_team_by_owner(user['id'])
+
+        if not team:
+            return {'success': False, 'error': 'You must be a team owner'}, 403
+
+        analytics = get_member_analytics(member_id, team['id'])
+        # Add server date for calendar restrictions
+        analytics['server_date'] = datetime.now().strftime('%Y-%m-%d')
+        return {'success': True, 'analytics': analytics}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Get member analytics error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+
+@app.route('/api/team/member/<int:member_id>/daily-stats', methods=['GET'])
+@rate_limit('api')
+def get_team_member_daily_stats(member_id):
+    """Get daily message stats for a specific team member."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    try:
+        user = get_user_by_discord_id(session['user']['id'])
+        if not user:
+            return {'success': False, 'error': 'User not found'}, 404
+
+        # Check if user owns a business team
+        from database import get_business_team_by_owner, get_member_daily_stats
+        team = get_business_team_by_owner(user['id'])
+
+        if not team:
+            return {'success': False, 'error': 'You must be a team owner'}, 403
+
+        # Get date range from query params
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        stats = get_member_daily_stats(member_id, team['id'], start_date, end_date)
+        return {'success': True, 'data': stats}, 200
+
+    except Exception as e:
+        print(f"[ERROR] Get member daily stats error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -2927,7 +2989,21 @@ def discord_unlink():
     if not user_id:
         return {'error': 'Not logged in'}, 401
 
+    # Get user's email before unlinking (for session update)
+    user = get_user_by_internal_id(user_id)
+    if not user:
+        return {'error': 'User not found'}, 404
+
+    email = user.get('email')
+
     full_unlink_discord_account(user_id)
+
+    # Update session to reflect the new discord_id (pending_email)
+    # This prevents issues when the page reloads and tries to look up user
+    if 'user' in session and email:
+        session['user']['id'] = f'pending_{email}'
+        session['user']['username'] = email.split('@')[0]
+        session['user']['avatar'] = None
 
     return {'success': True, 'message': 'Discord account unlinked successfully.'}
 

@@ -26,5 +26,8 @@ from .models import (
     complete_discord_link, unlink_discord_oauth, is_discord_linked,
     get_user_by_internal_id, full_unlink_discord_account,
     # Admin functions
-    get_purchase_history
+    get_purchase_history,
+    # Team member analytics functions
+    get_member_analytics, get_member_daily_stats, get_member_join_date,
+    record_daily_stat
 )

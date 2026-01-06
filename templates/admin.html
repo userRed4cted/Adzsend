@@ -349,7 +349,6 @@
             border-radius: 8px;
             white-space: pre-wrap;
             word-break: break-word;
-            flex: 1;
         }
 
         .dialog-actions {
@@ -1118,7 +1117,7 @@
                     const data = await response.json();
 
                     if (data.success && data.history && data.history.length > 0) {
-                        container.innerHTML = `<div style="max-height: 200px; overflow-y: auto;">` + data.history.map(item => `
+                        container.innerHTML = `<div style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column;">` + data.history.map(item => `
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #282930;">
                                 <div>
                                     <div style="color: #dcddde; font-weight: 500;">${item.plan_name || item.plan_id}</div>

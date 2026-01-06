@@ -103,7 +103,7 @@
                                             {% if member.member_avatar %}
                                                 <img src="https://cdn.discordapp.com/avatars/{{ member.member_discord_id }}/{{ member.member_avatar }}.png" alt="{{ member.member_username }}">
                                             {% else %}
-                                                <div class="member-avatar-placeholder">{{ member.member_username[0].upper() if member.member_username else '?' }}</div>
+                                                <div style="width: 100%; height: 100%; border-radius: 50%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord" style="width: 20px; height: 20px; object-fit: contain; opacity: 0.5;"></div>
                                             {% endif %}
                                         </div>
                                         <div class="member-info">
@@ -165,33 +165,95 @@
                         </div>
                     </div>
 
-                    <!-- Member Statistics Section -->
+                    <!-- Member Analytics Section -->
                     <div class="member-stats-section" style="display: flex; flex-direction: column; gap: 0.75rem; flex: 0.5; min-height: 0;">
-                        <div class="panel-header" style="padding: 0 1rem; margin-bottom: 0.5rem; margin-top: 0.75rem;">Team Member Statistics</div>
+                        <div class="panel-header" style="padding: 0 1rem; margin-bottom: 0.5rem; margin-top: 0.75rem;">Analytics</div>
                         <div id="member-stats-list" class="member-stats-list">
                             {% if member_stats|length == 0 %}
                                 <div class="no-selection">No team members yet</div>
                             {% else %}
                                 {% for stat in member_stats %}
-                                    <div class="member-stat-item">
+                                    <div class="member-stat-item" data-member-id="{{ stat.user_id }}" data-member-name="{{ stat.member_username or 'Unknown User' }}">
                                         <div class="member-stat-avatar">
                                             {% if stat.member_avatar %}
                                                 <img src="https://cdn.discordapp.com/avatars/{{ stat.member_discord_id }}/{{ stat.member_avatar }}.png" alt="{{ stat.member_username }}">
                                             {% else %}
-                                                <div class="member-avatar-placeholder">{{ stat.member_username[0].upper() if stat.member_username else '?' }}</div>
+                                                <div style="width: 100%; height: 100%; border-radius: 50%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord" style="width: 20px; height: 20px; object-fit: contain; opacity: 0.5;"></div>
                                             {% endif %}
                                         </div>
                                         <div class="member-stat-info">
-                                            <div class="member-stat-username">{{ stat.member_username or 'Unknown User' }}</div>
+                                            <div class="member-stat-username">
+                                                {{ stat.member_username or 'Unknown User' }}
+                                                {% if stat.is_owner %}
+                                                    <span style="background: linear-gradient(to bottom, #15d8bc, #006e59); color: #121215; font-size: 0.6rem; padding: 0.15rem 0.4rem; border-radius: 3px; margin-left: 0.5rem; font-weight: 500;">Owner</span>
+                                                {% endif %}
+                                            </div>
                                             <div class="member-stat-id">ID: {{ stat.member_discord_id }}</div>
                                         </div>
                                         <div class="member-stat-usage">
                                             <div class="stat-number">{{ stat.business_all_time_sent }}</div>
-                                            <div class="stat-label">Messages Sent</div>
+                                            <div class="stat-label">Ads Sent</div>
                                         </div>
+                                        <button class="view-analytics-btn" onclick="openAnalyticsDialog({{ stat.user_id }}, '{{ stat.member_username or 'Unknown User' }}')">View</button>
                                     </div>
                                 {% endfor %}
                             {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Dialog -->
+    <div class="analytics-dialog-overlay" id="analytics-dialog-overlay">
+        <div class="analytics-dialog">
+            <div class="analytics-dialog-header">
+                <h3 class="analytics-dialog-title" id="analytics-dialog-title">Member Analytics</h3>
+                <button class="analytics-dialog-close" onclick="closeAnalyticsDialog()">&times;</button>
+            </div>
+            <div class="analytics-tabs">
+                <button class="analytics-tab active" data-tab="information" onclick="switchAnalyticsTab('information')">Information</button>
+                <button class="analytics-tab" data-tab="dates" onclick="switchAnalyticsTab('dates')">Dates</button>
+            </div>
+            <div class="analytics-content">
+                <!-- Information Panel -->
+                <div class="analytics-panel active" id="panel-information">
+                    <div id="analytics-info-content">
+                        <div class="no-data-message">Loading...</div>
+                    </div>
+                </div>
+                <!-- Dates Panel -->
+                <div class="analytics-panel" id="panel-dates">
+                    <div class="date-range-container">
+                        <div class="date-input-group">
+                            <label>From</label>
+                            <input type="date" id="analytics-start-date">
+                        </div>
+                        <div class="date-input-group">
+                            <label>To</label>
+                            <input type="date" id="analytics-end-date">
+                        </div>
+                        <button class="apply-dates-btn" onclick="applyDateRange()">Apply</button>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-canvas-wrapper">
+                            <canvas id="analytics-chart" class="chart-canvas"></canvas>
+                            <div class="chart-tooltip" id="chart-tooltip"></div>
+                        </div>
+                        <div class="chart-summary" id="chart-summary">
+                            <div class="chart-summary-item">
+                                <div class="chart-summary-value" id="summary-total">0</div>
+                                <div class="chart-summary-label">Total Ads</div>
+                            </div>
+                            <div class="chart-summary-item">
+                                <div class="chart-summary-value" id="summary-avg">0</div>
+                                <div class="chart-summary-label">Daily Avg</div>
+                            </div>
+                            <div class="chart-summary-item">
+                                <div class="chart-summary-value" id="summary-peak">0</div>
+                                <div class="chart-summary-label">Peak Day</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -229,18 +291,6 @@
             object-fit: cover;
         }
 
-        .member-avatar-placeholder {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-weight: 600;
-            font-size: 1.2rem;
-        }
-
         .member-info {
             flex: 1;
             min-width: 0;
@@ -262,61 +312,52 @@
         }
 
         .status-tag {
-            font-size: 0.65rem;
-            padding: 0.2rem 0.5rem;
+            font-size: 0.7rem;
+            padding: 0.3rem 0.6rem;
             border-radius: 4px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: 500;
             white-space: nowrap;
+            border: none;
         }
 
         .status-pending {
-            background: #121215;
-            color: #949BA4;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: linear-gradient(to bottom, #3a3a4d, #2a2a3d);
+            color: #ffffff;
         }
 
         .status-accepted {
-            background: rgba(51, 95, 255, 0.2);
-            color: #335FFF;
-            border: 1px solid rgba(51, 95, 255, 0.4);
+            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            color: #121215;
         }
 
         .status-denied {
-            background: rgba(231, 76, 60, 0.2);
-            color: #E74C3C;
-            border: 1px solid rgba(231, 76, 60, 0.4);
+            background: linear-gradient(to bottom, #991a35, #6b1226);
+            color: #ffffff;
         }
 
         .status-left {
-            background: rgba(231, 76, 60, 0.2);
-            color: #E74C3C;
-            border: 1px solid rgba(231, 76, 60, 0.4);
+            background: linear-gradient(to bottom, #991a35, #6b1226);
+            color: #ffffff;
         }
 
         .status-banned {
-            background: rgba(192, 57, 43, 0.3);
-            color: #c0392b;
-            border: 1px solid rgba(192, 57, 43, 0.5);
+            background: linear-gradient(to bottom, #991a35, #6b1226);
+            color: #ffffff;
         }
 
         .status-owns-team {
-            background: rgba(124, 67, 125, 0.2);
-            color: #15d8bc;
-            border: 1px solid rgba(124, 67, 125, 0.4);
+            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            color: #121215;
         }
 
         .status-has-account {
-            background: rgba(46, 204, 113, 0.2);
-            color: #2ecc71;
-            border: 1px solid rgba(46, 204, 113, 0.4);
+            background: linear-gradient(to bottom, #3a3a4d, #2a2a3d);
+            color: #ffffff;
         }
 
         .status-no-account {
-            background: rgba(149, 155, 164, 0.2);
+            background: linear-gradient(to bottom, #3a3a4d, #2a2a3d);
             color: #949ba4;
-            border: 1px solid rgba(149, 155, 164, 0.4);
         }
 
         .member-remove-btn {
@@ -444,7 +485,7 @@
         }
 
         .stat-number {
-            color: #5865f2;
+            color: #15d8bc;
             font-weight: 700;
             font-size: 1.2rem;
             line-height: 1;
@@ -456,6 +497,273 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-top: 0.25rem;
+        }
+
+        .view-analytics-btn {
+            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            border: none;
+            color: #121215;
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-left: auto;
+        }
+
+        .view-analytics-btn:hover {
+            background: linear-gradient(to bottom, #10b89e, #004e40);
+        }
+
+        /* Analytics Dialog Styles */
+        .analytics-dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .analytics-dialog-overlay.show {
+            display: flex;
+        }
+
+        .analytics-dialog {
+            background: #1a1a1d;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .analytics-dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #282930;
+        }
+
+        .analytics-dialog-title {
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .analytics-dialog-close {
+            background: none;
+            border: none;
+            color: #949ba4;
+            cursor: pointer;
+            font-size: 1.5rem;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .analytics-dialog-close:hover {
+            color: #ffffff;
+        }
+
+        .analytics-tabs {
+            display: flex;
+            border-bottom: 1px solid #282930;
+        }
+
+        .analytics-tab {
+            flex: 1;
+            padding: 0.75rem;
+            background: none;
+            border: none;
+            color: #949ba4;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        .analytics-tab:hover {
+            color: #dcddde;
+        }
+
+        .analytics-tab.active {
+            color: #15d8bc;
+            border-bottom-color: #15d8bc;
+        }
+
+        .analytics-content {
+            padding: 1.25rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .analytics-panel {
+            display: none;
+        }
+
+        .analytics-panel.active {
+            display: block;
+        }
+
+        .analytics-stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #282930;
+        }
+
+        .analytics-stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .analytics-stat-label {
+            color: #949ba4;
+            font-size: 0.9rem;
+        }
+
+        .analytics-stat-value {
+            color: #dcddde;
+            font-weight: 600;
+        }
+
+        .analytics-progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #282930;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .analytics-progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #15d8bc, #006e59);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        /* Date picker styles */
+        .date-range-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .date-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .date-input-group label {
+            color: #949ba4;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .date-input-group input {
+            background: #212227;
+            border: 1px solid #282930;
+            border-radius: 6px;
+            padding: 0.5rem;
+            color: #dcddde;
+            font-size: 0.85rem;
+        }
+
+        .date-input-group input:focus {
+            outline: none;
+            border-color: #15d8bc;
+        }
+
+        .apply-dates-btn {
+            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            border: none;
+            color: #121215;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: auto;
+        }
+
+        .apply-dates-btn:hover {
+            background: linear-gradient(to bottom, #10b89e, #004e40);
+        }
+
+        /* Chart styles */
+        .chart-container {
+            background: #121215;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .chart-canvas-wrapper {
+            position: relative;
+            width: 100%;
+            height: 200px;
+        }
+
+        .chart-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            background: #282930;
+            color: #dcddde;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+            white-space: nowrap;
+        }
+
+        .chart-summary {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #282930;
+        }
+
+        .chart-summary-item {
+            text-align: center;
+        }
+
+        .chart-summary-value {
+            color: #15d8bc;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .chart-summary-label {
+            color: #949ba4;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            margin-top: 0.25rem;
+        }
+
+        .no-data-message {
+            text-align: center;
+            color: #949ba4;
+            padding: 2rem;
         }
     </style>
 
@@ -678,6 +986,306 @@
                         setMessageBtn.innerHTML = originalHtml;
                     }
                 });
+            }
+        });
+
+        // ========================================
+        // ANALYTICS DIALOG FUNCTIONALITY
+        // ========================================
+
+        let currentMemberId = null;
+        let currentMemberName = null;
+        let memberJoinDate = null;
+        let serverDate = null;
+        let chartData = [];
+
+        function openAnalyticsDialog(memberId, memberName) {
+            currentMemberId = memberId;
+            currentMemberName = memberName;
+
+            document.getElementById('analytics-dialog-title').textContent = `Analytics: ${memberName}`;
+            document.getElementById('analytics-dialog-overlay').classList.add('show');
+
+            // Reset to information tab
+            switchAnalyticsTab('information');
+
+            // Set default date range (last 30 days)
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+
+            document.getElementById('analytics-start-date').value = startDate.toISOString().split('T')[0];
+            document.getElementById('analytics-end-date').value = endDate.toISOString().split('T')[0];
+
+            // Load information data
+            loadAnalyticsInfo();
+        }
+
+        function closeAnalyticsDialog() {
+            document.getElementById('analytics-dialog-overlay').classList.remove('show');
+            currentMemberId = null;
+            currentMemberName = null;
+        }
+
+        // Close on overlay click
+        document.getElementById('analytics-dialog-overlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAnalyticsDialog();
+            }
+        });
+
+        function switchAnalyticsTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.analytics-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabName);
+            });
+
+            // Update panels
+            document.querySelectorAll('.analytics-panel').forEach(panel => {
+                panel.classList.toggle('active', panel.id === `panel-${tabName}`);
+            });
+
+            // Load data for the tab
+            if (tabName === 'information') {
+                loadAnalyticsInfo();
+            } else if (tabName === 'dates') {
+                loadDailyStats();
+            }
+        }
+
+        async function loadAnalyticsInfo() {
+            const container = document.getElementById('analytics-info-content');
+            container.innerHTML = '<div class="no-data-message">Loading...</div>';
+
+            try {
+                const response = await fetch(`/api/team/member/${currentMemberId}/analytics`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const analytics = data.analytics;
+                    const joinedDate = analytics.joined_at ? new Date(analytics.joined_at).toLocaleDateString() : 'Unknown';
+
+                    // Store dates for calendar restrictions
+                    memberJoinDate = analytics.joined_at ? analytics.joined_at.split('T')[0] : null;
+                    serverDate = analytics.server_date || new Date().toISOString().split('T')[0];
+
+                    // Apply date restrictions to inputs
+                    const startInput = document.getElementById('analytics-start-date');
+                    const endInput = document.getElementById('analytics-end-date');
+                    if (memberJoinDate) {
+                        startInput.min = memberJoinDate;
+                        endInput.min = memberJoinDate;
+                    }
+                    startInput.max = serverDate;
+                    endInput.max = serverDate;
+
+                    // Adjust default date range if join date is more recent than 30 days ago
+                    if (memberJoinDate && new Date(memberJoinDate) > new Date(startInput.value)) {
+                        startInput.value = memberJoinDate;
+                    }
+
+                    container.innerHTML = `
+                        <div class="analytics-stat-row">
+                            <span class="analytics-stat-label">All-Time Ads Sent</span>
+                            <span class="analytics-stat-value">${analytics.all_time.toLocaleString()}</span>
+                        </div>
+                        <div class="analytics-stat-row">
+                            <span class="analytics-stat-label">Current Cycle Ads</span>
+                            <span class="analytics-stat-value">${analytics.current_cycle.toLocaleString()}</span>
+                        </div>
+                        <div class="analytics-stat-row">
+                            <span class="analytics-stat-label">Joined Team</span>
+                            <span class="analytics-stat-value">${joinedDate}</span>
+                        </div>
+                        <div class="analytics-stat-row" style="flex-direction: column; align-items: stretch;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span class="analytics-stat-label">Team Usage Contribution</span>
+                                <span class="analytics-stat-value">${analytics.percentage}%</span>
+                            </div>
+                            <div class="analytics-progress-bar">
+                                <div class="analytics-progress-fill" style="width: ${Math.min(analytics.percentage, 100)}%"></div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `<div class="no-data-message">${data.error || 'Failed to load analytics'}</div>`;
+                }
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                container.innerHTML = '<div class="no-data-message">Error loading analytics</div>';
+            }
+        }
+
+        async function loadDailyStats() {
+            const startDate = document.getElementById('analytics-start-date').value;
+            const endDate = document.getElementById('analytics-end-date').value;
+
+            try {
+                const response = await fetch(`/api/team/member/${currentMemberId}/daily-stats?start_date=${startDate}&end_date=${endDate}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    chartData = data.data.stats || [];
+
+                    // Update summary
+                    document.getElementById('summary-total').textContent = data.data.total.toLocaleString();
+                    document.getElementById('summary-avg').textContent = data.data.average.toFixed(1);
+                    document.getElementById('summary-peak').textContent = data.data.peak.toLocaleString();
+
+                    // Draw chart
+                    drawChart();
+                } else {
+                    console.error('Failed to load daily stats:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading daily stats:', error);
+            }
+        }
+
+        function applyDateRange() {
+            loadDailyStats();
+        }
+
+        function drawChart() {
+            const canvas = document.getElementById('analytics-chart');
+            const ctx = canvas.getContext('2d');
+            const wrapper = canvas.parentElement;
+
+            // Set canvas size
+            canvas.width = wrapper.offsetWidth;
+            canvas.height = wrapper.offsetHeight;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = { top: 20, right: 20, bottom: 30, left: 40 };
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            if (chartData.length === 0) {
+                ctx.fillStyle = '#949ba4';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data for selected period', width / 2, height / 2);
+                return;
+            }
+
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+
+            // Find max value for scaling
+            const maxCount = Math.max(...chartData.map(d => d.count), 1);
+
+            // Calculate points
+            const points = chartData.map((d, i) => ({
+                x: padding.left + (i / (chartData.length - 1 || 1)) * chartWidth,
+                y: padding.top + chartHeight - (d.count / maxCount) * chartHeight,
+                date: d.date,
+                count: d.count
+            }));
+
+            // Draw gradient fill
+            if (points.length > 1) {
+                const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+                gradient.addColorStop(0, 'rgba(21, 216, 188, 0.3)');
+                gradient.addColorStop(1, 'rgba(21, 216, 188, 0)');
+
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, height - padding.bottom);
+                points.forEach(p => ctx.lineTo(p.x, p.y));
+                ctx.lineTo(points[points.length - 1].x, height - padding.bottom);
+                ctx.closePath();
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+
+            // Draw line
+            ctx.beginPath();
+            ctx.strokeStyle = '#15d8bc';
+            ctx.lineWidth = 2;
+            points.forEach((p, i) => {
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            });
+            ctx.stroke();
+
+            // Draw points
+            points.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#15d8bc';
+                ctx.fill();
+                ctx.strokeStyle = '#121215';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Draw Y-axis labels
+            ctx.fillStyle = '#949ba4';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(maxCount.toString(), padding.left - 5, padding.top + 5);
+            ctx.fillText('0', padding.left - 5, height - padding.bottom + 5);
+
+            // Draw X-axis labels (first and last dates)
+            if (chartData.length > 0) {
+                ctx.textAlign = 'left';
+                ctx.fillText(formatDateShort(chartData[0].date), padding.left, height - 5);
+                ctx.textAlign = 'right';
+                ctx.fillText(formatDateShort(chartData[chartData.length - 1].date), width - padding.right, height - 5);
+            }
+
+            // Store points for tooltip
+            canvas.chartPoints = points;
+        }
+
+        function formatDateShort(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        // Chart tooltip
+        const chartCanvas = document.getElementById('analytics-chart');
+        const chartTooltip = document.getElementById('chart-tooltip');
+
+        chartCanvas.addEventListener('mousemove', function(e) {
+            if (!this.chartPoints || this.chartPoints.length === 0) return;
+
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // Find closest point
+            let closest = null;
+            let minDist = Infinity;
+
+            this.chartPoints.forEach(p => {
+                const dist = Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
+                if (dist < minDist && dist < 20) {
+                    minDist = dist;
+                    closest = p;
+                }
+            });
+
+            if (closest) {
+                chartTooltip.style.display = 'block';
+                chartTooltip.style.left = (closest.x + 10) + 'px';
+                chartTooltip.style.top = (closest.y - 10) + 'px';
+                chartTooltip.innerHTML = `<strong>${closest.count} ads</strong><br>${formatDateShort(closest.date)}`;
+            } else {
+                chartTooltip.style.display = 'none';
+            }
+        });
+
+        chartCanvas.addEventListener('mouseleave', function() {
+            chartTooltip.style.display = 'none';
+        });
+
+        // Redraw chart on window resize
+        window.addEventListener('resize', function() {
+            if (document.getElementById('analytics-dialog-overlay').classList.contains('show') &&
+                document.getElementById('panel-dates').classList.contains('active')) {
+                drawChart();
             }
         });
     </script>

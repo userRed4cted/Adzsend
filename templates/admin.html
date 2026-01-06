@@ -486,7 +486,7 @@
             <!-- Left Panel: Filters and User List -->
             <div class="admin-left-panel">
                 <div class="search-section">
-                    <input type="text" id="user-search" class="search-input" placeholder="Search by email, Adzsend ID, or Discord ID...">
+                    <input type="text" id="user-search" class="search-input" placeholder="Search by email or Adzsend ID...">
                 </div>
 
                 <div class="admin-filters">
@@ -710,10 +710,9 @@
             const usersList = document.getElementById('users-list');
 
             try {
-                // Check if it looks like an email, Adzsend ID (18 digits), or Discord ID
+                // Check if it looks like an email or Adzsend ID (18 digits)
                 const isEmail = searchTerm.includes('@');
-                const isAdzsendId = /^\d{18}$/.test(searchTerm);
-                const queryParam = isEmail ? 'email' : (isAdzsendId ? 'adzsend_id' : 'discord_id');
+                const queryParam = isEmail ? 'email' : 'adzsend_id';
                 const response = await fetch(`/api/admin/search-user?${queryParam}=${encodeURIComponent(searchTerm)}`);
                 const data = await response.json();
 
@@ -1068,10 +1067,12 @@
                     btn.classList.add('active');
                     btn.style.background = 'linear-gradient(to bottom, #3a3a4d, #2a2a3d)';
                     btn.style.color = '#fff';
+                    btn.style.border = '1px solid transparent';
                 } else {
                     btn.classList.remove('active');
-                    btn.style.background = 'transparent';
+                    btn.style.background = 'linear-gradient(to bottom, rgba(58, 58, 77, 0.3), rgba(42, 42, 61, 0.3))';
                     btn.style.color = '#949BA4';
+                    btn.style.border = '1px solid transparent';
                 }
             });
 
@@ -1135,10 +1136,12 @@
                     btn.classList.add('active');
                     btn.style.background = 'linear-gradient(to bottom, #3a3a4d, #2a2a3d)';
                     btn.style.color = '#fff';
+                    btn.style.border = '1px solid transparent';
                 } else {
                     btn.classList.remove('active');
                     btn.style.background = 'linear-gradient(to bottom, rgba(58, 58, 77, 0.3), rgba(42, 42, 61, 0.3))';
                     btn.style.color = '#949BA4';
+                    btn.style.border = '1px solid transparent';
                 }
             });
 

@@ -78,8 +78,8 @@
                     <div class="selection-panel">
                         <!-- View Mode Toggle -->
                         <div class="view-mode-toggle" style="display: flex; gap: 0; padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            <button class="view-mode-btn active" data-mode="servers" style="flex: 1; padding: 0.5rem 1rem; background: linear-gradient(to bottom, #15d8bc, #006e59); border: none; border-radius: 6px 0 0 6px; color: #121215; font-weight: 500; cursor: pointer; transition: all 0.2s ease;">Show servers and channels</button>
-                            <button class="view-mode-btn" data-mode="channels" style="flex: 1; padding: 0.5rem 1rem; background: transparent; border: 2px solid #444; border-left: none; border-radius: 0 6px 6px 0; color: #949BA4; font-weight: 500; cursor: pointer; transition: all 0.2s ease;">Show channels only</button>
+                            <button class="view-mode-btn active" data-mode="servers" style="flex: 1; padding: 0.5rem 1rem; background: linear-gradient(to bottom, #15d8bc, #006e59); border: 1px solid transparent; border-radius: 6px 0 0 6px; color: #121215; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box;">Show servers and channels</button>
+                            <button class="view-mode-btn" data-mode="channels" style="flex: 1; padding: 0.5rem 1rem; background: linear-gradient(to bottom, rgba(21, 216, 188, 0.15), rgba(0, 110, 89, 0.15)); border: 1px solid transparent; border-radius: 0 6px 6px 0; color: #15d8bc; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box;">Show channels only</button>
                         </div>
 
                         <!-- Unified Header for Left Panel (Servers Mode) -->
@@ -319,15 +319,10 @@
                             b.classList.add('active');
                             b.style.background = 'linear-gradient(to bottom, #15d8bc, #006e59)';
                             b.style.color = '#121215';
-                            b.style.border = 'none';
                         } else {
                             b.classList.remove('active');
-                            b.style.background = 'transparent';
-                            b.style.color = '#949BA4';
-                            b.style.border = '2px solid #444';
-                            if (b.dataset.mode === 'channels') {
-                                b.style.borderLeft = 'none';
-                            }
+                            b.style.background = 'linear-gradient(to bottom, rgba(21, 216, 188, 0.15), rgba(0, 110, 89, 0.15))';
+                            b.style.color = '#15d8bc';
                         }
                     });
 

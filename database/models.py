@@ -865,10 +865,10 @@ def record_daily_stat(user_id, team_id):
 
     # Try to update existing record, or insert new one
     cursor.execute('''
-        INSERT INTO daily_message_stats (user_id, team_id, date, message_count, created_at)
-        VALUES (?, ?, ?, 1, ?)
-        ON CONFLICT(user_id, team_id, date) DO UPDATE SET message_count = message_count + 1
-    ''', (user_id, team_id, today, datetime.now().isoformat()))
+        INSERT INTO daily_message_stats (user_id, team_id, date, messages_sent)
+        VALUES (?, ?, ?, 1)
+        ON CONFLICT(user_id, team_id, date) DO UPDATE SET messages_sent = messages_sent + 1
+    ''', (user_id, team_id, today))
 
     conn.commit()
     conn.close()
@@ -1237,17 +1237,32 @@ def update_user_profile(user_id, username, avatar):
     conn.commit()
     conn.close()
 
-def get_team_members(team_id):
-    """Get all members of a business team."""
+def get_team_members(team_id, include_all=False):
+    """Get members of a business team.
+
+    Args:
+        team_id: The ID of the business team
+        include_all: If True, include all members (pending, denied, left, etc).
+                    If False (default), only return accepted members.
+    """
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('''
-        SELECT btm.*, u.id as user_id, u.email as member_email, u.adzsend_id as member_adzsend_id
-        FROM business_team_members btm
-        LEFT JOIN users u ON u.discord_id = btm.member_discord_id
-        WHERE btm.team_id = ? AND btm.invitation_status = 'accepted'
-        ORDER BY btm.added_at
-    ''', (team_id,))
+    if include_all:
+        cursor.execute('''
+            SELECT btm.*, u.id as user_id, u.email as member_email, u.adzsend_id as member_adzsend_id
+            FROM business_team_members btm
+            LEFT JOIN users u ON u.discord_id = btm.member_discord_id
+            WHERE btm.team_id = ?
+            ORDER BY btm.added_at
+        ''', (team_id,))
+    else:
+        cursor.execute('''
+            SELECT btm.*, u.id as user_id, u.email as member_email, u.adzsend_id as member_adzsend_id
+            FROM business_team_members btm
+            LEFT JOIN users u ON u.discord_id = btm.member_discord_id
+            WHERE btm.team_id = ? AND btm.invitation_status = 'accepted'
+            ORDER BY btm.added_at
+        ''', (team_id,))
     members = cursor.fetchall()
     conn.close()
     return [dict(member) for member in members]
@@ -2363,7 +2378,7 @@ def get_member_daily_stats(member_user_id, team_id, start_date=None, end_date=No
         start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
 
     cursor.execute('''
-        SELECT date, message_count
+        SELECT date, messages_sent
         FROM daily_message_stats
         WHERE user_id = ? AND team_id = ? AND date >= ? AND date <= ?
         ORDER BY date ASC

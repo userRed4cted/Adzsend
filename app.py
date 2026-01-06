@@ -1274,8 +1274,8 @@ def team_management():
     if not team:
         return redirect(url_for('purchase'))
 
-    # Get team members
-    members = get_team_members(team['id'])
+    # Get team members (include all statuses for management view)
+    members = get_team_members(team['id'], include_all=True)
 
     # Refresh Discord info for members who show as "Unknown User"
     for member in members:
@@ -2083,7 +2083,9 @@ def get_team_member_daily_stats(member_id):
         return {'success': True, 'data': stats}, 200
 
     except Exception as e:
+        import traceback
         print(f"[ERROR] Get member daily stats error: {str(e)}")
+        traceback.print_exc()
         return {'success': False, 'error': str(e)}, 500
 
 

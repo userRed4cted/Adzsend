@@ -572,6 +572,19 @@
         </div>
     </div>
 
+    <!-- Discord Account View Dialog -->
+    <div class="dialog-overlay" id="discord-view-dialog">
+        <div class="dialog-box" style="max-width: 450px;">
+            <div class="dialog-header">Linked Discord Account</div>
+            <div class="dialog-content" id="discord-account-content" style="padding: 0.5rem 0;">
+                <!-- Discord account card will be populated here -->
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-btn secondary" onclick="closeDiscordViewDialog()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentUser = null;
         let allUsers = [];
@@ -615,18 +628,22 @@
         }
 
         // Hamburger menu toggle
-        document.getElementById('menu-icon').addEventListener('click', function(event) {
-            event.stopPropagation();
-            const dropdown = document.getElementById('dropdown-menu');
-            dropdown.classList.toggle('show');
-        });
+        const menuIcon = document.getElementById('menu-icon');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+
+        if (menuIcon) {
+            menuIcon.addEventListener('click', function(event) {
+                event.stopPropagation();
+                if (dropdownMenu) {
+                    dropdownMenu.classList.toggle('show');
+                }
+            });
+        }
 
         // Close dropdown when clicking outside
         document.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('dropdown-menu');
-            const menuIcon = document.getElementById('menu-icon');
-            if (!menuIcon.contains(event.target) && !dropdown.contains(event.target)) {
-                dropdown.classList.remove('show');
+            if (dropdownMenu && menuIcon && !menuIcon.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                dropdownMenu.classList.remove('show');
             }
         });
 
@@ -814,6 +831,14 @@
                 selectedItem.style.boxShadow = '0 0 15px rgba(124, 67, 125, 0.4)';
             }
 
+            // Show loading indicator while fetching user details
+            const panel = document.getElementById('user-details-panel');
+            panel.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #949BA4; font-size: 1rem;">
+                    Loading...
+                </div>
+            `;
+
             try {
                 const response = await fetch(`/api/admin/user/${userId}`);
                 const data = await response.json();
@@ -871,7 +896,7 @@
                         <div class="detail-label">Discord</div>
                         <div class="detail-value" style="display: flex; align-items: center; gap: 8px;">
                             ${(user.discord_id && !user.discord_id.startsWith('pending_') && !user.discord_id.startsWith('email_') && user.discord_id !== 'no_discord_userid') ? user.discord_id : 'No linked Discord'}
-                            ${(user.discord_id && !user.discord_id.startsWith('pending_') && !user.discord_id.startsWith('email_') && user.discord_id !== 'no_discord_userid') ? \`<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" onclick="copyToClipboard('\${user.discord_id}')">\` : ''}
+                            ${(user.discord_id && !user.discord_id.startsWith('pending_') && !user.discord_id.startsWith('email_') && user.discord_id !== 'no_discord_userid') ? \`<button class="grey-btn" onclick="viewDiscordAccount()" style="margin-left: 6px; padding: 4px 10px; border-radius: 4px; font-size: 12px;">View</button>\` : ''}
                         </div>
                     </div>
                     <div class="detail-row">
@@ -1065,6 +1090,49 @@
 
         function closePlansUsageDialog() {
             document.getElementById('plans-usage-dialog').classList.remove('active');
+        }
+
+        function viewDiscordAccount() {
+            if (!currentUser) return;
+
+            const discordContent = document.getElementById('discord-account-content');
+            const hasDiscord = currentUser.discord_id &&
+                              !currentUser.discord_id.startsWith('pending_') &&
+                              !currentUser.discord_id.startsWith('email_') &&
+                              currentUser.discord_id !== 'no_discord_userid';
+
+            if (!hasDiscord) {
+                discordContent.innerHTML = '<div style="text-align: center; color: #949BA4; padding: 1rem;">No Discord account linked</div>';
+            } else {
+                // Build the Discord account card (similar to admin user list style)
+                let avatarHtml;
+                if (currentUser.avatar) {
+                    avatarHtml = `<img src="https://cdn.discordapp.com/avatars/${currentUser.discord_id}/${currentUser.avatar}.png" style="width: 100%; height: 100%; object-fit: cover;">`;
+                } else {
+                    avatarHtml = `<div style="width: 100%; height: 100%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" style="width: 28px; height: 28px; object-fit: contain; opacity: 0.5;"></div>`;
+                }
+
+                discordContent.innerHTML = `
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 300px; overflow-y: auto;">
+                        <div style="background: #212227; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+                            <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                                ${avatarHtml}
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="color: #dcddde; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${currentUser.username || 'Unknown User'}</div>
+                                <div style="color: #949BA4; font-size: 0.85rem; font-family: 'Roboto Mono', monospace;">${currentUser.discord_id}</div>
+                            </div>
+                            <img src="{{ url_for('static', filename='copy.png') }}" style="width: 16px; height: 16px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" onclick="copyToClipboard('${currentUser.discord_id}')">
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('discord-view-dialog').classList.add('active');
+        }
+
+        function closeDiscordViewDialog() {
+            document.getElementById('discord-view-dialog').classList.remove('active');
         }
 
         function switchPlansTab(tabName) {

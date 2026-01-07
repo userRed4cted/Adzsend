@@ -1492,6 +1492,13 @@
             const reasonElement = document.getElementById('flagging-reason');
             reasonElement.style.whiteSpace = 'pre-wrap';
 
+            // Helper function to escape HTML to prevent XSS
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
             // Parse the flag reason to format it nicely
             if (flagReason.includes('Prohibited content:')) {
                 // Extract the prohibited words and message
@@ -1506,19 +1513,27 @@
                     const wordsMatch = prohibitedLine.match(/Prohibited content: (.+)/);
                     const words = wordsMatch ? wordsMatch[1] : 'unknown';
 
+                    // Escape HTML in the full message to prevent XSS
+                    let escapedMessage = escapeHtml(fullMessage);
+
                     // Extract individual prohibited words from the list
                     const prohibitedWordsArray = words.match(/'([^']+)'/g);
                     if (prohibitedWordsArray) {
                         // Highlight each prohibited word in the message with yellow color
                         prohibitedWordsArray.forEach(wordWithQuotes => {
                             const word = wordWithQuotes.replace(/'/g, ''); // Remove quotes
-                            const regex = new RegExp(`(${word})`, 'gi');
-                            fullMessage = fullMessage.replace(regex, '<span style="color: #ffaa00; font-weight: 600;">$1</span>');
+                            const escapedWord = escapeHtml(word);
+                            // Use case-insensitive regex with escaped word
+                            const regex = new RegExp(`(${escapedWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                            escapedMessage = escapedMessage.replace(regex, '<span style="color: #ffaa00; font-weight: 600;">$1</span>');
                         });
                     }
 
-                    // Format nicely
-                    reasonElement.innerHTML = `<strong>Prohibited Words Used:</strong><br>${words}<br><br><strong>Full Message:</strong><br>${fullMessage.replace(/\n/g, '<br>')}`;
+                    // Escape the words as well
+                    const escapedWords = escapeHtml(words);
+
+                    // Format nicely - now safe because we escaped everything
+                    reasonElement.innerHTML = `<strong>Prohibited Words Used:</strong><br>${escapedWords}<br><br><strong>Full Message:</strong><br>${escapedMessage.replace(/\n/g, '<br>')}`;
                 } else {
                     reasonElement.textContent = flagReason;
                 }

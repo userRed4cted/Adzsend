@@ -136,8 +136,30 @@
         injectModals();
     }
 
+    // Lightweight HTML sanitizer to prevent XSS attacks
+    // Only allows safe HTML tags and attributes
+    function sanitizeHtml(html) {
+        const div = document.createElement('div');
+        div.textContent = html; // First escape everything
+        let sanitized = div.innerHTML;
+
+        // Allow only specific safe HTML tags
+        const allowedTags = ['br', 'strong', 'b', 'em', 'i', 'u', 'span', 'div'];
+        const tagPattern = /<(\/?)([\w]+)([^>]*)>/g;
+
+        sanitized = sanitized.replace(tagPattern, (match, slash, tag, attrs) => {
+            if (allowedTags.includes(tag.toLowerCase())) {
+                // Strip all attributes to prevent XSS via attributes
+                return `<${slash}${tag}>`;
+            }
+            return ''; // Remove disallowed tags
+        });
+
+        return sanitized;
+    }
+
     // Alert function - returns a Promise
-    // Options: { icon: 'success' | 'error' | 'warning' | 'none' }
+    // Options: { icon: 'success' | 'error' | 'warning' | 'none', allowHtml: boolean }
     window.showAlert = function(message, title = 'Notice', options = {}) {
         return new Promise((resolve) => {
             injectModals();
@@ -148,12 +170,17 @@
             const okBtn = document.getElementById('custom-alert-ok');
 
             titleEl.textContent = title;
-            messageEl.textContent = message;
+            // Support HTML content if allowHtml is true - but SANITIZE IT
+            if (options.allowHtml) {
+                messageEl.innerHTML = sanitizeHtml(message);
+            } else {
+                messageEl.textContent = message;
+            }
 
             // Handle icon display
             const iconType = options.icon || 'none';
             if (iconType === 'success') {
-                iconEl.innerHTML = '<img src="/static/tick.png" width="48" height="48" style="filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);">';
+                iconEl.innerHTML = '<img src="/static/tick.png" width="48" height="48" style="filter: brightness(0) saturate(100%) invert(74%) sepia(43%) saturate(1015%) hue-rotate(124deg) brightness(94%) contrast(92%);">';
                 iconEl.style.display = 'block';
             } else if (iconType === 'error') {
                 iconEl.innerHTML = '<span style="font-size: 48px; color: #991a35; font-weight: 300; line-height: 1;">✕</span>';

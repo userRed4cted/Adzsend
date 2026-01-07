@@ -8,6 +8,14 @@ from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
 
 
+# Configuration Constants
+DEFAULT_MESSAGE_DELAY_MS = 1000  # Default delay between messages in milliseconds
+VERIFICATION_CODE_EXPIRY_MINUTES = 10  # How long verification codes are valid
+RESEND_COOLDOWN_MINUTES = 1  # Minimum time between resending verification codes
+MAX_ID_GENERATION_RETRIES = 5  # Max retries for unique ID generation on collision
+ADZSEND_ID_LENGTH = 10  # Length of adzsend_id identifiers
+
+
 def generate_verification_code():
     """Generate a random 6-digit verification code."""
     return ''.join([str(secrets.randbelow(10)) for _ in range(6)])
@@ -20,8 +28,37 @@ DATABASE = 'marketing_panel.db'
 
 # Token Encryption Functions
 def _get_encryption_key():
-    """Derive a Fernet key from SECRET_KEY."""
-    secret_key = os.getenv('SECRET_KEY', 'fallback-secret-key')
+    """
+    Derive a Fernet key from SECRET_KEY.
+    SECURITY: SECRET_KEY must be set in environment variables for encryption to work.
+    """
+    secret_key = os.getenv('SECRET_KEY')
+
+    # CRITICAL SECURITY CHECK: SECRET_KEY must be set
+    if not secret_key:
+        raise ValueError(
+            "CRITICAL SECURITY ERROR: SECRET_KEY environment variable is not set!\n"
+            "Token encryption requires a secure SECRET_KEY.\n"
+            "Set SECRET_KEY to a random 32+ character string in your environment."
+        )
+
+    # Validate minimum key strength
+    if len(secret_key) < 32:
+        raise ValueError(
+            f"CRITICAL SECURITY ERROR: SECRET_KEY is too weak ({len(secret_key)} chars)!\n"
+            "SECRET_KEY must be at least 32 characters for secure encryption.\n"
+            "Generate a strong key with: python -c 'import secrets; print(secrets.token_hex(32))'"
+        )
+
+    # Warn if using default/weak keys
+    weak_keys = ['fallback-secret-key', 'your-secret-key-here', 'secret', 'password', 'changeme']
+    if secret_key.lower() in weak_keys:
+        raise ValueError(
+            f"CRITICAL SECURITY ERROR: SECRET_KEY appears to be a default/weak value!\n"
+            "Never use default keys in production.\n"
+            "Generate a strong key with: python -c 'import secrets; print(secrets.token_hex(32))'"
+        )
+
     # Fernet requires a 32-byte base64-encoded key
     # We use SHA256 to get a consistent 32-byte hash from SECRET_KEY
     key_hash = hashlib.sha256(secret_key.encode()).digest()
@@ -468,7 +505,7 @@ def create_user(discord_id, username, avatar, discord_token, signup_ip):
         return None
 
     # Retry loop to handle race conditions on adzsend_id collision
-    max_retries = 5
+    max_retries = MAX_ID_GENERATION_RETRIES
     for attempt in range(max_retries):
         conn = get_db()
         cursor = conn.cursor()
@@ -586,6 +623,14 @@ def validate_user_session(discord_id, session_id):
 
 def save_user_data(user_id, selected_channels=None, draft_message=None, message_delay=None):
     """Save or update user's selected channels, draft message, and message delay."""
+    # Input validation
+    if not isinstance(user_id, int) or user_id <= 0:
+        raise ValueError("user_id must be a positive integer")
+
+    if message_delay is not None:
+        if not isinstance(message_delay, (int, float)) or message_delay < 0 or message_delay > 60000:
+            raise ValueError("message_delay must be between 0 and 60000 milliseconds")
+
     conn = get_db()
     cursor = conn.cursor()
 
@@ -626,7 +671,7 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
         cursor.execute('''
             INSERT INTO user_data (user_id, selected_channels, draft_message, message_delay, updated_at)
             VALUES (?, ?, ?, ?, ?)
-        ''', (user_id, channels_json, draft_message, message_delay if message_delay is not None else 1000, datetime.now().isoformat()))
+        ''', (user_id, channels_json, draft_message, message_delay if message_delay is not None else DEFAULT_MESSAGE_DELAY_MS, datetime.now().isoformat()))
 
     conn.commit()
     conn.close()
@@ -1903,7 +1948,7 @@ def create_user_with_email(email, signup_ip):
     placeholder_discord_id = f'email_{email_hash}'
 
     # Retry loop to handle race conditions on adzsend_id collision
-    max_retries = 5
+    max_retries = MAX_ID_GENERATION_RETRIES
     for attempt in range(max_retries):
         conn = get_db()
         cursor = conn.cursor()
@@ -2017,7 +2062,7 @@ def create_verification_code(email, purpose='login'):
 
     code = generate_verification_code()
     created_at = now
-    expires_at = created_at + timedelta(minutes=10)  # Code valid for 10 minutes
+    expires_at = created_at + timedelta(minutes=VERIFICATION_CODE_EXPIRY_MINUTES)
 
     # Invalidate any existing unused codes for this email/purpose
     cursor.execute('''
@@ -2040,10 +2085,6 @@ def create_verification_code(email, purpose='login'):
 
 def verify_code(email, code, purpose='login'):
     """Verify a code. Returns (success, error_message, code_rate_limited)."""
-    # DEV BYPASS: Remove this before production!
-    if code == '000001':
-        return True, None, False
-
     conn = get_db()
     cursor = conn.cursor()
 
@@ -2138,10 +2179,10 @@ def get_resend_status(email, purpose='login'):
     resend_count = record[0] or 0
     last_resend_at = record[1]
 
-    # Check cooldown (1 minute between resends)
+    # Check cooldown between resends
     if last_resend_at:
         last_resend = datetime.fromisoformat(last_resend_at)
-        cooldown_end = last_resend + timedelta(minutes=1)
+        cooldown_end = last_resend + timedelta(minutes=RESEND_COOLDOWN_MINUTES)
         if datetime.now() < cooldown_end:
             seconds_remaining = int((cooldown_end - datetime.now()).total_seconds())
             return False, seconds_remaining, 3 - resend_count
@@ -2447,13 +2488,30 @@ def get_member_analytics(member_user_id, team_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    # Get member's current cycle stats (this resets each period)
+    # Get member's last reset date to calculate current cycle for THIS TEAM
     cursor.execute('''
-        SELECT business_messages_sent, business_last_reset
+        SELECT business_last_reset
         FROM usage WHERE user_id = ?
     ''', (member_user_id,))
     usage = cursor.fetchone()
-    current_cycle = usage[0] if usage else 0
+    last_reset = usage[0] if usage and usage[0] else None
+
+    # Calculate current cycle from daily_message_stats since last reset for THIS TEAM
+    if last_reset:
+        cursor.execute('''
+            SELECT SUM(messages_sent)
+            FROM daily_message_stats
+            WHERE user_id = ? AND team_id = ? AND date >= ?
+        ''', (member_user_id, team_id, last_reset))
+    else:
+        # No reset date, count all messages for this team
+        cursor.execute('''
+            SELECT SUM(messages_sent)
+            FROM daily_message_stats
+            WHERE user_id = ? AND team_id = ?
+        ''', (member_user_id, team_id))
+    current_cycle_row = cursor.fetchone()
+    current_cycle = current_cycle_row[0] if current_cycle_row and current_cycle_row[0] else 0
 
     # Calculate all-time stats from daily_message_stats for THIS TEAM ONLY
     cursor.execute('''

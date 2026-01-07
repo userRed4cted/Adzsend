@@ -689,6 +689,14 @@
             border-color: #15d8bc;
         }
 
+        /* Style the calendar icon */
+        .date-input-group input[type="date"]::-webkit-calendar-picker-indicator {
+            background: url('/static/calendar.png') no-repeat center;
+            background-size: contain;
+            filter: brightness(0) invert(1);
+            cursor: pointer;
+        }
+
         .apply-dates-btn {
             background: transparent;
             border: none;
@@ -717,6 +725,7 @@
             position: relative;
             width: 100%;
             height: 200px;
+            overflow: hidden;
         }
 
         .chart-canvas {
@@ -1284,9 +1293,27 @@
 
             if (closest) {
                 chartTooltip.style.display = 'block';
-                chartTooltip.style.left = (closest.x + 10) + 'px';
-                chartTooltip.style.top = (closest.y - 10) + 'px';
                 chartTooltip.innerHTML = `<strong>${closest.count} ads</strong><br>${formatDateShort(closest.date)}`;
+
+                // Position tooltip below the point
+                const tooltipHeight = chartTooltip.offsetHeight;
+                const tooltipWidth = chartTooltip.offsetWidth;
+
+                // Center horizontally under the point
+                let left = closest.x - (tooltipWidth / 2);
+                // Ensure it doesn't go off-screen horizontally
+                if (left < 0) left = 0;
+                if (left + tooltipWidth > rect.width) left = rect.width - tooltipWidth;
+
+                // Position below the point
+                let top = closest.y + 15;
+                // If it would go off-screen below, position above instead
+                if (top + tooltipHeight > rect.height) {
+                    top = closest.y - tooltipHeight - 10;
+                }
+
+                chartTooltip.style.left = left + 'px';
+                chartTooltip.style.top = top + 'px';
             } else {
                 chartTooltip.style.display = 'none';
             }

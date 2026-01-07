@@ -1249,6 +1249,125 @@
                 }
             }
 
+            // Show collapsible send results
+            async function showSendResults(succeeded, rateLimited, failed) {
+                const totalAttempted = succeeded.length + rateLimited.length + failed.length;
+
+                // Determine title and icon
+                let title, icon;
+                if (succeeded.length === 0 && (rateLimited.length > 0 || failed.length > 0)) {
+                    title = 'Failed to send';
+                    icon = 'error';
+                } else {
+                    title = 'Send succeeded';
+                    icon = 'success';
+                }
+
+                // Build collapsible sections HTML
+                let sectionsHTML = '';
+
+                // Success section
+                if (succeeded.length > 0) {
+                    sectionsHTML += `
+                        <div class="result-section collapsed">
+                            <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                <span>Send succeeded (${succeeded.length} Channel${succeeded.length !== 1 ? 's' : ''})</span>
+                                <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
+                            </div>
+                            <div class="result-content">
+                                ${succeeded.map(ch => `<div class="channel-item">${ch}</div>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Rate limited section
+                if (rateLimited.length > 0) {
+                    sectionsHTML += `
+                        <div class="result-section collapsed">
+                            <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                <span>Send rate limited (${rateLimited.length} Channel${rateLimited.length !== 1 ? 's' : ''})</span>
+                                <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
+                            </div>
+                            <div class="result-content">
+                                ${rateLimited.map(ch => `<div class="channel-item">${ch}</div>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Failed section
+                if (failed.length > 0) {
+                    sectionsHTML += `
+                        <div class="result-section collapsed">
+                            <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                                <span>Send failed (${failed.length} Channel${failed.length !== 1 ? 's' : ''})</span>
+                                <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
+                            </div>
+                            <div class="result-content">
+                                ${failed.map(ch => `<div class="channel-item">${ch}</div>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Create custom modal
+                const modalHTML = `
+                    <style>
+                        .result-section {
+                            margin-bottom: 0.25rem;
+                        }
+                        .result-section.collapsed .result-content {
+                            display: none;
+                        }
+                        .result-section.collapsed .collapse-icon {
+                            transform: rotate(-90deg);
+                        }
+                        .result-header {
+                            background: transparent;
+                            padding: 0.5rem 0;
+                            cursor: pointer;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            font-weight: 400;
+                            color: #dcddde;
+                            user-select: none;
+                        }
+                        .result-header:hover {
+                            opacity: 0.8;
+                        }
+                        .result-content {
+                            max-height: 200px;
+                            overflow-y: auto;
+                            overflow-x: hidden;
+                            padding: 0 0 0 0.5rem;
+                            scroll-behavior: auto;
+                        }
+                        .result-content::-webkit-scrollbar {
+                            width: 6px;
+                        }
+                        .result-content::-webkit-scrollbar-track {
+                            background: transparent;
+                        }
+                        .result-content::-webkit-scrollbar-thumb {
+                            background: rgba(255, 255, 255, 0.2);
+                            border-radius: 3px;
+                        }
+                        .channel-item {
+                            padding: 0.2rem 0;
+                            color: #949BA4;
+                            font-size: 0.85rem;
+                        }
+                    </style>
+                    <div style="max-height: 400px; overflow-y: auto; overflow-x: hidden; scroll-behavior: auto;">
+                        ${sectionsHTML}
+                    </div>
+                `;
+
+                await showAlert(modalHTML, title, { icon: icon, allowHtml: true });
+            }
+
             // Send button handler
             if (sendBtn) {
                 sendBtn.addEventListener('click', async function() {
@@ -1299,8 +1418,9 @@
                         sendBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"></path></svg> Sending...';
 
                         // Send messages one by one for real-time usage tracking
-                        let successCount = 0;
-                        let failedList = [];
+                        let succeededChannels = [];
+                        let rateLimitedChannels = [];
+                        let failedChannelsList = [];
 
                         // Helper function to wait/delay
                         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -1333,7 +1453,7 @@
 
                                 // Check if send was successful (200/201 response)
                                 if (response.ok && result.success) {
-                                    successCount++;
+                                    succeededChannels.push(channel.name);
                                     // Clear any previous failure status for this channel
                                     const channelKey = `${channel.guildId}-${channel.id}`;
                                     failedChannels.delete(channelKey);
@@ -1346,15 +1466,13 @@
                                     // Rate limited by Discord - mark and skip (don't retry)
                                     const channelKey = `${channel.guildId}-${channel.id}`;
                                     failedChannels.set(channelKey, { type: 'ratelimit' });
-                                    const errorDetail = result.error || 'Rate limited by Discord';
-                                    failedList.push(`${channel.name} (${errorDetail})`);
+                                    rateLimitedChannels.push(channel.name);
                                     updateFailedChannelStatus(channel);
                                 } else {
                                     // Other error (permissions, etc.)
                                     const channelKey = `${channel.guildId}-${channel.id}`;
                                     failedChannels.set(channelKey, { type: 'permission' });
-                                    const errorDetail = result.error || 'Send failed';
-                                    failedList.push(`${channel.name} (${errorDetail})`);
+                                    failedChannelsList.push(channel.name);
                                     updateFailedChannelStatus(channel);
                                 }
 
@@ -1365,20 +1483,8 @@
                                 }
                             }
 
-                            // Show final summary
-                            if (successCount === 0 && failedList.length > 0) {
-                                // All failed
-                                let failMsg = `Failed to send to ${failedList.length} channel(s)\n\n${failedList.map(f => `• ${f}`).join('\n')}`;
-                                await showAlert(failMsg, 'Send failed', { icon: 'error' });
-                            } else if (failedList.length > 0) {
-                                // Some succeeded, some failed
-                                let mixedMsg = `Send succeeded: ${successCount} channel(s)\n\nFailed: ${failedList.length}\n${failedList.map(f => `• ${f}`).join('\n')}`;
-                                await showAlert(mixedMsg, 'Send complete', { icon: 'warning' });
-                            } else {
-                                // All succeeded
-                                let successMsg = `Send succeeded: ${successCount} channel(s)`;
-                                await showAlert(successMsg, 'Send complete', { icon: 'success' });
-                            }
+                            // Show collapsible results
+                            await showSendResults(succeededChannels, rateLimitedChannels, failedChannelsList);
                         } catch (error) {
                             console.error('Send error:', error);
                             await showAlert(`Error sending message: ${error.message}`, 'Error');

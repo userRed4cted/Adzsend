@@ -96,13 +96,51 @@ def rate_limit(limit_type='general'):
     """
     Decorator for rate limiting endpoints.
     Usage: @rate_limit('login')
-    NOTE: Rate limiting disabled - passes through all requests.
+    Prevents brute force attacks and API abuse.
     """
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Rate limiting disabled - pass through all requests
-            return f(*args, **kwargs)
+            # Get rate limit configuration
+            if limit_type not in RATE_LIMITS:
+                max_requests, window_seconds = RATE_LIMITS['general']
+            else:
+                max_requests, window_seconds = RATE_LIMITS[limit_type]
+
+            # Get client identifier
+            client_ip = get_client_ip()
+
+            # Check rate limit
+            is_limited, remaining, reset_time = rate_limiter.is_rate_limited(
+                client_ip, max_requests, window_seconds
+            )
+
+            if is_limited:
+                # Calculate retry_after in seconds
+                retry_after = int(reset_time - time.time())
+                return {
+                    'error': 'Rate limit exceeded',
+                    'message': f'Too many requests. Please try again in {retry_after} seconds.',
+                    'retry_after': retry_after
+                }, 429
+
+            # Add rate limit headers to response
+            response = f(*args, **kwargs)
+
+            # If response is a tuple (data, status_code), handle it
+            if isinstance(response, tuple):
+                data, status_code = response[0], response[1]
+                headers = response[2] if len(response) > 2 else {}
+            else:
+                data, status_code, headers = response, 200, {}
+
+            # Add rate limit headers
+            headers['X-RateLimit-Limit'] = str(max_requests)
+            headers['X-RateLimit-Remaining'] = str(remaining)
+            headers['X-RateLimit-Reset'] = str(int(reset_time))
+
+            return (data, status_code, headers)
+
         return decorated_function
     return decorator
 

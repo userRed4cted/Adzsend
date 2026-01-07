@@ -1275,7 +1275,7 @@
                                 <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
                             </div>
                             <div class="result-content">
-                                ${succeeded.map(ch => `<div class="channel-item">${ch}</div>`).join('')}
+                                ${succeeded.map(ch => `<div class="channel-item"># ${ch}</div>`).join('')}
                             </div>
                         </div>
                     `;
@@ -1290,7 +1290,7 @@
                                 <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
                             </div>
                             <div class="result-content">
-                                ${rateLimited.map(ch => `<div class="channel-item">${ch}</div>`).join('')}
+                                ${rateLimited.map(ch => `<div class="channel-item"># ${ch}</div>`).join('')}
                             </div>
                         </div>
                     `;
@@ -1305,7 +1305,7 @@
                                 <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
                             </div>
                             <div class="result-content">
-                                ${failed.map(ch => `<div class="channel-item">${ch}</div>`).join('')}
+                                ${failed.map(ch => `<div class="channel-item"># ${ch}</div>`).join('')}
                             </div>
                         </div>
                     `;
@@ -1315,7 +1315,7 @@
                 const modalHTML = `
                     <style>
                         .result-section {
-                            margin-bottom: 0.25rem;
+                            margin-bottom: 0;
                         }
                         .result-section.collapsed .result-content {
                             display: none;
@@ -1324,8 +1324,7 @@
                             transform: rotate(-90deg);
                         }
                         .result-header {
-                            background: transparent;
-                            padding: 0.5rem 0;
+                            padding: 0.4rem 0;
                             cursor: pointer;
                             display: flex;
                             justify-content: space-between;
@@ -1355,9 +1354,10 @@
                             border-radius: 3px;
                         }
                         .channel-item {
-                            padding: 0.2rem 0;
+                            padding: 0.15rem 0;
                             color: #949BA4;
                             font-size: 0.85rem;
+                            background: transparent;
                         }
                     </style>
                     <div style="max-height: 400px; overflow-y: auto; overflow-x: hidden; scroll-behavior: auto;">

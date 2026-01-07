@@ -879,7 +879,7 @@
 
                 <div class="user-details-section">
                     <div class="detail-row">
-                        <div class="detail-label">Account created</div>
+                        <div class="detail-label">Account created (mm/dd/yy)</div>
                         <div class="detail-value">${new Date(user.signup_date).toLocaleString()}</div>
                     </div>
                     <div class="detail-row">
@@ -927,7 +927,7 @@
                         <div class="detail-value ${user.flagged ? 'flagged' : ''}">${user.flagged ? 'Yes' : 'No'} (${user.flag_count || 0} time${(user.flag_count || 0) !== 1 ? 's' : ''})</div>
                     </div>
                     <div class="detail-row">
-                        <div class="detail-label">Last flagged</div>
+                        <div class="detail-label">Last flagged (mm/dd/yy)</div>
                         <div class="detail-value ${user.flagged_at ? 'flagged' : ''}">${user.flagged_at ? new Date(user.flagged_at).toLocaleString() : 'Never'}</div>
                     </div>
                     <div class="detail-row">
@@ -1066,7 +1066,7 @@
                             const startDate = formatDate(sub.start_date);
                             const endDate = sub.end_date ? formatDate(sub.end_date) : 'No expiry';
                             const status = sub.is_active ? '<span style="color: #57f287;">Active</span>' : '<span style="color: #949BA4;">Inactive</span>';
-                            return `<div style="padding: 10px; background: #1a1a1d; border-radius: 6px; margin-bottom: 8px;">
+                            return `<div style="padding: 10px; border-radius: 6px; margin-bottom: 4px;">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                                     <strong style="color: #fff;">${sub.plan_name || sub.plan_id}</strong>
                                     ${status}
@@ -1138,7 +1138,7 @@
 
             if (!hasDiscord) {
                 discordContent.innerHTML = `
-                    <div style="background: #212227; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+                    <div style="border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
                         <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: #2a2b32; display: flex; align-items: center; justify-content: center;">
                             <img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord" style="width: 28px; height: 28px; object-fit: contain; opacity: 0.5;">
                         </div>
@@ -1157,7 +1157,7 @@
                 }
 
                 discordContent.innerHTML = `
-                    <div style="background: #212227; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+                    <div style="border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
                         <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
                             ${avatarHtml}
                         </div>
@@ -1262,11 +1262,11 @@
                             </div>
                             <div style="max-height: 200px; overflow-y: auto; overflow-x: hidden;">
                                 ${data.history.map(item => `
-                                    <div style="display: flex; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: center; gap: 0;">
+                                    <div style="display: flex; padding: 0.25rem 0; align-items: center; gap: 0;">
                                         <div style="flex: 1.5; color: #dcddde; font-size: 0.85rem;">${formatDate(item.start_date)}</div>
                                         <div style="flex: 1; color: #dcddde; font-size: 0.85rem;">$${item.price || '0.00'}</div>
                                         <div style="flex: 1;">
-                                            <span style="background: ${item.is_active ? 'rgba(21, 216, 188, 0.2)' : 'rgba(148, 155, 164, 0.2)'}; color: ${item.is_active ? '#15d8bc' : '#949BA4'}; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;">${item.is_active ? 'Active' : 'Expired'}</span>
+                                            <span style="color: ${item.is_active ? '#15d8bc' : '#949BA4'}; font-size: 0.85rem;">${item.is_active ? 'Active' : 'Expired'}</span>
                                         </div>
                                     </div>
                                 `).join('')}

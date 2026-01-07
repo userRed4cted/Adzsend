@@ -2739,16 +2739,11 @@ def get_session_user_id():
     # Fallback: look up user_id from session['user']['id'] (discord_id)
     if 'user' in session and 'id' in session['user']:
         discord_id = session['user']['id']
-        print(f"[DEBUG] Looking up user by discord_id: {discord_id}")
         user = get_user_by_discord_id(discord_id)
         if user:
-            print(f"[DEBUG] Found user with id: {user['id']}")
             session['user_id'] = user['id']  # Cache it for future requests
             return user['id']
-        else:
-            print(f"[DEBUG] No user found for discord_id: {discord_id}")
 
-    print(f"[DEBUG] Session contents: {dict(session)}")
     return None
 
 @app.route('/api/discord/auth-url')

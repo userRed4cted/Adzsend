@@ -96,51 +96,17 @@ def rate_limit(limit_type='general'):
     """
     Decorator for rate limiting endpoints.
     Usage: @rate_limit('login')
-    Prevents brute force attacks and API abuse.
+
+    NOTE: Rate limiting is DISABLED for general endpoints.
+    Only auth endpoints (login/signup/verify) have their own separate rate limiting.
+    The hosting provider handles DDoS/DoS protection.
     """
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Get rate limit configuration
-            if limit_type not in RATE_LIMITS:
-                max_requests, window_seconds = RATE_LIMITS['general']
-            else:
-                max_requests, window_seconds = RATE_LIMITS[limit_type]
-
-            # Get client identifier
-            client_ip = get_client_ip()
-
-            # Check rate limit
-            is_limited, remaining, reset_time = rate_limiter.is_rate_limited(
-                client_ip, max_requests, window_seconds
-            )
-
-            if is_limited:
-                # Calculate retry_after in seconds
-                retry_after = int(reset_time - time.time())
-                return {
-                    'error': 'Rate limit exceeded',
-                    'message': f'Too many requests. Please try again in {retry_after} seconds.',
-                    'retry_after': retry_after
-                }, 429
-
-            # Add rate limit headers to response
-            response = f(*args, **kwargs)
-
-            # If response is a tuple (data, status_code), handle it
-            if isinstance(response, tuple):
-                data, status_code = response[0], response[1]
-                headers = response[2] if len(response) > 2 else {}
-            else:
-                data, status_code, headers = response, 200, {}
-
-            # Add rate limit headers
-            headers['X-RateLimit-Limit'] = str(max_requests)
-            headers['X-RateLimit-Remaining'] = str(remaining)
-            headers['X-RateLimit-Reset'] = str(int(reset_time))
-
-            return (data, status_code, headers)
-
+            # Rate limiting disabled - pass through all requests
+            # Auth endpoints (login/signup/verify) have their own rate limiting
+            return f(*args, **kwargs)
         return decorated_function
     return decorator
 

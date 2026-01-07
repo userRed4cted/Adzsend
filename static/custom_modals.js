@@ -95,12 +95,13 @@
                 max-width: 400px;
             }
             .custom-modal-btn.primary {
-                background: linear-gradient(to bottom, #3a3a4d, #2a2a3d);
+                background: linear-gradient(to bottom, #15d8bc, #006e59);
                 border: none;
-                color: #ffffff;
+                color: #121215;
+                font-weight: 600;
             }
             .custom-modal-btn.primary:hover {
-                background: linear-gradient(to bottom, #4a4a5d, #3a3a4d);
+                background: linear-gradient(to bottom, #10b89e, #004e40);
             }
             .custom-modal-btn.secondary {
                 background: linear-gradient(to bottom, #3a3a4d, #2a2a3d);
@@ -152,10 +153,10 @@
             // Handle icon display
             const iconType = options.icon || 'none';
             if (iconType === 'success') {
-                iconEl.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#15d8bc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9 12l2 2 4-4"></path></svg>';
+                iconEl.innerHTML = '<img src="/static/tick.png" width="48" height="48" style="filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);">';
                 iconEl.style.display = 'block';
             } else if (iconType === 'error') {
-                iconEl.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#991a35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+                iconEl.innerHTML = '<span style="font-size: 48px; color: #991a35; font-weight: 300; line-height: 1;">✕</span>';
                 iconEl.style.display = 'block';
             } else if (iconType === 'warning') {
                 iconEl.innerHTML = '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FFC107" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';

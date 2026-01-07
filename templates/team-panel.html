@@ -1331,26 +1331,32 @@
 
                                 const result = await response.json();
 
-                                if (result.success) {
+                                // Check if send was successful (200/201 response)
+                                if (response.ok && result.success) {
                                     successCount++;
+                                    // Clear any previous failure status for this channel
+                                    const channelKey = `${channel.guildId}-${channel.id}`;
+                                    failedChannels.delete(channelKey);
+                                    updateFailedChannelStatus(channel);
                                 } else if (result.token_invalid) {
                                     // Token is invalid - redirect to settings
                                     window.location.href = '/settings';
                                     return; // Stop execution
                                 } else if (response.status === 429) {
-                                    // Rate limited - mark and skip (don't retry)
+                                    // Rate limited by Discord - mark and skip (don't retry)
                                     const channelKey = `${channel.guildId}-${channel.id}`;
                                     failedChannels.set(channelKey, { type: 'ratelimit' });
-                                    failedList.push(`${channel.name} (Rate limited)`);
+                                    const errorDetail = result.error || 'Rate limited by Discord';
+                                    failedList.push(`${channel.name} (${errorDetail})`);
+                                    updateFailedChannelStatus(channel);
                                 } else {
-                                    // Other error
+                                    // Other error (permissions, etc.)
                                     const channelKey = `${channel.guildId}-${channel.id}`;
                                     failedChannels.set(channelKey, { type: 'permission' });
-                                    failedList.push(`${channel.name} (${result.error})`);
+                                    const errorDetail = result.error || 'Send failed';
+                                    failedList.push(`${channel.name} (${errorDetail})`);
+                                    updateFailedChannelStatus(channel);
                                 }
-
-                                // Update only the failed channel status, not rebuild entire display
-                                updateFailedChannelStatus(channel);
 
                                 // Add delay between messages based on user setting
                                 // Only delay if there are more messages to send

@@ -769,12 +769,39 @@ def set_subscription(user_id, plan_type, plan_id, plan_config, billing_period=No
     # Update last_reset timestamp and reset messages_sent for new plans
     # For business/team plans, also reset business usage counters
     if plan_id.startswith('team_plan_'):
-        # Reset both personal and business usage for team plans
+        # Reset both personal and business usage for the owner
         cursor.execute('''
             UPDATE usage SET messages_sent = 0, last_reset = ?,
             business_messages_sent = 0, business_last_reset = ?
             WHERE user_id = ?
         ''', (start_date.isoformat(), start_date.isoformat(), user_id))
+
+        # Also reset business usage for all team members
+        cursor.execute('SELECT discord_id FROM users WHERE id = ?', (user_id,))
+        owner_discord = cursor.fetchone()
+        if owner_discord:
+            # Get team ID for this owner
+            cursor.execute('SELECT id FROM business_teams WHERE owner_user_id = ?', (user_id,))
+            team_row = cursor.fetchone()
+            if team_row:
+                team_id = team_row[0]
+                # Get all team members
+                cursor.execute('''
+                    SELECT btm.member_discord_id FROM business_team_members btm
+                    WHERE btm.team_id = ? AND btm.invitation_status = 'accepted'
+                ''', (team_id,))
+                member_discord_ids = [row[0] for row in cursor.fetchall()]
+
+                # Reset business usage for all team members
+                for discord_id in member_discord_ids:
+                    cursor.execute('SELECT id FROM users WHERE discord_id = ?', (discord_id,))
+                    member_row = cursor.fetchone()
+                    if member_row:
+                        member_user_id = member_row[0]
+                        cursor.execute('''
+                            UPDATE usage SET business_messages_sent = 0, business_last_reset = ?
+                            WHERE user_id = ?
+                        ''', (start_date.isoformat(), member_user_id))
     else:
         # For non-team plans, reset personal usage
         cursor.execute('''
@@ -887,9 +914,9 @@ def record_daily_stat(user_id, team_id):
 
     # Try to update existing record, or insert new one
     cursor.execute('''
-        INSERT INTO daily_message_stats (user_id, team_id, date, messages_sent)
+        INSERT INTO daily_message_stats (user_id, team_id, date, message_count)
         VALUES (?, ?, ?, 1)
-        ON CONFLICT(user_id, team_id, date) DO UPDATE SET messages_sent = messages_sent + 1
+        ON CONFLICT(user_id, team_id, date) DO UPDATE SET message_count = message_count + 1
     ''', (user_id, team_id, today))
 
     conn.commit()
@@ -1746,12 +1773,12 @@ def delete_user_account_admin(user_id):
 
 
 def get_purchase_history(user_id):
-    """Get all purchase history for a user (all subscriptions, including inactive)."""
+    """Get all purchase history for a user (paid plans only, excluding free plan)."""
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
         SELECT * FROM subscriptions
-        WHERE user_id = ?
+        WHERE user_id = ? AND plan_id != 'plan_free'
         ORDER BY start_date DESC
     ''', (user_id,))
     history = [dict(row) for row in cursor.fetchall()]
@@ -2428,7 +2455,7 @@ def get_member_daily_stats(member_user_id, team_id, start_date=None, end_date=No
         start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
 
     cursor.execute('''
-        SELECT date, messages_sent
+        SELECT date, message_count
         FROM daily_message_stats
         WHERE user_id = ? AND team_id = ? AND date >= ? AND date <= ?
         ORDER BY date ASC

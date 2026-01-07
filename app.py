@@ -1105,20 +1105,26 @@ def send_message_single():
         )
 
         if resp.status_code == 200 or resp.status_code == 201:
-            if is_business and owner_user_id:
-                # For business sends: update owner's usage (team pool) and member's business stats
-                from database import increment_business_usage
-                record_successful_send(owner_user_id)  # Owner's pool gets decremented
-                team_id = team['id'] if team else None
-                increment_business_usage(user['id'], team_id)   # Member's business stats get updated
-            else:
-                # For personal sends: update user's own usage
-                record_successful_send(user['id'])
-            # Also update session for backward compatibility
-            if 'sent_count' not in session:
-                session['sent_count'] = 0
-            session['sent_count'] += 1
-            session.modified = True
+            try:
+                if is_business and owner_user_id:
+                    # For business sends: update owner's usage (team pool) and member's business stats
+                    from database import increment_business_usage
+                    record_successful_send(owner_user_id)  # Owner's pool gets decremented
+                    team_id = team['id'] if team else None
+                    increment_business_usage(user['id'], team_id)   # Member's business stats get updated
+                else:
+                    # For personal sends: update user's own usage
+                    record_successful_send(user['id'])
+                # Also update session for backward compatibility
+                if 'sent_count' not in session:
+                    session['sent_count'] = 0
+                session['sent_count'] += 1
+                session.modified = True
+            except Exception as db_error:
+                print(f"[ERROR] Database error after successful send: {str(db_error)}")
+                import traceback
+                traceback.print_exc()
+                # Message was sent successfully, return success anyway
             return {'success': True, 'channel': channel_name}, 200
         elif resp.status_code == 401:
             # Token is invalid/expired - unlink Discord account

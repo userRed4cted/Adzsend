@@ -594,7 +594,7 @@
     <div class="dialog-overlay" id="discord-view-dialog">
         <div class="dialog-box" style="max-width: 450px;">
             <div class="dialog-header">Linked Discord account</div>
-            <div class="dialog-content" id="discord-account-content" style="padding: 0; max-height: 400px; overflow-y: auto;">
+            <div class="dialog-content" id="discord-account-content" style="padding: 1rem; max-height: 400px; overflow-y: auto; overflow-x: hidden; display: block;">
                 <!-- Discord account card will be populated here -->
             </div>
             <div class="dialog-actions">
@@ -1253,27 +1253,27 @@
                     const data = await response.json();
 
                     if (data.success && data.history && data.history.length > 0) {
-                        // Compact invoice layout with minimal gaps
+                        // Compact invoice layout with no gaps
                         container.innerHTML = `
-                            <div style="display: flex; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); color: #949BA4; font-size: 0.85rem; font-weight: 500;">
+                            <div style="display: flex; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); color: #949BA4; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.25rem;">
                                 <div style="flex: 1.5;">Date (mm/dd/yy)</div>
                                 <div style="flex: 1;">Total</div>
                                 <div style="flex: 1;">Status</div>
                             </div>
-                            <div style="max-height: 200px; overflow-y: auto;">
+                            <div style="max-height: 200px; overflow-y: auto; overflow-x: hidden;">
                                 ${data.history.map(item => `
-                                    <div style="display: flex; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: center;">
+                                    <div style="display: flex; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: center; gap: 0;">
                                         <div style="flex: 1.5; color: #dcddde; font-size: 0.85rem;">${formatDate(item.start_date)}</div>
                                         <div style="flex: 1; color: #dcddde; font-size: 0.85rem;">$${item.price || '0.00'}</div>
                                         <div style="flex: 1;">
-                                            <span style="background: ${item.is_active ? 'rgba(21, 216, 188, 0.2)' : 'rgba(148, 155, 164, 0.2)'}; color: ${item.is_active ? '#15d8bc' : '#949BA4'}; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;">${item.is_active ? 'Active' : 'Expired'}</span>
+                                            <span style="background: ${item.is_active ? 'rgba(21, 216, 188, 0.2)' : 'rgba(148, 155, 164, 0.2)'}; color: ${item.is_active ? '#15d8bc' : '#949BA4'}; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;">${item.is_active ? 'Active' : 'Expired'}</span>
                                         </div>
                                     </div>
                                 `).join('')}
                             </div>
                         `;
                     } else {
-                        container.innerHTML = '<div style="color: #949BA4; text-align: center; padding: 2rem;">No invoice history available</div>';
+                        container.innerHTML = '<div style="color: #949BA4; text-align: center; padding: 1.5rem;">No invoice history available</div>';
                     }
                 } catch (error) {
                     console.error('Error loading invoice history:', error);

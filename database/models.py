@@ -302,13 +302,71 @@ def init_db():
             user_id INTEGER NOT NULL,
             team_id INTEGER,
             date TEXT NOT NULL,
-            message_count INTEGER DEFAULT 0,
+            messages_sent INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id),
             FOREIGN KEY (team_id) REFERENCES business_teams(id),
             UNIQUE(user_id, team_id, date)
         )
     ''')
+
+    # Migration: Fix daily_message_stats table schema
+    cursor.execute("PRAGMA table_info(daily_message_stats)")
+    daily_stats_columns = [column[1] for column in cursor.fetchall()]
+
+    # Check if we need to recreate the table (wrong columns or wrong constraint)
+    needs_recreation = (
+        'message_count' in daily_stats_columns or  # Old column name
+        'is_team_message' in daily_stats_columns or  # Extra column that shouldn't be there
+        'created_at' not in daily_stats_columns  # Missing column
+    )
+
+    if needs_recreation:
+        # Create new table with correct schema
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS daily_message_stats_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                team_id INTEGER,
+                date TEXT NOT NULL,
+                messages_sent INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (team_id) REFERENCES business_teams(id),
+                UNIQUE(user_id, team_id, date)
+            )
+        ''')
+
+        # Copy data from old table, handling different column names
+        try:
+            if 'message_count' in daily_stats_columns:
+                # Old schema with message_count
+                cursor.execute('''
+                    INSERT OR IGNORE INTO daily_message_stats_new (id, user_id, team_id, date, messages_sent, created_at)
+                    SELECT id, user_id, team_id, date, message_count, created_at
+                    FROM daily_message_stats
+                ''')
+            elif 'is_team_message' in daily_stats_columns:
+                # Schema with is_team_message - aggregate by user_id, team_id, date
+                cursor.execute('''
+                    INSERT OR IGNORE INTO daily_message_stats_new (user_id, team_id, date, messages_sent, created_at)
+                    SELECT user_id, team_id, date, SUM(messages_sent), MIN(created_at)
+                    FROM daily_message_stats
+                    GROUP BY user_id, team_id, date
+                ''')
+            else:
+                # Current schema, just copy
+                cursor.execute('''
+                    INSERT OR IGNORE INTO daily_message_stats_new (id, user_id, team_id, date, messages_sent, created_at)
+                    SELECT id, user_id, team_id, date, messages_sent, created_at
+                    FROM daily_message_stats
+                ''')
+        except Exception as e:
+            print(f"[WARNING] Error copying data from old daily_message_stats table: {e}")
+
+        # Drop old table and rename new table
+        cursor.execute('DROP TABLE daily_message_stats')
+        cursor.execute('ALTER TABLE daily_message_stats_new RENAME TO daily_message_stats')
 
     # Migration: Add message_delay column if it doesn't exist
     cursor.execute("PRAGMA table_info(user_data)")
@@ -914,9 +972,9 @@ def record_daily_stat(user_id, team_id):
 
     # Try to update existing record, or insert new one
     cursor.execute('''
-        INSERT INTO daily_message_stats (user_id, team_id, date, message_count)
+        INSERT INTO daily_message_stats (user_id, team_id, date, messages_sent)
         VALUES (?, ?, ?, 1)
-        ON CONFLICT(user_id, team_id, date) DO UPDATE SET message_count = message_count + 1
+        ON CONFLICT(user_id, team_id, date) DO UPDATE SET messages_sent = messages_sent + 1
     ''', (user_id, team_id, today))
 
     conn.commit()
@@ -1378,16 +1436,21 @@ def get_team_member_stats(team_id):
         }
         # Get owner's business usage
         cursor.execute('''
-            SELECT business_messages_sent, business_all_time_sent
+            SELECT business_messages_sent
             FROM usage WHERE user_id = ?
         ''', (owner_row['owner_user_id'],))
         owner_usage = cursor.fetchone()
-        if owner_usage:
-            owner_dict['business_messages_sent'] = owner_usage[0] or 0
-            owner_dict['business_all_time_sent'] = owner_usage[1] or 0
-        else:
-            owner_dict['business_messages_sent'] = 0
-            owner_dict['business_all_time_sent'] = 0
+        owner_dict['business_messages_sent'] = owner_usage[0] if owner_usage else 0
+
+        # Get owner's all-time sent for THIS TEAM ONLY from daily_message_stats
+        cursor.execute('''
+            SELECT SUM(messages_sent)
+            FROM daily_message_stats
+            WHERE user_id = ? AND team_id = ?
+        ''', (owner_row['owner_user_id'], team_id))
+        all_time_row = cursor.fetchone()
+        owner_dict['business_all_time_sent'] = all_time_row[0] if all_time_row and all_time_row[0] else 0
+
         stats.append(owner_dict)
 
     # Then get team members
@@ -1414,18 +1477,21 @@ def get_team_member_stats(team_id):
         # Get business usage for this member if they have a user account
         if member_dict['user_id']:
             cursor.execute('''
-                SELECT business_messages_sent, business_all_time_sent
+                SELECT business_messages_sent
                 FROM usage
                 WHERE user_id = ?
             ''', (member_dict['user_id'],))
             usage = cursor.fetchone()
+            member_dict['business_messages_sent'] = usage[0] if usage else 0
 
-            if usage:
-                member_dict['business_messages_sent'] = usage[0] or 0
-                member_dict['business_all_time_sent'] = usage[1] or 0
-            else:
-                member_dict['business_messages_sent'] = 0
-                member_dict['business_all_time_sent'] = 0
+            # Get all-time sent for THIS TEAM ONLY from daily_message_stats
+            cursor.execute('''
+                SELECT SUM(messages_sent)
+                FROM daily_message_stats
+                WHERE user_id = ? AND team_id = ?
+            ''', (member_dict['user_id'], team_id))
+            all_time_row = cursor.fetchone()
+            member_dict['business_all_time_sent'] = all_time_row[0] if all_time_row and all_time_row[0] else 0
         else:
             member_dict['business_messages_sent'] = 0
             member_dict['business_all_time_sent'] = 0
@@ -2377,16 +2443,26 @@ def get_user_by_internal_id(user_id):
 # =============================================================================
 
 def get_member_analytics(member_user_id, team_id):
-    """Get analytics data for a team member."""
+    """Get analytics data for a team member - ONLY for current team."""
     conn = get_db()
     cursor = conn.cursor()
 
-    # Get member's business usage stats
+    # Get member's current cycle stats (this resets each period)
     cursor.execute('''
-        SELECT business_messages_sent, business_all_time_sent, business_last_reset
+        SELECT business_messages_sent, business_last_reset
         FROM usage WHERE user_id = ?
     ''', (member_user_id,))
     usage = cursor.fetchone()
+    current_cycle = usage[0] if usage else 0
+
+    # Calculate all-time stats from daily_message_stats for THIS TEAM ONLY
+    cursor.execute('''
+        SELECT SUM(messages_sent)
+        FROM daily_message_stats
+        WHERE user_id = ? AND team_id = ?
+    ''', (member_user_id, team_id))
+    all_time_row = cursor.fetchone()
+    all_time = all_time_row[0] if all_time_row and all_time_row[0] else 0
 
     # Get when member joined the team
     cursor.execute('''
@@ -2406,32 +2482,32 @@ def get_member_analytics(member_user_id, team_id):
         if owner_row:
             joined_at = owner_row[0]
 
-    # Get team's total usage for percentage calculation
+    # Get team's total usage for percentage calculation (from daily_message_stats for THIS TEAM)
     cursor.execute('''
-        SELECT SUM(u.business_all_time_sent)
-        FROM business_team_members btm
-        JOIN users usr ON usr.discord_id = btm.member_discord_id
-        JOIN usage u ON u.user_id = usr.id
-        WHERE btm.team_id = ? AND btm.invitation_status = 'accepted'
-    ''', (team_id,))
+        SELECT SUM(dms.messages_sent)
+        FROM daily_message_stats dms
+        JOIN business_team_members btm ON btm.member_discord_id = (SELECT discord_id FROM users WHERE id = dms.user_id)
+        WHERE btm.team_id = ? AND dms.team_id = ? AND btm.invitation_status = 'accepted'
+    ''', (team_id, team_id))
     total_row = cursor.fetchone()
     team_total = total_row[0] if total_row and total_row[0] else 0
 
-    # Also add owner's business usage to total
+    # Also add owner's usage to total (from daily_message_stats)
     cursor.execute('''
         SELECT bt.owner_user_id FROM business_teams bt WHERE bt.id = ?
     ''', (team_id,))
     owner_row = cursor.fetchone()
     if owner_row:
-        cursor.execute('SELECT business_all_time_sent FROM usage WHERE user_id = ?', (owner_row[0],))
+        cursor.execute('''
+            SELECT SUM(messages_sent) FROM daily_message_stats
+            WHERE user_id = ? AND team_id = ?
+        ''', (owner_row[0], team_id))
         owner_usage = cursor.fetchone()
         if owner_usage and owner_usage[0]:
             team_total += owner_usage[0]
 
     conn.close()
 
-    current_cycle = usage[0] if usage else 0
-    all_time = usage[1] if usage else 0
     percentage = (all_time / team_total * 100) if team_total > 0 else 0
 
     return {
@@ -2455,7 +2531,7 @@ def get_member_daily_stats(member_user_id, team_id, start_date=None, end_date=No
         start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
 
     cursor.execute('''
-        SELECT date, message_count
+        SELECT date, messages_sent
         FROM daily_message_stats
         WHERE user_id = ? AND team_id = ? AND date >= ? AND date <= ?
         ORDER BY date ASC

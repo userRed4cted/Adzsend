@@ -334,7 +334,7 @@
         .dialog-box {
             background: #191A1F;
             border-radius: 12px;
-            padding: 1.5rem 1.5rem 0.5rem 1.5rem;
+            padding: 1rem 1rem 0.5rem 1rem;
             max-width: 500px;
             width: 90%;
             max-height: 80vh;
@@ -342,7 +342,7 @@
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 0.25rem;
         }
 
         .dialog-header {
@@ -358,7 +358,7 @@
             font-size: 0.9rem;
             line-height: 1.6;
             margin: 0;
-            padding: 1rem;
+            padding: 0.5rem;
             background: #121215;
             border-radius: 8px;
             white-space: pre-wrap;
@@ -594,7 +594,7 @@
     <div class="dialog-overlay" id="discord-view-dialog">
         <div class="dialog-box" style="max-width: 450px;">
             <div class="dialog-header">Linked Discord account</div>
-            <div class="dialog-content" id="discord-account-content" style="padding: 1rem; max-height: 400px; overflow-y: auto; overflow-x: hidden; display: block;">
+            <div class="dialog-content" id="discord-account-content" style="padding: 0; overflow-y: auto; overflow-x: hidden; display: block;">
                 <!-- Discord account card will be populated here -->
             </div>
             <div class="dialog-actions">
@@ -1154,19 +1154,19 @@
                 if (currentUser.avatar) {
                     avatarHtml = `<img src="https://cdn.discordapp.com/avatars/${currentUser.discord_id}/${currentUser.avatar}.png" alt="Discord Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
                 } else {
-                    avatarHtml = `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #5865f2 0%, #15d8bc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.2rem;">${currentUser.username ? currentUser.username[0].toUpperCase() : '?'}</div>`;
+                    avatarHtml = `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #5865f2 0%, #15d8bc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.9rem;">${currentUser.username ? currentUser.username[0].toUpperCase() : '?'}</div>`;
                 }
 
                 discordContent.innerHTML = `
                     <div style="display: flex; flex-direction: column;">
                         <!-- Linked Discord Account -->
-                        <div style="background: #212227; border-radius: 8px; padding: 0.6rem 0.8rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="background: #212227; border-radius: 8px; padding: 0.4rem 0.6rem; display: flex; align-items: center; gap: 0.5rem;">
                             <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
                                 ${avatarHtml}
                             </div>
                             <div style="flex: 1; min-width: 0;">
-                                <div style="color: #dcddde; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem;">${currentUser.username || 'Unknown User'}</div>
-                                <div style="color: #949BA4; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <div style="color: #dcddde; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; line-height: 1.2; margin: 0; padding: 0;">${currentUser.username || 'Unknown User'}</div>
+                                <div style="color: #949BA4; font-size: 0.75rem; display: flex; align-items: center; gap: 0.3rem; line-height: 1.2; margin: 0; padding: 0;">
                                     <span>ID: ${currentUser.discord_id}</span>
                                     <img src="{{ url_for('static', filename='copy.png') }}" style="width: 12px; height: 12px; cursor: pointer; opacity: 0.6; filter: brightness(0.5) opacity(0.7);" onclick="copyToClipboard('${currentUser.discord_id}')" title="Copy ID">
                                 </div>
@@ -1216,23 +1216,23 @@
                 if (hasPaidPlan) {
                     // Show full info for paid plans
                     container.innerHTML = currentUser.subscriptions.filter(sub => sub.plan_id !== 'plan_free').map(sub => `
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                 <div style="color: #949BA4; font-size: 0.85rem;">Status</div>
                                 <div style="color: #15d8bc; font-size: 0.95rem;">Active</div>
                             </div>
-                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                 <div style="color: #949BA4; font-size: 0.85rem;">Current plan</div>
                                 <div style="color: #dcddde; font-size: 0.95rem;">${sub.plan_name}</div>
                             </div>
                             ${sub.plan_type === 'subscription' && sub.billing_period ? `
-                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                 <div style="color: #949BA4; font-size: 0.85rem;">Billing period</div>
                                 <div style="color: #dcddde; font-size: 0.95rem;">${sub.billing_period.charAt(0).toUpperCase() + sub.billing_period.slice(1)}</div>
                             </div>
                             ` : ''}
                             ${sub.started_at ? `
-                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                 <div style="color: #949BA4; font-size: 0.85rem;">Plan started (mm/dd/yy)</div>
                                 <div style="color: #dcddde; font-size: 0.95rem;">${formatDate(sub.started_at)}</div>
                             </div>
@@ -1242,12 +1242,12 @@
                 } else {
                     // Free plan - only show Status and Current plan
                     container.innerHTML = `
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                 <div style="color: #949BA4; font-size: 0.85rem;">Status</div>
                                 <div style="color: #15d8bc; font-size: 0.95rem;">Active</div>
                             </div>
-                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                 <div style="color: #949BA4; font-size: 0.85rem;">Current plan</div>
                                 <div style="color: #dcddde; font-size: 0.95rem;">Free</div>
                             </div>
@@ -1262,17 +1262,17 @@
                     if (data.success && data.history && data.history.length > 0) {
                         // Compact invoice layout with no gaps
                         container.innerHTML = `
-                            <div style="display: flex; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); color: #949BA4; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.25rem;">
-                                <div style="flex: 1.5;">Date (mm/dd/yy)</div>
-                                <div style="flex: 1;">Total</div>
-                                <div style="flex: 1;">Status</div>
+                            <div style="display: flex; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); color: #949BA4; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem; width: 100%; box-sizing: border-box;">
+                                <div style="flex: 1.5; min-width: 0; padding-right: 0.5rem; box-sizing: border-box;">Date (mm/dd/yy)</div>
+                                <div style="flex: 1; min-width: 0; padding-right: 0.5rem; box-sizing: border-box;">Total</div>
+                                <div style="flex: 1; min-width: 0; box-sizing: border-box;">Status</div>
                             </div>
-                            <div style="max-height: 200px; overflow-y: auto; overflow-x: hidden;">
-                                ${data.history.map(item => `
-                                    <div style="display: flex; padding: 0.25rem 0; align-items: center; gap: 0;">
-                                        <div style="flex: 1.5; color: #dcddde; font-size: 0.85rem;">${formatDate(item.start_date)}</div>
-                                        <div style="flex: 1; color: #dcddde; font-size: 0.85rem;">$${item.price || '0.00'}</div>
-                                        <div style="flex: 1;">
+                            <div style="max-height: 200px; overflow-y: auto; overflow-x: hidden; width: 100%; box-sizing: border-box;">
+                                ${data.history.map((item, index) => `
+                                    <div style="display: flex; padding: 0.5rem 0; align-items: center; gap: 0; width: 100%; box-sizing: border-box; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        <div style="flex: 1.5; min-width: 0; color: #dcddde; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 0.5rem; box-sizing: border-box;">${formatDate(item.start_date)}</div>
+                                        <div style="flex: 1; min-width: 0; color: #dcddde; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 0.5rem; box-sizing: border-box;">$${item.price || '0.00'}</div>
+                                        <div style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box;">
                                             <span style="color: ${item.is_active ? '#15d8bc' : '#949BA4'}; font-size: 0.85rem;">${item.is_active ? 'Active' : 'Expired'}</span>
                                         </div>
                                     </div>
@@ -1342,12 +1342,12 @@
                         }
 
                         let usageHtml = `
-                            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                     <div style="color: #949BA4; font-size: 0.85rem;">Messages sent</div>
                                     <div style="color: #dcddde; font-size: 0.95rem;">${messagesSent}</div>
                                 </div>
-                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                     <div style="color: #949BA4; font-size: 0.85rem;">Message limit</div>
                                     <div style="color: #dcddde; font-size: 0.95rem;">${planStatus.is_unlimited ? 'Unlimited' : planStatus.message_limit}</div>
                                 </div>`;
@@ -1355,7 +1355,7 @@
                         // Only show reset countdown for allowance-based plans
                         if (planStatus.usage_type === 'allowance' && nextReset) {
                             usageHtml += `
-                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                                     <div style="color: #949BA4; font-size: 0.85rem;">Limit resets in${periodLabel ? ` (${periodLabel})` : ''}</div>
                                     <div style="color: #dcddde; font-size: 0.95rem;">${resetCountdown}</div>
                                 </div>`;

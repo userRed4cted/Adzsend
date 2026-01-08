@@ -41,7 +41,6 @@
             max-width: 450px;
             width: 90%;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             animation: slideIn 0.3s ease;
         `;
 

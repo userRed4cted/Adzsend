@@ -8,7 +8,7 @@
     const modalHTML = `
         <div class="custom-modal-overlay" id="custom-alert-modal">
             <div class="custom-modal-box">
-                <div class="custom-modal-icon" id="custom-alert-icon" style="display: none; text-align: center; margin-bottom: 16px;"></div>
+                <div class="custom-modal-icon" id="custom-alert-icon" style="display: none; text-align: center; margin-bottom: 8px;"></div>
                 <div class="custom-modal-header" id="custom-alert-title">Notice</div>
                 <div class="custom-modal-content" id="custom-alert-message"></div>
                 <div class="custom-modal-actions">
@@ -49,10 +49,9 @@
             .custom-modal-box {
                 background: #1a1a1d;
                 border-radius: 12px;
-                padding: 24px;
+                padding: 16px;
                 max-width: 450px;
                 width: 90%;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
                 border: 1px solid #2a2a30;
             }
             .custom-modal-header {
@@ -60,12 +59,13 @@
                 font-size: 18px;
                 font-weight: 600;
                 margin-bottom: 8px;
+                line-height: 1.2;
             }
             .custom-modal-content {
                 color: #e0e0e0;
                 font-size: 14px;
-                line-height: 1.6;
-                margin-bottom: 12px;
+                line-height: 1.4;
+                margin-bottom: 8px;
                 white-space: pre-wrap;
                 word-wrap: break-word;
             }
@@ -183,7 +183,7 @@
             // Handle icon display
             const iconType = options.icon || 'none';
             if (iconType === 'success') {
-                iconEl.innerHTML = '<img src="/static/tick.png" width="48" height="48" style="filter: brightness(0) saturate(100%) invert(74%) sepia(43%) saturate(1015%) hue-rotate(124deg) brightness(94%) contrast(92%);">';
+                iconEl.innerHTML = '<img src="/static/tick.png" width="48" height="48" style="filter: brightness(0) saturate(100%) invert(81%) sepia(20%) saturate(2076%) hue-rotate(121deg) brightness(99%) contrast(97%);">';
                 iconEl.style.display = 'block';
             } else if (iconType === 'error') {
                 iconEl.innerHTML = '<span style="font-size: 48px; color: #991a35; font-weight: 300; line-height: 1;">✕</span>';

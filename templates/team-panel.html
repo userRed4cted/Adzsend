@@ -1315,19 +1315,19 @@
                 const modalHTML = `
                     <style>
                         .result-section {
-                            margin-bottom: 0;
-                        }
-                        .result-section:last-child {
-                            margin-bottom: 0;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            display: block !important;
                         }
                         .result-section.collapsed .result-content {
                             display: none;
                         }
                         .result-section.collapsed .collapse-icon {
-                            transform: rotate(-90deg);
+                            transform: rotate(180deg);
                         }
                         .result-header {
-                            padding: 0;
+                            padding: 0 !important;
+                            margin: 0 !important;
                             cursor: pointer;
                             display: flex;
                             justify-content: space-between;
@@ -1335,16 +1335,23 @@
                             font-weight: 500;
                             color: #dcddde;
                             user-select: none;
-                            font-size: 0.9rem;
+                            font-size: 0.85rem;
+                            line-height: 1;
                         }
                         .result-header:hover {
                             opacity: 0.8;
+                        }
+                        .result-header span {
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            line-height: 1;
                         }
                         .result-content {
                             max-height: 150px;
                             overflow-y: auto;
                             overflow-x: hidden;
-                            padding: 0 0 0 0.75rem;
+                            padding: 0 !important;
+                            margin: 0 !important;
                             scroll-behavior: auto;
                         }
                         .result-content::-webkit-scrollbar {
@@ -1358,13 +1365,16 @@
                             border-radius: 3px;
                         }
                         .channel-item {
-                            padding: 0.1rem 0;
+                            padding: 0 !important;
+                            margin: 0 !important;
                             color: #949BA4;
-                            font-size: 0.8rem;
+                            font-size: 0.75rem;
                             background: transparent;
+                            line-height: 1;
+                            display: block !important;
                         }
                     </style>
-                    <div style="max-height: 300px; overflow-y: auto; overflow-x: hidden; scroll-behavior: auto;">
+                    <div style="max-height: 300px; overflow-y: auto; overflow-x: hidden; scroll-behavior: auto; padding: 0 !important; margin: 0 !important; display: flex; flex-direction: column; gap: 0;">
                         ${sectionsHTML}
                     </div>
                 `;

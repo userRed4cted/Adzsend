@@ -307,7 +307,7 @@
                         </div>
 
                         <div class="settings-panel-content" id="personal-usage" {% if has_business %}style="display: block;"{% endif %}>
-                            <div class="usage-stat" style="margin-bottom: 1.25rem;">
+                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
                                 <div class="usage-label">
                                     Allowance
                                     {% if plan_status.has_plan and plan_status.usage_type == 'allowance' %}
@@ -326,7 +326,7 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="usage-stat" style="margin-bottom: 1.25rem;">
+                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
                                 <div class="usage-label">Advertisements sent (with current plan)</div>
                                 <div class="usage-value">
                                     {% if plan_status.has_plan %}
@@ -336,11 +336,11 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="usage-stat" style="margin-bottom: 1.25rem;">
+                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
                                 <div class="usage-label">All time ads sent</div>
                                 <div class="usage-value">{{ plan_status.all_time_sent }}</div>
                             </div>
-                            <div class="usage-stat" style="margin-bottom: 1.25rem;">
+                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
                                 <div class="usage-label">Usage percentage</div>
                                 <div class="usage-value">
                                     {% if plan_status.is_unlimited %}
@@ -366,7 +366,7 @@
                         <!-- Business Usage Section -->
                         {% if has_business and business_plan_status %}
                         <div class="settings-panel-content" id="business-usage" style="display: none;">
-                            <div class="usage-stat" style="margin-bottom: 1.25rem;">
+                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
                                 <div class="usage-label">
                                     Allowance
                                     {% if business_plan_status.usage_type == 'allowance' %}
@@ -383,15 +383,15 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="usage-stat" style="margin-bottom: 1.25rem;">
+                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
                                 <div class="usage-label">Advertisements sent (with current plan)</div>
                                 <div class="usage-value">{{ business_plan_status.messages_sent }}</div>
                             </div>
-                            <div class="usage-stat" style="margin-bottom: 1.25rem;">
+                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
                                 <div class="usage-label">All time ads sent (across all team members)</div>
                                 <div class="usage-value">{{ business_plan_status.all_time_sent }}</div>
                             </div>
-                            <div class="usage-stat" style="margin-bottom: 1.25rem;">
+                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
                                 <div class="usage-label">Usage percentage</div>
                                 <div class="usage-value">
                                     {% if business_plan_status.is_unlimited %}

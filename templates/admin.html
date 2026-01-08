@@ -1137,8 +1137,9 @@
                               currentUser.discord_id !== 'no_discord_userid';
 
             if (!hasDiscord) {
+                // No Discord account - show single card
                 discordContent.innerHTML = `
-                    <div style="border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+                    <div style="background: #212227; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
                         <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: #2a2b32; display: flex; align-items: center; justify-content: center;">
                             <img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord" style="width: 28px; height: 28px; object-fit: contain; opacity: 0.5;">
                         </div>
@@ -1148,22 +1149,36 @@
                     </div>
                 `;
             } else {
-                // Build the Discord account card matching settings page
+                // Has Discord account - show scroll frame with account cards (matching settings page)
                 let avatarHtml;
                 if (currentUser.avatar) {
-                    avatarHtml = `<img src="https://cdn.discordapp.com/avatars/${currentUser.discord_id}/${currentUser.avatar}.png" style="width: 100%; height: 100%; object-fit: cover;">`;
+                    avatarHtml = `<img src="https://cdn.discordapp.com/avatars/${currentUser.discord_id}/${currentUser.avatar}.png" alt="Discord Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
                 } else {
-                    avatarHtml = `<div style="width: 100%; height: 100%; background: #2a2b32; display: flex; align-items: center; justify-content: center;"><img src="{{ url_for('static', filename='DiscordLogo.png') }}" style="width: 28px; height: 28px; object-fit: contain; opacity: 0.5;"></div>`;
+                    avatarHtml = `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #5865f2 0%, #15d8bc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.2rem;">${currentUser.username ? currentUser.username[0].toUpperCase() : '?'}</div>`;
                 }
 
                 discordContent.innerHTML = `
-                    <div style="border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
-                        <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
-                            ${avatarHtml}
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 300px; overflow-y: auto;">
+                        <!-- Linked Discord Account -->
+                        <div style="background: #212227; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+                            <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                                ${avatarHtml}
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="color: #dcddde; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${currentUser.username || 'Unknown User'}</div>
+                                <div style="color: #949BA4; font-size: 0.85rem;">ID: ${currentUser.discord_id}</div>
+                            </div>
                         </div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="color: #dcddde; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${currentUser.username || 'Unknown User'}</div>
-                            <div style="color: #949BA4; font-size: 0.85rem;">ID: ${currentUser.discord_id}</div>
+
+                        <!-- Add another Discord account (disabled) -->
+                        <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #1e1f22; border-radius: 8px; opacity: 0.6; cursor: not-allowed;">
+                            <div style="width: 48px; height: 48px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #949BA4; font-size: 1.5rem; font-weight: 300;">
+                                +
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="color: #949BA4; font-size: 0.9rem;">Add another Discord account</div>
+                                <div style="color: #15d8bc; font-size: 0.85rem;">$3</div>
+                            </div>
                         </div>
                     </div>
                 `;

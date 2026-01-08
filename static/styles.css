@@ -1529,7 +1529,7 @@ body {
 .settings-panels {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(350px, 100%), 1fr));
-    gap: 2rem;
+    gap: 1.5rem;
     align-content: start;
     width: 100%;
     padding-bottom: 4rem;
@@ -1539,7 +1539,7 @@ body {
 .settings-panel {
     background: var(--bg-secondary);
     border-radius: 12px;
-    padding: 2rem;
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -1553,14 +1553,14 @@ body {
     font-size: 1.5rem;
     font-weight: 700;
     color: #ffffff;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     letter-spacing: 0.5px;
 }
 
 .settings-panel-content {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1rem;
     justify-content: flex-start;
     align-items: stretch;
 }
@@ -1568,7 +1568,7 @@ body {
 .usage-stat {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.4rem;
 }
 
 .usage-label {

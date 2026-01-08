@@ -1315,6 +1315,9 @@
                 const modalHTML = `
                     <style>
                         .result-section {
+                            margin-bottom: 0.5rem;
+                        }
+                        .result-section:last-child {
                             margin-bottom: 0;
                         }
                         .result-section.collapsed .result-content {
@@ -1324,27 +1327,28 @@
                             transform: rotate(-90deg);
                         }
                         .result-header {
-                            padding: 0.4rem 0;
+                            padding: 0.3rem 0;
                             cursor: pointer;
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
-                            font-weight: 400;
+                            font-weight: 500;
                             color: #dcddde;
                             user-select: none;
+                            font-size: 0.9rem;
                         }
                         .result-header:hover {
                             opacity: 0.8;
                         }
                         .result-content {
-                            max-height: 200px;
+                            max-height: 150px;
                             overflow-y: auto;
                             overflow-x: hidden;
-                            padding: 0 0 0 0.5rem;
+                            padding: 0.25rem 0 0 0.75rem;
                             scroll-behavior: auto;
                         }
                         .result-content::-webkit-scrollbar {
-                            width: 6px;
+                            width: 5px;
                         }
                         .result-content::-webkit-scrollbar-track {
                             background: transparent;
@@ -1354,13 +1358,13 @@
                             border-radius: 3px;
                         }
                         .channel-item {
-                            padding: 0.15rem 0;
+                            padding: 0.1rem 0;
                             color: #949BA4;
-                            font-size: 0.85rem;
+                            font-size: 0.8rem;
                             background: transparent;
                         }
                     </style>
-                    <div style="max-height: 400px; overflow-y: auto; overflow-x: hidden; scroll-behavior: auto;">
+                    <div style="max-height: 300px; overflow-y: auto; overflow-x: hidden; scroll-behavior: auto;">
                         ${sectionsHTML}
                     </div>
                 `;

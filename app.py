@@ -23,7 +23,7 @@ from database import (
     # Discord OAuth account linking functions
     save_discord_oauth, get_discord_oauth_status, get_discord_oauth_info,
     complete_discord_link, unlink_discord_oauth, is_discord_linked,
-    get_user_by_internal_id, full_unlink_discord_account
+    get_user_by_internal_id, full_unlink_discord_account, update_discord_profile
 )
 
 # Config imports
@@ -1002,6 +1002,16 @@ def test_page():
             resp = requests.get('https://discord.com/api/v10/users/@me', headers=headers)
             if resp.status_code == 200:
                 discord_info = resp.json()
+                # Sync fresh Discord profile data to database
+                avatar_decoration = None
+                if discord_info.get('avatar_decoration_data') and discord_info['avatar_decoration_data'].get('asset'):
+                    avatar_decoration = discord_info['avatar_decoration_data']['asset']
+                update_discord_profile(
+                    user['id'],
+                    discord_info.get('username'),
+                    discord_info.get('avatar'),
+                    avatar_decoration
+                )
             # Fetch user's guilds
             guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
             if guilds_resp.status_code == 200:

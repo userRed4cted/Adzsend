@@ -2477,6 +2477,23 @@ def is_discord_linked(user_id):
     return bool(result and result[0])
 
 
+def update_discord_profile(user_id, username, avatar, avatar_decoration=None):
+    """Update Discord profile info (username, avatar, decoration) from fresh API data."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        UPDATE users SET
+            discord_oauth_username = ?,
+            discord_oauth_avatar = ?,
+            discord_oauth_avatar_decoration = ?
+        WHERE id = ?
+    ''', (username, avatar, avatar_decoration, user_id))
+
+    conn.commit()
+    conn.close()
+
+
 def get_user_by_internal_id(user_id):
     """Get user by their internal database ID."""
     conn = get_db()

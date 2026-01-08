@@ -24,7 +24,7 @@ from .models import (
     # Discord OAuth account linking functions
     save_discord_oauth, get_discord_oauth_status, get_discord_oauth_info,
     complete_discord_link, unlink_discord_oauth, is_discord_linked,
-    get_user_by_internal_id, full_unlink_discord_account,
+    get_user_by_internal_id, full_unlink_discord_account, update_discord_profile,
     # Admin functions
     get_purchase_history,
     # Team member analytics functions

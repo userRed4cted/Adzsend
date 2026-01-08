@@ -148,14 +148,18 @@
                             <div style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 300px; overflow-y: auto;">
                                 <!-- Linked Discord Account -->
                                 <div style="background: #212227; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
-                                    <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                                    <div style="width: 48px; height: 48px; border-radius: 50%; overflow: visible; flex-shrink: 0; position: relative;">
                                         {% if discord_oauth_info.oauth_avatar %}
                                             <img src="https://cdn.discordapp.com/avatars/{{ discord_oauth_info.oauth_discord_id }}/{{ discord_oauth_info.oauth_avatar }}.png"
-                                                 alt="Discord Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+                                                 alt="Discord Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                                         {% else %}
-                                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #5865f2 0%, #15d8bc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.2rem;">
+                                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #5865f2 0%, #15d8bc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.2rem; border-radius: 50%;">
                                                 {{ discord_oauth_info.oauth_username[0].upper() if discord_oauth_info.oauth_username else '?' }}
                                             </div>
+                                        {% endif %}
+                                        {% if discord_oauth_info.oauth_avatar_decoration %}
+                                            <img src="https://cdn.discordapp.com/avatar-decoration-presets/{{ discord_oauth_info.oauth_avatar_decoration }}.png?size=160&passthrough=true"
+                                                 alt="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 130%; height: 130%; pointer-events: none; z-index: 1;">
                                         {% endif %}
                                     </div>
                                     <div style="flex: 1; min-width: 0;">
@@ -184,14 +188,18 @@
                             <div id="discord-account-frame" style="background: #212227; border-radius: 8px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
                                 {% if discord_oauth_info and discord_oauth_info.has_oauth %}
                                     <!-- OAuth completed but not fully linked - show Discord user info -->
-                                    <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                                    <div style="width: 48px; height: 48px; border-radius: 50%; overflow: visible; flex-shrink: 0; position: relative;">
                                         {% if discord_oauth_info.oauth_avatar %}
                                             <img src="https://cdn.discordapp.com/avatars/{{ discord_oauth_info.oauth_discord_id }}/{{ discord_oauth_info.oauth_avatar }}.png"
-                                                 alt="Discord Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+                                                 alt="Discord Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                                         {% else %}
-                                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #5865f2 0%, #15d8bc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.2rem;">
+                                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #5865f2 0%, #15d8bc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 1.2rem; border-radius: 50%;">
                                                 {{ discord_oauth_info.oauth_username[0].upper() if discord_oauth_info.oauth_username else '?' }}
                                             </div>
+                                        {% endif %}
+                                        {% if discord_oauth_info.oauth_avatar_decoration %}
+                                            <img src="https://cdn.discordapp.com/avatar-decoration-presets/{{ discord_oauth_info.oauth_avatar_decoration }}.png?size=160&passthrough=true"
+                                                 alt="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 130%; height: 130%; pointer-events: none; z-index: 1;">
                                         {% endif %}
                                     </div>
                                     <div style="flex: 1; min-width: 0;">
@@ -620,21 +628,13 @@
         });
 
         // Copy Adzsend ID function
-        function copyAdzsendId() {
+        async function copyAdzsendId() {
             const adzsendIdInput = document.getElementById('adzsendIdInput');
-
-            const textArea = document.createElement('textarea');
-            textArea.value = adzsendIdInput.value;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            const success = document.execCommand('copy');
-            document.body.removeChild(textArea);
-
-            if (success) {
-                alert('Copied to clipboard');
+            try {
+                await navigator.clipboard.writeText(adzsendIdInput.value);
+                await showAlert('Copied to clipboard', 'Success', { icon: 'success' });
+            } catch (err) {
+                await showAlert('Failed to copy to clipboard', 'Error', { icon: 'error' });
             }
         }
 

@@ -991,6 +991,7 @@ def test_page():
     # Check if Discord account is linked
     discord_linked = is_discord_linked(user['id'])
     discord_info = None
+    guilds = []
 
     if discord_linked:
         # Decrypt token only when needed for API call
@@ -1001,8 +1002,24 @@ def test_page():
             resp = requests.get('https://discord.com/api/v10/users/@me', headers=headers)
             if resp.status_code == 200:
                 discord_info = resp.json()
+            # Fetch user's guilds
+            guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
+            if guilds_resp.status_code == 200:
+                guilds = guilds_resp.json()
 
-    return render_template('test.html', discord_info=discord_info, discord_linked=discord_linked)
+    # Get plan status and user data
+    plan_status = get_plan_status(user['id'])
+    user_data = get_user_data(user['id'])
+
+    return render_template('test.html',
+        discord_info=discord_info,
+        discord_linked=discord_linked,
+        guilds=guilds,
+        plan_status=plan_status,
+        user_data=user_data,
+        BLACKLISTED_WORDS=BLACKLISTED_WORDS,
+        PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS
+    )
 
 @app.route('/api/guild/<guild_id>/channels')
 @rate_limit('api')
@@ -2863,8 +2880,14 @@ def discord_oauth_callback():
         username = discord_user.get('username')
         avatar = discord_user.get('avatar')
 
+        # Get avatar decoration asset if present
+        avatar_decoration = None
+        avatar_decoration_data = discord_user.get('avatar_decoration_data')
+        if avatar_decoration_data and avatar_decoration_data.get('asset'):
+            avatar_decoration = avatar_decoration_data.get('asset')
+
         # Save OAuth data to database (user_id already retrieved at top of function)
-        save_discord_oauth(user_id, discord_id, username, avatar, access_token, refresh_token, expires_at)
+        save_discord_oauth(user_id, discord_id, username, avatar, access_token, refresh_token, expires_at, avatar_decoration)
 
         # Redirect back to settings with success message
         return redirect(url_for('settings') + '?discord_success=1')

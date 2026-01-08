@@ -991,25 +991,14 @@
         }
 
 
-        function copyToClipboard(text) {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-
+        async function copyToClipboard(text) {
             try {
-                const success = document.execCommand('copy');
-                if (success) {
-                    alert('Copied to clipboard');
-                }
+                await navigator.clipboard.writeText(text);
+                await showAlert('Copied to clipboard', 'Success', { icon: 'success' });
             } catch (err) {
                 console.error('Copy failed:', err);
+                await showAlert('Failed to copy to clipboard', 'Error', { icon: 'error' });
             }
-
-            document.body.removeChild(textArea);
         }
 
         async function viewMessage() {
@@ -1073,19 +1062,12 @@
             }
         }
 
-        function copyMessage() {
-            const textArea = document.createElement('textarea');
-            textArea.value = currentMessageContent;
-            textArea.style.position = 'fixed';
-            textArea.style.opacity = '0';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            const success = document.execCommand('copy');
-            document.body.removeChild(textArea);
-
-            if (success) {
-                alert('Copied to clipboard');
+        async function copyMessage() {
+            try {
+                await navigator.clipboard.writeText(currentMessageContent);
+                await showAlert('Copied to clipboard', 'Success', { icon: 'success' });
+            } catch (err) {
+                await showAlert('Failed to copy to clipboard', 'Error', { icon: 'error' });
             }
         }
 
@@ -1182,17 +1164,24 @@
                 // Has Discord account - show scroll frame with account cards (matching settings page)
                 let avatarHtml;
                 if (currentUser.avatar) {
-                    avatarHtml = `<img src="https://cdn.discordapp.com/avatars/${currentUser.discord_id}/${currentUser.avatar}.png" alt="Discord Avatar" style="width: 100%; height: 100%; object-fit: cover;">`;
+                    avatarHtml = `<img src="https://cdn.discordapp.com/avatars/${currentUser.discord_id}/${currentUser.avatar}.png" alt="Discord Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
                 } else {
-                    avatarHtml = `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #5865f2 0%, #15d8bc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.9rem;">${currentUser.username ? currentUser.username[0].toUpperCase() : '?'}</div>`;
+                    avatarHtml = `<div style="width: 100%; height: 100%; background: linear-gradient(135deg, #5865f2 0%, #15d8bc 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.9rem; border-radius: 50%;">${currentUser.username ? currentUser.username[0].toUpperCase() : '?'}</div>`;
+                }
+
+                // Add avatar decoration if present
+                let decorationHtml = '';
+                if (currentUser.discord_oauth_avatar_decoration) {
+                    decorationHtml = `<img src="https://cdn.discordapp.com/avatar-decoration-presets/${currentUser.discord_oauth_avatar_decoration}.png?size=160&passthrough=true" alt="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 130%; height: 130%; pointer-events: none; z-index: 1;">`;
                 }
 
                 discordContent.innerHTML = `
                     <div style="display: flex; flex-direction: column;">
                         <!-- Linked Discord Account -->
                         <div style="background: #212227; border-radius: 8px; padding: 0.4rem 0.6rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                            <div style="width: 32px; height: 32px; border-radius: 50%; overflow: visible; flex-shrink: 0; display: flex; align-items: center; justify-content: center; position: relative;">
                                 ${avatarHtml}
+                                ${decorationHtml}
                             </div>
                             <div style="flex: 1; min-width: 0;">
                                 <div style="color: #dcddde; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; line-height: 1.2; margin: 0; padding: 0;">${currentUser.username || 'Unknown User'}</div>

@@ -190,6 +190,11 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN discord_oauth_avatar_decoration TEXT')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Add adzsend_id column if it doesn't exist (unique user ID)
     try:
         cursor.execute('ALTER TABLE users ADD COLUMN adzsend_id TEXT')
@@ -2279,7 +2284,7 @@ def is_code_rate_limited(email, purpose='login'):
 # DISCORD OAUTH ACCOUNT LINKING FUNCTIONS
 # =============================================================================
 
-def save_discord_oauth(user_id, discord_id, username, avatar, access_token, refresh_token, expires_at):
+def save_discord_oauth(user_id, discord_id, username, avatar, access_token, refresh_token, expires_at, avatar_decoration=None):
     """Save Discord OAuth tokens after successful authorization."""
     conn = get_db()
     cursor = conn.cursor()
@@ -2293,11 +2298,12 @@ def save_discord_oauth(user_id, discord_id, username, avatar, access_token, refr
             discord_oauth_discord_id = ?,
             discord_oauth_username = ?,
             discord_oauth_avatar = ?,
+            discord_oauth_avatar_decoration = ?,
             discord_oauth_access_token = ?,
             discord_oauth_refresh_token = ?,
             discord_oauth_expires_at = ?
         WHERE id = ?
-    ''', (discord_id, username, avatar, encrypted_access, encrypted_refresh, expires_at, user_id))
+    ''', (discord_id, username, avatar, avatar_decoration, encrypted_access, encrypted_refresh, expires_at, user_id))
 
     conn.commit()
     conn.close()
@@ -2336,7 +2342,8 @@ def get_discord_oauth_info(user_id):
 
     cursor.execute('''
         SELECT discord_oauth_linked, discord_oauth_discord_id, discord_oauth_username,
-               discord_oauth_avatar, discord_oauth_linked_at, discord_id, username, avatar
+               discord_oauth_avatar, discord_oauth_linked_at, discord_id, username, avatar,
+               discord_oauth_avatar_decoration
         FROM users WHERE id = ?
     ''', (user_id,))
 
@@ -2356,7 +2363,8 @@ def get_discord_oauth_info(user_id):
         # Current linked account info (after full linking)
         'linked_discord_id': result[5],
         'linked_username': result[6],
-        'linked_avatar': result[7]
+        'linked_avatar': result[7],
+        'oauth_avatar_decoration': result[8]
     }
 
 

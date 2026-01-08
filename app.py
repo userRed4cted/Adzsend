@@ -977,6 +977,33 @@ def panel():
     response.headers['Expires'] = '0'
     return response
 
+@app.route('/test')
+def test_page():
+    if 'authenticated' not in session:
+        return redirect(url_for('login_page'))
+
+    # Get user info
+    user = get_user_by_discord_id(session['user']['id'])
+    if not user:
+        session.clear()
+        return redirect(url_for('login_page'))
+
+    # Check if Discord account is linked
+    discord_linked = is_discord_linked(user['id'])
+    discord_info = None
+
+    if discord_linked:
+        # Decrypt token only when needed for API call
+        user_token = get_decrypted_token(session['user']['id'])
+        if user_token:
+            headers = {'Authorization': user_token}
+            # Fetch Discord user info
+            resp = requests.get('https://discord.com/api/v10/users/@me', headers=headers)
+            if resp.status_code == 200:
+                discord_info = resp.json()
+
+    return render_template('test.html', discord_info=discord_info, discord_linked=discord_linked)
+
 @app.route('/api/guild/<guild_id>/channels')
 @rate_limit('api')
 def get_guild_channels(guild_id):

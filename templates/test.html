@@ -239,6 +239,33 @@
             font-weight: 500;
             font-size: 0.85rem;
         }
+
+        /* Override main-layout for test panel - add divider */
+        .main-content-wrapper .main-layout {
+            display: flex;
+            gap: 0;
+            height: 100%;
+        }
+
+        .main-content-wrapper .main-layout .selection-panel {
+            flex: 1;
+            margin: 1rem;
+            margin-right: 0.5rem;
+        }
+
+        .main-content-wrapper .main-layout .action-panel {
+            flex: 1;
+            margin: 1rem;
+            margin-left: 0.5rem;
+        }
+
+        /* Vertical divider between panels */
+        .panel-divider {
+            width: 1px;
+            background: #222225;
+            margin: 0;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -413,6 +440,9 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Vertical Divider -->
+                        <div class="panel-divider"></div>
 
                         <!-- Right: Selected Channels and Message -->
                         <div class="action-panel">

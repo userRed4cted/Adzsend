@@ -295,7 +295,7 @@
 
                         <!-- Personal/Business Toggle -->
                         {% set is_business_plan = plan_status.has_plan and plan_status.plan_id and plan_status.plan_id.startswith('team_plan_') %}
-                        <div style="display: flex; gap: 1.5rem; margin: 1rem 0; padding-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                        <div style="display: flex; gap: 1.5rem; padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: {% if not plan_status.has_plan or is_business_plan %}not-allowed{% else %}pointer{% endif %}; opacity: {% if not plan_status.has_plan or is_business_plan %}0.5{% else %}1{% endif %};">
                                 <input type="radio" name="usage-view" value="personal" {% if not is_business_plan %}checked{% endif %} {% if not plan_status.has_plan or is_business_plan %}disabled{% endif %} style="cursor: {% if not plan_status.has_plan or is_business_plan %}not-allowed{% else %}pointer{% endif %};">
                                 <span style="color: #dcddde; font-weight: 500;">Personal</span>
@@ -307,111 +307,115 @@
                         </div>
 
                         <div class="settings-panel-content" id="personal-usage" {% if has_business %}style="display: block;"{% endif %}>
-                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
-                                <div class="usage-label">
-                                    Allowance
-                                    {% if plan_status.has_plan and plan_status.usage_type == 'allowance' %}
-                                        (per {% if plan_status.allowance_period == 'weekly' %}week{% elif plan_status.allowance_period == 'monthly' %}month{% elif plan_status.allowance_period == 'daily' %}day{% endif %})
-                                    {% elif plan_status.has_plan and plan_status.usage_type == 'amount' %}
-                                        (total)
-                                    {% endif %}
+                            <div style="display: flex; flex-direction: column; gap: 1rem; padding-top: 1rem;">
+                                <div class="usage-stat">
+                                    <div class="usage-label">
+                                        Allowance
+                                        {% if plan_status.has_plan and plan_status.usage_type == 'allowance' %}
+                                            (per {% if plan_status.allowance_period == 'weekly' %}week{% elif plan_status.allowance_period == 'monthly' %}month{% elif plan_status.allowance_period == 'daily' %}day{% endif %})
+                                        {% elif plan_status.has_plan and plan_status.usage_type == 'amount' %}
+                                            (total)
+                                        {% endif %}
+                                    </div>
+                                    <div class="usage-value">
+                                        {% if plan_status.is_unlimited %}
+                                            inf
+                                        {% elif plan_status.has_plan %}
+                                            {{ plan_status.message_limit }}
+                                        {% else %}
+                                            0
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                <div class="usage-value">
-                                    {% if plan_status.is_unlimited %}
-                                        inf
-                                    {% elif plan_status.has_plan %}
-                                        {{ plan_status.message_limit }}
-                                    {% else %}
-                                        0
-                                    {% endif %}
+                                <div class="usage-stat">
+                                    <div class="usage-label">Advertisements sent (with current plan)</div>
+                                    <div class="usage-value">
+                                        {% if plan_status.has_plan %}
+                                            {{ plan_status.messages_sent }}
+                                        {% else %}
+                                            0
+                                        {% endif %}
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
-                                <div class="usage-label">Advertisements sent (with current plan)</div>
-                                <div class="usage-value">
-                                    {% if plan_status.has_plan %}
-                                        {{ plan_status.messages_sent }}
-                                    {% else %}
-                                        0
-                                    {% endif %}
+                                <div class="usage-stat">
+                                    <div class="usage-label">All time ads sent</div>
+                                    <div class="usage-value">{{ plan_status.all_time_sent }}</div>
                                 </div>
-                            </div>
-                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
-                                <div class="usage-label">All time ads sent</div>
-                                <div class="usage-value">{{ plan_status.all_time_sent }}</div>
-                            </div>
-                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
-                                <div class="usage-label">Usage percentage</div>
-                                <div class="usage-value">
-                                    {% if plan_status.is_unlimited %}
-                                        0%
-                                    {% elif plan_status.has_plan and plan_status.message_limit > 0 %}
-                                        {{ ((plan_status.messages_sent / plan_status.message_limit) * 100)|round(0)|int }}%
-                                    {% else %}
-                                        0%
-                                    {% endif %}
+                                <div class="usage-stat">
+                                    <div class="usage-label">Usage percentage</div>
+                                    <div class="usage-value">
+                                        {% if plan_status.is_unlimited %}
+                                            0%
+                                        {% elif plan_status.has_plan and plan_status.message_limit > 0 %}
+                                            {{ ((plan_status.messages_sent / plan_status.message_limit) * 100)|round(0)|int }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </div>
+                                    <div class="usage-progress-bar" style="margin-top: 0.5rem;">
+                                        <div class="usage-progress-fill" style="width: {% if plan_status.is_unlimited %}0{% elif plan_status.has_plan and plan_status.message_limit > 0 %}{{ ((plan_status.messages_sent / plan_status.message_limit) * 100)|round(0)|int }}{% else %}0{% endif %}%;"></div>
+                                    </div>
                                 </div>
-                                <div class="usage-progress-bar" style="margin-top: 0.5rem;">
-                                    <div class="usage-progress-fill" style="width: {% if plan_status.is_unlimited %}0{% elif plan_status.has_plan and plan_status.message_limit > 0 %}{{ ((plan_status.messages_sent / plan_status.message_limit) * 100)|round(0)|int }}{% else %}0{% endif %}%;"></div>
+                                {% if plan_status.has_plan and plan_status.usage_type == 'allowance' and plan_status.next_reset %}
+                                <div class="usage-stat">
+                                    <div class="usage-label">Limit resets in</div>
+                                    <div class="usage-value" id="resetCountdown" data-reset-time="{{ plan_status.next_reset }}">Calculating...</div>
                                 </div>
+                                {% endif %}
                             </div>
-                            {% if plan_status.has_plan and plan_status.usage_type == 'allowance' and plan_status.next_reset %}
-                            <div class="usage-stat" style="margin-top: 1rem;">
-                                <div class="usage-label">Limit resets in</div>
-                                <div class="usage-value" id="resetCountdown" data-reset-time="{{ plan_status.next_reset }}">Calculating...</div>
-                            </div>
-                            {% endif %}
                         </div>
 
                         <!-- Business Usage Section -->
                         {% if has_business and business_plan_status %}
                         <div class="settings-panel-content" id="business-usage" style="display: none;">
-                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
-                                <div class="usage-label">
-                                    Allowance
-                                    {% if business_plan_status.usage_type == 'allowance' %}
-                                        (per {% if business_plan_status.allowance_period == 'weekly' %}week{% elif business_plan_status.allowance_period == 'monthly' %}month{% elif business_plan_status.allowance_period == 'daily' %}day{% endif %})
-                                    {% elif business_plan_status.usage_type == 'amount' %}
-                                        (total)
-                                    {% endif %}
+                            <div style="display: flex; flex-direction: column; gap: 1rem; padding-top: 1rem;">
+                                <div class="usage-stat">
+                                    <div class="usage-label">
+                                        Allowance
+                                        {% if business_plan_status.usage_type == 'allowance' %}
+                                            (per {% if business_plan_status.allowance_period == 'weekly' %}week{% elif business_plan_status.allowance_period == 'monthly' %}month{% elif business_plan_status.allowance_period == 'daily' %}day{% endif %})
+                                        {% elif business_plan_status.usage_type == 'amount' %}
+                                            (total)
+                                        {% endif %}
+                                    </div>
+                                    <div class="usage-value">
+                                        {% if business_plan_status.is_unlimited %}
+                                            inf
+                                        {% else %}
+                                            {{ business_plan_status.message_limit }}
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                <div class="usage-value">
-                                    {% if business_plan_status.is_unlimited %}
-                                        inf
-                                    {% else %}
-                                        {{ business_plan_status.message_limit }}
-                                    {% endif %}
+                                <div class="usage-stat">
+                                    <div class="usage-label">Advertisements sent (with current plan)</div>
+                                    <div class="usage-value">{{ business_plan_status.messages_sent }}</div>
                                 </div>
-                            </div>
-                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
-                                <div class="usage-label">Advertisements sent (with current plan)</div>
-                                <div class="usage-value">{{ business_plan_status.messages_sent }}</div>
-                            </div>
-                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
-                                <div class="usage-label">All time ads sent (across all team members)</div>
-                                <div class="usage-value">{{ business_plan_status.all_time_sent }}</div>
-                            </div>
-                            <div class="usage-stat" style="margin-bottom: 0.75rem;">
-                                <div class="usage-label">Usage percentage</div>
-                                <div class="usage-value">
-                                    {% if business_plan_status.is_unlimited %}
-                                        0%
-                                    {% elif business_plan_status.message_limit > 0 %}
-                                        {{ ((business_plan_status.messages_sent / business_plan_status.message_limit) * 100)|round(0)|int }}%
-                                    {% else %}
-                                        0%
-                                    {% endif %}
+                                <div class="usage-stat">
+                                    <div class="usage-label">All time ads sent (across all team members)</div>
+                                    <div class="usage-value">{{ business_plan_status.all_time_sent }}</div>
                                 </div>
-                                <div class="usage-progress-bar" style="margin-top: 0.5rem;">
-                                    <div class="usage-progress-fill" style="width: {% if business_plan_status.is_unlimited %}0{% elif business_plan_status.message_limit > 0 %}{{ ((business_plan_status.messages_sent / business_plan_status.message_limit) * 100)|round(0)|int }}{% else %}0{% endif %}%;"></div>
+                                <div class="usage-stat">
+                                    <div class="usage-label">Usage percentage</div>
+                                    <div class="usage-value">
+                                        {% if business_plan_status.is_unlimited %}
+                                            0%
+                                        {% elif business_plan_status.message_limit > 0 %}
+                                            {{ ((business_plan_status.messages_sent / business_plan_status.message_limit) * 100)|round(0)|int }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </div>
+                                    <div class="usage-progress-bar" style="margin-top: 0.5rem;">
+                                        <div class="usage-progress-fill" style="width: {% if business_plan_status.is_unlimited %}0{% elif business_plan_status.message_limit > 0 %}{{ ((business_plan_status.messages_sent / business_plan_status.message_limit) * 100)|round(0)|int }}{% else %}0{% endif %}%;"></div>
+                                    </div>
                                 </div>
+                                {% if business_plan_status.usage_type == 'allowance' and business_plan_status.next_reset %}
+                                <div class="usage-stat">
+                                    <div class="usage-label">Limit resets in</div>
+                                    <div class="usage-value" id="businessResetCountdown" data-reset-time="{{ business_plan_status.next_reset }}">Calculating...</div>
+                                </div>
+                                {% endif %}
                             </div>
-                            {% if business_plan_status.usage_type == 'allowance' and business_plan_status.next_reset %}
-                            <div class="usage-stat" style="margin-top: 1rem;">
-                                <div class="usage-label">Limit resets in</div>
-                                <div class="usage-value" id="businessResetCountdown" data-reset-time="{{ business_plan_status.next_reset }}">Calculating...</div>
-                            </div>
-                            {% endif %}
                         </div>
                         {% endif %}
                     </div>
@@ -546,24 +550,26 @@
                             </div>
 
                             <!-- Account Section -->
-                            <div class="setting-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-                                <div class="usage-label">Account email</div>
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-                                    <div style="flex: 1; position: relative; display: flex; align-items: center;">
-                                        <input type="email" id="emailInput" value="{{ user_email }}" readonly style="width: 100%; padding: 0.6rem 2.5rem 0.6rem 0.75rem; background: #212227; border: none; border-radius: 6px; color: #717688; font-size: 0.9rem; outline: none;">
-                                        <img src="{{ url_for('static', filename='tick.png') }}" id="saveEmailTick" alt="Save" style="position: absolute; right: 0.75rem; width: 18px; height: 18px; cursor: pointer; opacity: 0.3; pointer-events: none; filter: brightness(0.5) opacity(0.7); transition: opacity 0.2s ease;">
+                            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 1rem;">
+                                <div class="setting-group">
+                                    <div class="usage-label">Account email</div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <div style="flex: 1; position: relative; display: flex; align-items: center;">
+                                            <input type="email" id="emailInput" value="{{ user_email }}" readonly style="width: 100%; padding: 0.6rem 2.5rem 0.6rem 0.75rem; background: #212227; border: none; border-radius: 6px; color: #717688; font-size: 0.9rem; outline: none;">
+                                            <img src="{{ url_for('static', filename='tick.png') }}" id="saveEmailTick" alt="Save" style="position: absolute; right: 0.75rem; width: 18px; height: 18px; cursor: pointer; opacity: 0.3; pointer-events: none; filter: brightness(0.5) opacity(0.7); transition: opacity 0.2s ease;">
+                                        </div>
+                                        <button type="button" id="editEmailBtn" style="padding: 0.6rem 1rem; background: transparent; border: none; color: #15d8bc; font-weight: 500; cursor: pointer; font-size: 0.9rem;">Edit</button>
                                     </div>
-                                    <button type="button" id="editEmailBtn" style="padding: 0.6rem 1rem; background: transparent; border: none; color: #15d8bc; font-weight: 500; cursor: pointer; font-size: 0.9rem;">Edit</button>
                                 </div>
-                            </div>
 
-                            <!-- Adzsend ID Section -->
-                            <div class="setting-group" style="margin-top: 1rem;">
-                                <div class="usage-label">Adzsend user ID</div>
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-                                    <div style="flex: 1; position: relative; display: flex; align-items: center;">
-                                        <input type="text" id="adzsendIdInput" value="{{ adzsend_id or 'Loading...' }}" readonly style="width: 100%; padding: 0.6rem 2.5rem 0.6rem 0.75rem; background: #212227; border: none; border-radius: 6px; color: #717688; font-size: 0.9rem; outline: none; cursor: default;">
-                                        <img src="{{ url_for('static', filename='copy.png') }}" id="copyAdzsendIdBtn" alt="Copy" style="position: absolute; right: 0.75rem; width: 18px; height: 18px; cursor: pointer; opacity: 0.6; filter: brightness(0.5) opacity(0.7);" onclick="copyAdzsendId()">
+                                <!-- Adzsend ID Section -->
+                                <div class="setting-group">
+                                    <div class="usage-label">Adzsend user ID</div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <div style="flex: 1; position: relative; display: flex; align-items: center;">
+                                            <input type="text" id="adzsendIdInput" value="{{ adzsend_id or 'Loading...' }}" readonly style="width: 100%; padding: 0.6rem 2.5rem 0.6rem 0.75rem; background: #212227; border: none; border-radius: 6px; color: #717688; font-size: 0.9rem; outline: none; cursor: default;">
+                                            <img src="{{ url_for('static', filename='copy.png') }}" id="copyAdzsendIdBtn" alt="Copy" style="position: absolute; right: 0.75rem; width: 18px; height: 18px; cursor: pointer; opacity: 0.6; filter: brightness(0.5) opacity(0.7);" onclick="copyAdzsendId()">
+                                        </div>
                                     </div>
                                 </div>
                             </div>

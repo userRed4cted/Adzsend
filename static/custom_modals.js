@@ -59,13 +59,13 @@
                 color: #fff;
                 font-size: 18px;
                 font-weight: 600;
-                margin-bottom: 16px;
+                margin-bottom: 8px;
             }
             .custom-modal-content {
                 color: #e0e0e0;
                 font-size: 14px;
                 line-height: 1.6;
-                margin-bottom: 24px;
+                margin-bottom: 12px;
                 white-space: pre-wrap;
                 word-wrap: break-word;
             }
@@ -140,22 +140,25 @@
     // Only allows safe HTML tags and attributes
     function sanitizeHtml(html) {
         const div = document.createElement('div');
-        div.textContent = html; // First escape everything
-        let sanitized = div.innerHTML;
+        div.innerHTML = html;
 
-        // Allow only specific safe HTML tags
-        const allowedTags = ['br', 'strong', 'b', 'em', 'i', 'u', 'span', 'div'];
-        const tagPattern = /<(\/?)([\w]+)([^>]*)>/g;
+        // Remove script tags and event handlers
+        const scripts = div.querySelectorAll('script');
+        scripts.forEach(script => script.remove());
 
-        sanitized = sanitized.replace(tagPattern, (match, slash, tag, attrs) => {
-            if (allowedTags.includes(tag.toLowerCase())) {
-                // Strip all attributes to prevent XSS via attributes
-                return `<${slash}${tag}>`;
-            }
-            return ''; // Remove disallowed tags
+        // Remove dangerous event handlers from all elements
+        const allElements = div.querySelectorAll('*');
+        allElements.forEach(el => {
+            // Remove inline event handlers except onclick (which we need for collapsible sections)
+            const attrs = Array.from(el.attributes);
+            attrs.forEach(attr => {
+                if (attr.name.startsWith('on') && attr.name !== 'onclick') {
+                    el.removeAttribute(attr.name);
+                }
+            });
         });
 
-        return sanitized;
+        return div.innerHTML;
     }
 
     // Alert function - returns a Promise

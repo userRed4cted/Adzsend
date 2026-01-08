@@ -68,7 +68,7 @@
                     <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
                 </svg>
                 <h2 style="color: #991a35; margin: 0;">Account Banned</h2>
-                <p style="color: #949BA4; margin: 0; text-align: center; max-width: 400px;">Your account has been banned from using the panel. If you believe this is a mistake, please contact support.</p>
+                <p style="color: #81828A; margin: 0; text-align: center; max-width: 400px;">Your account has been banned from using the panel. If you believe this is a mistake, please contact support.</p>
             </div>
             {% endif %}
 
@@ -103,7 +103,7 @@
                                             <div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #15d8bc, #006e59); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 0.9rem;">{{ (member.member_adzsend_id or '??')[:2] }}</div>
                                         </div>
                                         <div class="member-info">
-                                            <div class="member-username" style="font-family: 'Roboto Mono', monospace;">{{ member.member_adzsend_id or 'No ID' }}</div>
+                                            <div class="member-username" style="font-family: monospace;">{{ member.member_adzsend_id or 'No ID' }}</div>
                                         </div>
                                         {% set status = member.invitation_status or 'pending' %}
                                         {% if status == 'pending' %}
@@ -173,7 +173,7 @@
                                             <div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #15d8bc, #006e59); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600; font-size: 0.9rem;">{{ (stat.member_adzsend_id or '??')[:2] }}</div>
                                         </div>
                                         <div class="member-stat-info">
-                                            <div class="member-stat-username" style="font-family: 'Roboto Mono', monospace;">
+                                            <div class="member-stat-username" style="font-family: monospace;">
                                                 {{ stat.member_adzsend_id or 'No ID' }}
                                                 {% if stat.is_owner %}
                                                     <span style="background: linear-gradient(to bottom, #15d8bc, #006e59); color: #121215; font-size: 0.6rem; padding: 0.2rem 0.4rem; border-radius: 3px; margin-left: 0.5rem; font-weight: 500; line-height: 1.2; display: inline-block; vertical-align: middle;">Owner</span>
@@ -296,15 +296,15 @@
         }
 
         .member-email {
-            color: #949ba4;
+            color: #81828A;
             font-size: 0.8rem;
-            font-family: 'Roboto', sans-serif;
+            font-family: 'gg sans', sans-serif;
         }
 
         .member-email-only {
             color: #dcddde;
             font-size: 0.9rem;
-            font-family: 'Roboto', sans-serif;
+            font-family: 'gg sans', sans-serif;
         }
 
         .member-info {
@@ -359,7 +359,7 @@
 
         .status-no-account {
             background: linear-gradient(to bottom, #3a3a4d, #2a2a3d);
-            color: #949ba4;
+            color: #81828A;
         }
 
         .member-remove-btn {
@@ -400,7 +400,7 @@
 
         .panel-subheader {
             font-size: 0.9rem;
-            color: #949ba4;
+            color: #81828A;
         }
 
         /* Member Statistics Styles */
@@ -471,9 +471,9 @@
         }
 
         .member-stat-id {
-            color: #949ba4;
+            color: #81828A;
             font-size: 0.8rem;
-            font-family: 'Roboto', sans-serif;
+            font-family: 'gg sans', sans-serif;
         }
 
         .member-stat-usage {
@@ -494,7 +494,7 @@
         }
 
         .stat-label {
-            color: #949ba4;
+            color: #81828A;
             font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -565,7 +565,7 @@
         .analytics-dialog-close {
             background: none;
             border: none;
-            color: #949ba4;
+            color: #81828A;
             cursor: pointer;
             font-size: 1.5rem;
             line-height: 1;
@@ -586,7 +586,7 @@
             padding: 0.75rem;
             background: none;
             border: none;
-            color: #949ba4;
+            color: #81828A;
             cursor: pointer;
             font-size: 0.9rem;
             transition: all 0.2s ease;
@@ -629,7 +629,7 @@
         }
 
         .analytics-stat-label {
-            color: #949ba4;
+            color: #81828A;
             font-size: 0.9rem;
         }
 
@@ -670,7 +670,7 @@
         }
 
         .date-input-group label {
-            color: #949ba4;
+            color: #81828A;
             font-size: 0.75rem;
             text-transform: uppercase;
         }
@@ -765,7 +765,7 @@
         }
 
         .chart-summary-label {
-            color: #949ba4;
+            color: #81828A;
             font-size: 0.7rem;
             text-transform: uppercase;
             margin-top: 0.25rem;
@@ -773,7 +773,7 @@
 
         .no-data-message {
             text-align: center;
-            color: #949ba4;
+            color: #81828A;
             padding: 2rem;
         }
     </style>
@@ -1187,7 +1187,7 @@
             ctx.clearRect(0, 0, width, height);
 
             if (chartData.length === 0) {
-                ctx.fillStyle = '#949ba4';
+                ctx.fillStyle = '#81828A';
                 ctx.font = '14px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText('No data for selected period', width / 2, height / 2);
@@ -1245,7 +1245,7 @@
             });
 
             // Draw Y-axis labels
-            ctx.fillStyle = '#949ba4';
+            ctx.fillStyle = '#81828A';
             ctx.font = '11px sans-serif';
             ctx.textAlign = 'right';
             ctx.fillText(maxCount.toString(), padding.left - 5, padding.top + 5);

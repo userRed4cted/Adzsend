@@ -68,7 +68,7 @@
                     <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
                 </svg>
                 <h2 style="color: #991a35; margin: 0;">Account Banned</h2>
-                <p style="color: #949BA4; margin: 0; text-align: center; max-width: 400px;">Your account has been banned from using the panel. If you believe this is a mistake, please contact support.</p>
+                <p style="color: #81828A; margin: 0; text-align: center; max-width: 400px;">Your account has been banned from using the panel. If you believe this is a mistake, please contact support.</p>
             </div>
             {% endif %}
 
@@ -87,7 +87,7 @@
                             <div class="header-section">
                                 <div class="panel-header" style="margin-top: 0.75rem;">Your servers</div>
                                 <div class="server-search-container">
-                                    <input type="text" id="server-search" class="search-input" placeholder="Search servers...">
+                                    <input type="text" id="server-search" class="search-input" placeholder="Search">
                                 </div>
                             </div>
                         </div>
@@ -97,10 +97,10 @@
                             <div class="header-section">
                                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; margin-bottom: 0.5rem;">
                                     <div class="panel-header" style="margin: 0;">All channels</div>
-                                    <span style="color: #72767d; font-size: 0.7rem; font-style: italic;">All channels shown regardless of permissions</span>
+                                    <span style="color: #81828A; font-size: 0.7rem; font-style: italic;">All channels shown regardless of permissions</span>
                                 </div>
                                 <div class="server-search-container">
-                                    <input type="text" id="channels-only-search" class="search-input" placeholder="Search channels...">
+                                    <input type="text" id="channels-only-search" class="search-input" placeholder="Search">
                                     <div class="search-tags" id="channels-only-search-tags"></div>
                                 </div>
                             </div>
@@ -117,12 +117,12 @@
                         <div class="channels-section servers-mode-section">
                             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
                                 <div class="panel-header" style="margin: 0;">Channels</div>
-                                <span style="color: #72767d; font-size: 0.7rem; font-style: italic;">All channels shown regardless of permissions</span>
+                                <span style="color: #81828A; font-size: 0.7rem; font-style: italic;">All channels shown regardless of permissions</span>
                             </div>
 
                             <!-- Search Bar -->
                             <div class="channels-search" style="margin-bottom: 0;">
-                                <input type="text" id="channel-search" class="search-input" placeholder="Search channels...">
+                                <input type="text" id="channel-search" class="search-input" placeholder="Search">
                                 <div class="search-tags" id="search-tags"></div>
                             </div>
 
@@ -146,7 +146,7 @@
                             <div class="header-section">
                                 <div class="panel-header">Selected channels</div>
                                 <div class="selected-search-container">
-                                    <input type="text" id="selected-search" class="search-input" placeholder="Search selected channels...">
+                                    <input type="text" id="selected-search" class="search-input" placeholder="Search">
                                 </div>
                             </div>
                         </div>
@@ -210,7 +210,7 @@
     <div id="tag-limit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
         <div style="background: #191A1F; border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; text-align: center; display: flex; flex-direction: column; gap: 1rem;">
             <h2 style="color: #dcddde; margin: 0; font-size: 1.25rem;">Tag limit reached</h2>
-            <p style="color: #949BA4; margin: 0; font-size: 0.9rem;">Maximum 6 tags allowed. Please remove a tag before adding a new one.</p>
+            <p style="color: #81828A; margin: 0; font-size: 0.9rem;">Maximum 6 tags allowed. Please remove a tag before adding a new one.</p>
             <button class="grey-btn" onclick="closeTagLimitModal()" style="padding: 0.6rem 2rem;">OK</button>
         </div>
     </div>
@@ -219,7 +219,7 @@
     <div id="channel-limit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
         <div style="background: #191A1F; border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; text-align: center; display: flex; flex-direction: column; gap: 1rem;">
             <h2 style="color: #dcddde; margin: 0; font-size: 1.25rem;">Channel limit reached</h2>
-            <p id="channel-limit-message" style="color: #949BA4; margin: 0; font-size: 0.9rem;">You can only select up to X channels per server on your current plan.</p>
+            <p id="channel-limit-message" style="color: #81828A; margin: 0; font-size: 0.9rem;">You can only select up to X channels per server on your current plan.</p>
             <button class="grey-btn" onclick="closeChannelLimitModal()" style="padding: 0.6rem 2rem;">OK</button>
         </div>
     </div>
@@ -469,7 +469,7 @@
                                 }
                                 <span class="channel-name" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"># ${channel.name}</span>
                             </div>
-                            <span class="channel-guild" style="color: #949BA4; font-size: 0.75rem; flex-shrink: 0;">${channel.guildName}</span>
+                            <span class="channel-guild" style="color: #81828A; font-size: 0.75rem; flex-shrink: 0;">${channel.guildName}</span>
                         </div>
                     `;
                 }).join('');
@@ -723,7 +723,7 @@
                 serversList.innerHTML = '';
 
                 if (!guilds || guilds.length === 0) {
-                    serversList.innerHTML = '<div style="color: #949ba4; padding: 1rem;">No servers found</div>';
+                    serversList.innerHTML = '<div style="color: #81828A; padding: 1rem;">No servers found</div>';
                     return;
                 }
 
@@ -733,7 +733,7 @@
                 );
 
                 if (filteredGuilds.length === 0) {
-                    serversList.innerHTML = '<div style="color: #949ba4; padding: 1rem;">No servers match search</div>';
+                    serversList.innerHTML = '<div style="color: #81828A; padding: 1rem;">No servers match search</div>';
                     return;
                 }
 
@@ -1367,7 +1367,7 @@
                         .channel-item {
                             padding: 0 !important;
                             margin: 0 !important;
-                            color: #949BA4;
+                            color: #81828A;
                             font-size: 0.75rem;
                             background: transparent;
                             line-height: 1;

@@ -216,7 +216,7 @@
         }
 
         .user-item-id {
-            color: #949BA4;
+            color: #81828A;
             font-size: 12px;
         }
 
@@ -232,7 +232,7 @@
             align-items: center;
             justify-content: center;
             height: 100%;
-            color: #949BA4;
+            color: #81828A;
             font-size: 16px;
         }
 
@@ -256,7 +256,7 @@
         }
 
         .detail-label {
-            color: #949BA4;
+            color: #81828A;
             font-size: 14px;
             width: 200px;
             flex-shrink: 0;
@@ -386,7 +386,7 @@
         }
 
         .dialog-content {
-            color: #949BA4;
+            color: #81828A;
             font-size: 0.9rem;
             line-height: 1.6;
             margin: 0;
@@ -438,7 +438,7 @@
         }
 
         .no-users {
-            color: #949BA4;
+            color: #81828A;
             font-size: 14px;
             text-align: center;
             padding: 20px;
@@ -450,24 +450,36 @@
 
         .search-input {
             width: 100%;
-            padding: 10px 12px;
-            background: #212227;
-            border: none;
-            border-radius: 6px;
-            color: #fff;
-            font-size: 14px;
+            padding: 0.35rem 0.75rem;
+            padding-left: 2.5rem;
+            background-color: #1A1A1E;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2381828A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 0.75rem center;
+            background-size: 16px 16px;
+            border: 1px solid #222225;
+            border-radius: 8px;
+            color: #81828A;
+            font-size: 0.85rem;
+            box-sizing: border-box;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
         }
 
         .search-input:focus {
             outline: none;
+            background-color: #1A1A1E;
+            border-color: #222225;
         }
 
         .search-input:active {
             transform: none;
+            border-color: #222225;
         }
 
         .search-input::placeholder {
-            color: #949BA4;
+            color: #81828A;
         }
 
         /* Scrollbar styling */
@@ -536,7 +548,7 @@
             <!-- Left Panel: Filters and User List -->
             <div class="admin-left-panel">
                 <div class="search-section">
-                    <input type="text" id="user-search" class="search-input" placeholder="Search by email or Adzsend ID...">
+                    <input type="text" id="user-search" class="search-input" placeholder="Search">
                 </div>
 
                 <div class="admin-filters">
@@ -883,7 +895,7 @@
             // Show loading indicator while fetching user details
             const panel = document.getElementById('user-details-panel');
             panel.innerHTML = `
-                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #949BA4; font-size: 1rem;">
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #81828A; font-size: 1rem;">
                     Loading...
                 </div>
             `;
@@ -1088,13 +1100,13 @@
                         historyHtml = data.history.map(sub => {
                             const startDate = formatDate(sub.start_date);
                             const endDate = sub.end_date ? formatDate(sub.end_date) : 'No expiry';
-                            const status = sub.is_active ? '<span style="color: #57f287;">Active</span>' : '<span style="color: #949BA4;">Inactive</span>';
+                            const status = sub.is_active ? '<span style="color: #57f287;">Active</span>' : '<span style="color: #81828A;">Inactive</span>';
                             return `<div style="padding: 10px; border-radius: 6px; margin-bottom: 4px;">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                                     <strong style="color: #fff;">${sub.plan_name || sub.plan_id}</strong>
                                     ${status}
                                 </div>
-                                <div style="font-size: 12px; color: #949BA4;">
+                                <div style="font-size: 12px; color: #81828A;">
                                     <div>Type: ${sub.plan_type || 'subscription'}</div>
                                     <div>Billing: ${sub.billing_period || 'N/A'}</div>
                                     <div>Started (mm/dd/yy): ${startDate}</div>
@@ -1104,7 +1116,7 @@
                             </div>`;
                         }).join('');
                     } else {
-                        historyHtml = '<span style="color: #949BA4;">No billing history found</span>';
+                        historyHtml = '<span style="color: #81828A;">No billing history found</span>';
                     }
 
                     document.getElementById('dialog-title').textContent = 'Billing History';
@@ -1156,7 +1168,7 @@
                             <img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord" style="width: 28px; height: 28px; object-fit: contain; opacity: 0.5;">
                         </div>
                         <div style="flex: 1;">
-                            <div style="color: #949BA4; font-size: 0.9rem;">No Discord account linked</div>
+                            <div style="color: #81828A; font-size: 0.9rem;">No Discord account linked</div>
                         </div>
                     </div>
                 `;
@@ -1185,7 +1197,7 @@
                             </div>
                             <div style="flex: 1; min-width: 0;">
                                 <div style="color: #dcddde; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem; line-height: 1.2; margin: 0; padding: 0;">${currentUser.username || 'Unknown User'}</div>
-                                <div style="color: #949BA4; font-size: 0.75rem; display: flex; align-items: center; gap: 0.3rem; line-height: 1.2; margin: 0; padding: 0;">
+                                <div style="color: #81828A; font-size: 0.75rem; display: flex; align-items: center; gap: 0.3rem; line-height: 1.2; margin: 0; padding: 0;">
                                     <span>ID: ${currentUser.discord_id}</span>
                                     <img src="{{ url_for('static', filename='copy.png') }}" style="width: 12px; height: 12px; cursor: pointer; opacity: 0.6; filter: brightness(0.5) opacity(0.7);" onclick="copyToClipboard('${currentUser.discord_id}')" title="Copy ID">
                                 </div>
@@ -1221,22 +1233,22 @@
                     container.innerHTML = currentUser.subscriptions.filter(sub => sub.plan_id !== 'plan_free').map(sub => `
                         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                             <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                <div style="color: #949BA4; font-size: 0.85rem;">Status</div>
+                                <div style="color: #81828A; font-size: 0.85rem;">Status</div>
                                 <div style="color: #15d8bc; font-size: 0.95rem;">Active</div>
                             </div>
                             <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                <div style="color: #949BA4; font-size: 0.85rem;">Current plan</div>
+                                <div style="color: #81828A; font-size: 0.85rem;">Current plan</div>
                                 <div style="color: #dcddde; font-size: 0.95rem;">${sub.plan_name}</div>
                             </div>
                             ${sub.plan_type === 'subscription' && sub.billing_period ? `
                             <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                <div style="color: #949BA4; font-size: 0.85rem;">Billing period</div>
+                                <div style="color: #81828A; font-size: 0.85rem;">Billing period</div>
                                 <div style="color: #dcddde; font-size: 0.95rem;">${sub.billing_period.charAt(0).toUpperCase() + sub.billing_period.slice(1)}</div>
                             </div>
                             ` : ''}
                             ${sub.started_at ? `
                             <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                <div style="color: #949BA4; font-size: 0.85rem;">Plan started (mm/dd/yy)</div>
+                                <div style="color: #81828A; font-size: 0.85rem;">Plan started (mm/dd/yy)</div>
                                 <div style="color: #dcddde; font-size: 0.95rem;">${formatDate(sub.started_at)}</div>
                             </div>
                             ` : ''}
@@ -1247,11 +1259,11 @@
                     container.innerHTML = `
                         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                             <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                <div style="color: #949BA4; font-size: 0.85rem;">Status</div>
+                                <div style="color: #81828A; font-size: 0.85rem;">Status</div>
                                 <div style="color: #15d8bc; font-size: 0.95rem;">Active</div>
                             </div>
                             <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                <div style="color: #949BA4; font-size: 0.85rem;">Current plan</div>
+                                <div style="color: #81828A; font-size: 0.85rem;">Current plan</div>
                                 <div style="color: #dcddde; font-size: 0.95rem;">Free</div>
                             </div>
                         </div>
@@ -1265,7 +1277,7 @@
                     if (data.success && data.history && data.history.length > 0) {
                         // Compact invoice layout with no gaps
                         container.innerHTML = `
-                            <div style="display: flex; padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); color: #949BA4; font-size: 0.85rem; font-weight: 500; width: 100%; box-sizing: border-box; line-height: 1;">
+                            <div style="display: flex; padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); color: #81828A; font-size: 0.85rem; font-weight: 500; width: 100%; box-sizing: border-box; line-height: 1;">
                                 <div style="flex: 1.5; min-width: 0; padding-right: 0.5rem; box-sizing: border-box;">Date (mm/dd/yy)</div>
                                 <div style="flex: 1; min-width: 0; padding-right: 0.5rem; box-sizing: border-box;">Total</div>
                                 <div style="flex: 1; min-width: 0; box-sizing: border-box;">Status</div>
@@ -1276,14 +1288,14 @@
                                         <div style="flex: 1.5; min-width: 0; color: #dcddde; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 0.5rem; box-sizing: border-box;">${formatDate(item.start_date)}</div>
                                         <div style="flex: 1; min-width: 0; color: #dcddde; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 0.5rem; box-sizing: border-box;">$${item.price || '0.00'}</div>
                                         <div style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box;">
-                                            <span style="color: ${item.is_active ? '#15d8bc' : '#949BA4'}; font-size: 0.85rem;">${item.is_active ? 'Active' : 'Expired'}</span>
+                                            <span style="color: ${item.is_active ? '#15d8bc' : '#81828A'}; font-size: 0.85rem;">${item.is_active ? 'Active' : 'Expired'}</span>
                                         </div>
                                     </div>
                                 `).join('')}
                             </div>
                         `;
                     } else {
-                        container.innerHTML = '<div style="color: #949BA4; text-align: center; padding: 1.5rem;">No invoice history available</div>';
+                        container.innerHTML = '<div style="color: #81828A; text-align: center; padding: 1.5rem;">No invoice history available</div>';
                     }
                 } catch (error) {
                     console.error('Error loading invoice history:', error);
@@ -1347,11 +1359,11 @@
                         let usageHtml = `
                             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                                 <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                    <div style="color: #949BA4; font-size: 0.85rem;">Messages sent</div>
+                                    <div style="color: #81828A; font-size: 0.85rem;">Messages sent</div>
                                     <div style="color: #dcddde; font-size: 0.95rem;">${messagesSent}</div>
                                 </div>
                                 <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                    <div style="color: #949BA4; font-size: 0.85rem;">Message limit</div>
+                                    <div style="color: #81828A; font-size: 0.85rem;">Message limit</div>
                                     <div style="color: #dcddde; font-size: 0.95rem;">${planStatus.is_unlimited ? 'Unlimited' : planStatus.message_limit}</div>
                                 </div>`;
 
@@ -1359,7 +1371,7 @@
                         if (planStatus.usage_type === 'allowance' && nextReset) {
                             usageHtml += `
                                 <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                                    <div style="color: #949BA4; font-size: 0.85rem;">Limit resets in${periodLabel ? ` (${periodLabel})` : ''}</div>
+                                    <div style="color: #81828A; font-size: 0.85rem;">Limit resets in${periodLabel ? ` (${periodLabel})` : ''}</div>
                                     <div style="color: #dcddde; font-size: 0.95rem;">${resetCountdown}</div>
                                 </div>`;
                         }
@@ -1367,7 +1379,7 @@
                         usageHtml += `</div>`;
                         container.innerHTML = usageHtml;
                     } else {
-                        container.innerHTML = '<div style="text-align: center; color: #949BA4;">No usage data available</div>';
+                        container.innerHTML = '<div style="text-align: center; color: #81828A;">No usage data available</div>';
                     }
                 } catch (error) {
                     console.error('Error loading usage data:', error);

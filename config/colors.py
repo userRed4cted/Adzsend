@@ -30,7 +30,7 @@ COLORS = {
     # Used for various text elements
     'text_primary': '#ffffff',      # Main text - headings, body
     'text_secondary': '#a0a0b0',    # Muted text - descriptions
-    'text_muted': '#949BA4',        # Very muted - timestamps, meta
+    'text_muted': '#81828A',        # Very muted - timestamps, meta
 
     # ==========================================
     # STATUS COLORS
@@ -55,7 +55,7 @@ COLORS = {
     'discord': '#5662F6',           # Discord brand color
     'logout_red': '#991a35',        # Logout text color
     'admin_pink': '#ff0073',        # Admin text color
-    'scroll': '#717688',            # Scrollbar color
+    'scroll': '#666770',            # Scrollbar color
 
     # ==========================================
     # GALLERY GRADIENT

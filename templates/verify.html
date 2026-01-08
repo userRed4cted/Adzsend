@@ -63,7 +63,7 @@
             margin-top: 0.5rem;
         }
         .cooldown-timer {
-            color: #949BA4;
+            color: #81828A;
             font-size: 0.85rem;
             margin-top: 0.5rem;
         }
@@ -148,7 +148,7 @@
                 <div class="token-form">
                     <h2 class="form-title">Enter Verification Code</h2>
 
-                    <p style="color: #949BA4; margin-bottom: 1.5rem;">
+                    <p style="color: #81828A; margin-bottom: 1.5rem;">
                         We sent a 6-digit code to <span class="email-display">{{ email }}</span>
                     </p>
 
@@ -181,7 +181,7 @@
                         {% endif %}
                     </div>
 
-                    <p style="margin-top: 1.5rem; color: #949BA4; font-size: 0.9rem;">
+                    <p style="margin-top: 1.5rem; color: #81828A; font-size: 0.9rem;">
                         Wrong email? <a href="{% if purpose == 'email_change' %}{{ url_for('settings') }}{% elif purpose == 'login' %}{{ url_for('login_page') }}{% else %}{{ url_for('signup_page') }}{% endif %}" style="color: #15d8bc;">Go back</a>
                     </p>
                 </div>

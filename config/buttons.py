@@ -180,7 +180,7 @@ BUTTONS = {
     # CSS class: .help-btn
     'help': {
         'background': 'none',
-        'color': '#72767d',
+        'color': '#81828A',
         'border': 'none',
         'padding': '0.5rem',
         'font_size': '0.9rem',

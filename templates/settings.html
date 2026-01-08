@@ -425,9 +425,15 @@
                         <div class="settings-panel-header">Billing</div>
 
                         <!-- Plan information / Invoices Toggle -->
-                        <div style="display: flex; gap: 0; padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                            <button class="billing-view-btn active" data-view="plan-info" style="flex: 1; padding: 0.5rem 1rem; background: linear-gradient(to bottom, #15d8bc, #006e59); border: 1px solid transparent; border-radius: 6px 0 0 6px; color: #121215; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box;">Plan information</button>
-                            <button class="billing-view-btn" data-view="invoices" style="flex: 1; padding: 0.5rem 1rem; background: linear-gradient(to bottom, rgba(21, 216, 188, 0.15), rgba(0, 110, 89, 0.15)); border: 1px solid transparent; border-radius: 0 6px 6px 0; color: #15d8bc; font-weight: 500; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box;">Invoices</button>
+                        <div style="display: flex; gap: 1.5rem; padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" name="billing-view" value="plan-info" checked style="cursor: pointer;">
+                                <span style="color: #dcddde; font-weight: 500;">Plan information</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" name="billing-view" value="invoices" style="cursor: pointer;">
+                                <span style="color: #dcddde; font-weight: 500;">Invoices</span>
+                            </label>
                         </div>
 
                         <div class="settings-panel-content" style="display: flex; flex-direction: column; flex: 1;">
@@ -1267,26 +1273,13 @@
         loadCurrentTeam();
 
         // Billing toggle functionality
-        const billingViewBtns = document.querySelectorAll('.billing-view-btn');
+        const billingViewRadios = document.querySelectorAll('input[name="billing-view"]');
         const billingPlanInfo = document.getElementById('billing-plan-info');
         const billingInvoices = document.getElementById('billing-invoices');
 
-        billingViewBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const view = btn.dataset.view;
-
-                // Update button styles
-                billingViewBtns.forEach(b => {
-                    if (b.dataset.view === view) {
-                        b.classList.add('active');
-                        b.style.background = 'linear-gradient(to bottom, #15d8bc, #006e59)';
-                        b.style.color = '#121215';
-                    } else {
-                        b.classList.remove('active');
-                        b.style.background = 'linear-gradient(to bottom, rgba(21, 216, 188, 0.15), rgba(0, 110, 89, 0.15))';
-                        b.style.color = '#15d8bc';
-                    }
-                });
+        billingViewRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                const view = radio.value;
 
                 // Toggle sections
                 if (view === 'plan-info') {

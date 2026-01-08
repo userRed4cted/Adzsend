@@ -15,6 +15,38 @@
     <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_modals.js') }}"></script>
     <style>
+        /* Custom radio button styling with #15d8bc accent */
+        input[type="radio"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #15d8bc;
+            border-radius: 50%;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+        input[type="radio"]:checked {
+            background: #15d8bc;
+            border-color: #15d8bc;
+        }
+        input[type="radio"]:checked::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 6px;
+            height: 6px;
+            background: #fff;
+            border-radius: 50%;
+        }
+        input[type="radio"]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .admin-layout {
             display: grid;
             grid-template-columns: 450px 1fr;
@@ -573,10 +605,19 @@
             <div class="dialog-header">Plans and Usage</div>
 
             <!-- Tab Navigation -->
-            <div style="display: flex; gap: 0; margin: 0 -0.5rem;">
-                <button class="plans-tab-btn active" data-tab="plan-info" onclick="switchPlansTab('plan-info')" style="flex: 1; padding: 0.5rem; background: linear-gradient(to bottom, #3a3a4d, #2a2a3d); border: 1px solid transparent; border-radius: 6px 0 0 6px; color: #fff; font-weight: 500; cursor: pointer; font-size: 0.8rem; box-sizing: border-box;">Plan information</button>
-                <button class="plans-tab-btn" data-tab="invoices" onclick="switchPlansTab('invoices')" style="flex: 1; padding: 0.5rem; background: linear-gradient(to bottom, rgba(58, 58, 77, 0.3), rgba(42, 42, 61, 0.3)); border: 1px solid transparent; color: #949BA4; font-weight: 500; cursor: pointer; font-size: 0.8rem; box-sizing: border-box;">Invoices</button>
-                <button class="plans-tab-btn" data-tab="usage" onclick="switchPlansTab('usage')" style="flex: 1; padding: 0.5rem; background: linear-gradient(to bottom, rgba(58, 58, 77, 0.3), rgba(42, 42, 61, 0.3)); border: 1px solid transparent; border-radius: 0 6px 6px 0; color: #949BA4; font-weight: 500; cursor: pointer; font-size: 0.8rem; box-sizing: border-box;">Usage</button>
+            <div style="display: flex; gap: 1.5rem; margin: 0;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="radio" name="plans-tab" value="plan-info" checked onchange="switchPlansTab('plan-info')" style="cursor: pointer;">
+                    <span style="color: #dcddde; font-weight: 500;">Plan information</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="radio" name="plans-tab" value="invoices" onchange="switchPlansTab('invoices')" style="cursor: pointer;">
+                    <span style="color: #dcddde; font-weight: 500;">Invoices</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="radio" name="plans-tab" value="usage" onchange="switchPlansTab('usage')" style="cursor: pointer;">
+                    <span style="color: #dcddde; font-weight: 500;">Usage</span>
+                </label>
             </div>
 
             <!-- Tab Content -->
@@ -1105,19 +1146,8 @@
 
             // Reset to first tab and show dialog
             currentPlansTab = 'plan-info';
-            document.querySelectorAll('.plans-tab-btn').forEach(btn => {
-                if (btn.dataset.tab === 'plan-info') {
-                    btn.classList.add('active');
-                    btn.style.background = 'linear-gradient(to bottom, #3a3a4d, #2a2a3d)';
-                    btn.style.color = '#fff';
-                    btn.style.border = '1px solid transparent';
-                } else {
-                    btn.classList.remove('active');
-                    btn.style.background = 'linear-gradient(to bottom, rgba(58, 58, 77, 0.3), rgba(42, 42, 61, 0.3))';
-                    btn.style.color = '#949BA4';
-                    btn.style.border = '1px solid transparent';
-                }
-            });
+            const planInfoRadio = document.querySelector('input[name="plans-tab"][value="plan-info"]');
+            if (planInfoRadio) planInfoRadio.checked = true;
 
             document.getElementById('plans-usage-dialog').classList.add('active');
             loadPlansTabContent('plan-info');
@@ -1185,22 +1215,6 @@
 
         function switchPlansTab(tabName) {
             currentPlansTab = tabName;
-
-            // Update tab button styles
-            document.querySelectorAll('.plans-tab-btn').forEach(btn => {
-                if (btn.dataset.tab === tabName) {
-                    btn.classList.add('active');
-                    btn.style.background = 'linear-gradient(to bottom, #3a3a4d, #2a2a3d)';
-                    btn.style.color = '#fff';
-                    btn.style.border = '1px solid transparent';
-                } else {
-                    btn.classList.remove('active');
-                    btn.style.background = 'linear-gradient(to bottom, rgba(58, 58, 77, 0.3), rgba(42, 42, 61, 0.3))';
-                    btn.style.color = '#949BA4';
-                    btn.style.border = '1px solid transparent';
-                }
-            });
-
             loadPlansTabContent(tabName);
         }
 
@@ -1262,14 +1276,14 @@
                     if (data.success && data.history && data.history.length > 0) {
                         // Compact invoice layout with no gaps
                         container.innerHTML = `
-                            <div style="display: flex; padding: 0.4rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); color: #949BA4; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem; width: 100%; box-sizing: border-box;">
+                            <div style="display: flex; padding: 0.25rem 0; border-bottom: 1px solid rgba(255,255,255,0.1); color: #949BA4; font-size: 0.85rem; font-weight: 500; width: 100%; box-sizing: border-box; line-height: 1;">
                                 <div style="flex: 1.5; min-width: 0; padding-right: 0.5rem; box-sizing: border-box;">Date (mm/dd/yy)</div>
                                 <div style="flex: 1; min-width: 0; padding-right: 0.5rem; box-sizing: border-box;">Total</div>
                                 <div style="flex: 1; min-width: 0; box-sizing: border-box;">Status</div>
                             </div>
                             <div style="max-height: 200px; overflow-y: auto; overflow-x: hidden; width: 100%; box-sizing: border-box;">
                                 ${data.history.map((item, index) => `
-                                    <div style="display: flex; padding: 0.5rem 0; align-items: center; gap: 0; width: 100%; box-sizing: border-box; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <div style="display: flex; padding: 0.25rem 0; align-items: center; gap: 0; width: 100%; box-sizing: border-box; border-bottom: 1px solid rgba(255,255,255,0.05); line-height: 1;">
                                         <div style="flex: 1.5; min-width: 0; color: #dcddde; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 0.5rem; box-sizing: border-box;">${formatDate(item.start_date)}</div>
                                         <div style="flex: 1; min-width: 0; color: #dcddde; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 0.5rem; box-sizing: border-box;">$${item.price || '0.00'}</div>
                                         <div style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box;">

@@ -283,6 +283,10 @@ def csrf_protect(f):
 
 def add_security_headers(response):
     """Add security headers to response."""
+    # HTTP Strict Transport Security (HSTS) - only in production with HTTPS
+    if os.getenv('FLASK_ENV') == 'production':
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+
     # Prevent clickjacking
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
 

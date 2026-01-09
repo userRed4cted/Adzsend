@@ -1205,7 +1205,15 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100%;
+    flex: 1;
+    min-height: 100%;
+}
+
+/* When channels-list only contains a no-selection or loading message, center it */
+.channels-list:has(.no-selection),
+.channels-list:has(.loading-container) {
+    justify-content: center;
+    align-items: center;
 }
 
 .loading-container {
@@ -1217,7 +1225,8 @@ body {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    height: 100%;
+    flex: 1;
+    min-height: 100%;
 }
 
 /* Discord-style bouncing dots loader */
@@ -1423,7 +1432,7 @@ body {
 .search-tag-remove {
     cursor: pointer;
     font-size: 0.9rem;
-    color: rgba(18, 18, 21, 0.6);
+    color: #121215;
 }
 
 /* Message Input */
@@ -1695,10 +1704,10 @@ body {
     margin-top: 1rem;
     padding: 0.75rem 1.5rem;
     background: linear-gradient(to bottom, #991a35, #3b0b15);
-    color: #ffffff;
+    color: #121215;
     border: none;
     border-radius: 6px;
-    font-weight: 600;
+    font-weight: 500;
     font-size: 0.95rem;
     cursor: pointer;
     transition: all 0.3s ease;

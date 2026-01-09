@@ -70,11 +70,11 @@ BUTTONS = {
     # CSS class: .delete-account-btn
     'delete_account': {
         'background': 'linear-gradient(to bottom, #991a35, #3b0b15)',
-        'color': '#ffffff',
+        'color': '#121215',
         'border': 'none',
         'border_radius': '6px',
         'padding': '0.75rem 1.5rem',
-        'font_weight': '600',
+        'font_weight': '500',
         'font_size': '0.95rem',
         'hover_background': 'linear-gradient(to bottom, #7a152b, #2d0810)',
         'hover_transform': 'scale(1.02)',

@@ -492,14 +492,53 @@
 
         .channels-list .channel-item .channel-tick {
             display: none;
-            width: 16px;
-            height: 16px;
+            width: 11px;
+            height: 11px;
             flex-shrink: 0;
             filter: brightness(0) saturate(100%);
+            margin-left: auto;
         }
 
         .channels-list .channel-item.selected .channel-tick {
             display: block;
+        }
+
+        /* Failed channel status tag */
+        .channels-list .channel-item .channel-status-tag {
+            display: none;
+            background: #121215;
+            color: #81828A;
+            font-size: 0.65rem;
+            font-weight: 500;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            min-width: 85px;
+            text-align: center;
+            margin-left: auto;
+        }
+
+        .channels-list .channel-item.failed .channel-status-tag {
+            display: block;
+        }
+
+        /* Failed channel styling - red gradient background */
+        .channels-list .channel-item.failed {
+            background: linear-gradient(to bottom, #991a35, #6b1226);
+        }
+
+        .channels-list .channel-item.failed:hover {
+            background: linear-gradient(to bottom, #991a35, #6b1226);
+        }
+
+        .channels-list .channel-item.failed .channel-hash,
+        .channels-list .channel-item.failed .channel-name {
+            color: #121215;
+        }
+
+        .channels-list .channel-item.failed .channel-tick {
+            display: block;
+            filter: brightness(0) saturate(100%);
         }
 
         /* Server icon for channels-only mode */
@@ -715,10 +754,10 @@
                         <div class="panel-divider"></div>
 
                         <!-- Middle: Message Composer Only -->
-                        <div class="action-panel" style="display: flex; flex-direction: column; height: 100%; align-items: center; justify-content: center;">
+                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; background: transparent; padding: 0 0.75rem; padding-top: 2.75rem; border: none; box-sizing: border-box;">
                             <!-- Message Composer -->
-                            <div class="message-section" style="display: flex; flex-direction: column; width: 100%; max-width: 500px; padding: 0 1rem;">
-                                <div class="message-input-container" style="display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; min-height: 150px; position: relative;">
+                            <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
+                                <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
                                     <!-- Emoji button - top right corner -->
                                     <button id="emoji-btn" type="button" style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: pointer; padding: 0; z-index: 2;">
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
@@ -726,9 +765,9 @@
                                     <!-- Character count - bottom right corner -->
                                     <span id="char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1; pointer-events: none;">2000</span>
                                     <!-- Textarea with padding barriers for emoji (top-right) and counter (bottom-right) -->
-                                    <textarea id="message-input" class="message-input" placeholder="Message" maxlength="2000" style="flex: 1; width: 100%; padding: 8px; padding-top: 8px; padding-right: 40px; padding-bottom: 32px; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; min-height: 120px; box-sizing: border-box; line-height: 1.4; vertical-align: top;"></textarea>
+                                    <textarea id="message-input" class="message-input" placeholder="Message" style="flex: 1; width: 100%; padding: 8px; padding-top: 8px; padding-right: 40px; padding-bottom: 32px; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; box-sizing: border-box; line-height: 1.4; vertical-align: top;"></textarea>
                                 </div>
-                                <div class="message-footer" style="margin-top: 0.75rem;">
+                                <div class="message-footer" style="flex-shrink: 0; padding: 0.75rem 0;">
                                     <button id="send-btn" class="send-button" disabled style="width: 100%; justify-content: center;">
                                         <img src="{{ url_for('static', filename='favicon.png') }}" alt="Send" style="width: 16px; height: 16px; filter: brightness(0);">
                                         Send
@@ -931,8 +970,16 @@
                         ? `<img class="server-icon-small" src="${iconUrl}" alt="">`
                         : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
 
+                    // Check if channel failed
+                    const channelKey = `${channel.guildId}-${channel.id}`;
+                    const failedInfo = failedChannels.get(channelKey);
+                    const isFailed = !!failedInfo;
+                    const failedClass = isFailed ? ' failed' : '';
+                    const statusText = failedInfo?.type === 'ratelimit' ? 'Rate limited' : 'Missing permission';
+                    const statusTagHtml = isFailed ? `<span class="channel-status-tag">${statusText}</span>` : '';
+
                     return `
-                        <div class="channel-item selected"
+                        <div class="channel-item selected${failedClass}"
                              data-channel-id="${channel.id}"
                              data-channel-name="${channel.name}"
                              data-guild-id="${channel.guildId}"
@@ -941,6 +988,7 @@
                             ${serverIconHtml}
                             <span class="channel-hash">#</span>
                             <span class="channel-name">${channel.name}</span>
+                            ${statusTagHtml}
                             <img class="channel-tick" src="{{ url_for('static', filename='x.png') }}" alt="x">
                         </div>
                     `;
@@ -1086,8 +1134,16 @@
                         ? `<img class="server-icon-small" src="${iconUrl}" alt="">`
                         : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
 
+                    // Check if channel failed
+                    const channelKey = `${channel.guildId}-${channel.id}`;
+                    const failedInfo = failedChannels.get(channelKey);
+                    const isFailed = isSelected && !!failedInfo;
+                    const failedClass = isFailed ? ' failed' : '';
+                    const statusText = failedInfo?.type === 'ratelimit' ? 'Rate limited' : 'Missing permission';
+                    const statusTagHtml = isFailed ? `<span class="channel-status-tag">${statusText}</span>` : '';
+
                     return `
-                        <div class="channel-item ${isSelected ? 'selected' : ''}"
+                        <div class="channel-item ${isSelected ? 'selected' : ''}${failedClass}"
                              data-channel-id="${channel.id}"
                              data-channel-name="${channel.name}"
                              data-guild-id="${channel.guildId}"
@@ -1096,6 +1152,7 @@
                             ${serverIconHtml}
                             <span class="channel-hash">#</span>
                             <span class="channel-name">${channel.name}</span>
+                            ${statusTagHtml}
                             <img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓">
                         </div>
                     `;
@@ -1567,14 +1624,22 @@
                         ch.id === channel.id && ch.guildId === selectedGuild.id
                     );
 
+                    // Check if channel failed
+                    const channelKey = `${selectedGuild.id}-${channel.id}`;
+                    const failedInfo = failedChannels.get(channelKey);
+                    const isFailed = isSelected && !!failedInfo;
+                    const statusText = failedInfo?.type === 'ratelimit' ? 'Rate limited' : 'Missing permission';
+
                     const channelItem = document.createElement('div');
-                    channelItem.className = `channel-item ${isSelected ? 'selected' : ''}`;
+                    channelItem.className = `channel-item ${isSelected ? 'selected' : ''}${isFailed ? ' failed' : ''}`;
                     channelItem.dataset.channelId = channel.id;
 
-                    // Discord-style layout: # name tick
+                    // Discord-style layout: # name [status-tag] tick
+                    const statusTagHtml = isFailed ? `<span class="channel-status-tag">${statusText}</span>` : '';
                     channelItem.innerHTML = `
                         <span class="channel-hash">#</span>
                         <span class="channel-name">${channel.name}</span>
+                        ${statusTagHtml}
                         <img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓">
                     `;
 
@@ -1701,11 +1766,15 @@
                 }
             }
 
-            // Update only a specific channel's failed status - now just refreshes views
+            // Update only a specific channel's failed status - refreshes all relevant views
             function updateFailedChannelStatus(channel) {
-                // Refresh the selected channels mode view if active
+                // Refresh the current view to show failed status
                 if (viewMode === 'selected') {
                     renderSelectedChannelsMode();
+                } else if (viewMode === 'channels') {
+                    renderChannelsOnlyMode();
+                } else if (viewMode === 'servers' && selectedGuild) {
+                    renderChannels();
                 }
             }
 

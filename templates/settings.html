@@ -166,8 +166,8 @@
                                         <div style="color: #dcddde; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ discord_oauth_info.oauth_username or 'Unknown User' }}</div>
                                         <div style="color: #81828A; font-size: 0.85rem;">ID: {{ discord_oauth_info.oauth_discord_id }}</div>
                                     </div>
-                                    <button id="discord-unlink-btn" style="padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.8rem; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(to bottom, #991a35, #3b0b15); border: none; color: #fff; cursor: pointer; transition: all 0.2s;">
-                                        <img src="{{ url_for('static', filename='link.png') }}" alt="" style="width: 14px; height: 14px; filter: brightness(0) invert(1);">
+                                    <button id="discord-unlink-btn" style="padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; font-size: 0.8rem; white-space: nowrap; display: flex; align-items: center; gap: 0.4rem; background: linear-gradient(to bottom, #991a35, #3b0b15); border: none; color: #121215; cursor: pointer; transition: all 0.2s;">
+                                        <img src="{{ url_for('static', filename='link.png') }}" alt="" style="width: 14px; height: 14px; filter: brightness(0);">
                                         Unlink
                                     </button>
                                 </div>

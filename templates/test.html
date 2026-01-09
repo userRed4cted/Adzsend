@@ -690,11 +690,11 @@
                     <div class="menu-section">
                         <div class="menu-category">Main</div>
 
-                        <button class="menu-item active{% if not guilds %} disabled{% endif %}" data-page="personal-panel"{% if not guilds %} disabled style="opacity: 0.4; cursor: not-allowed;"{% endif %}>
+                        <button class="menu-item{% if is_team_owner %} disabled{% elif not guilds %} disabled{% else %} active{% endif %}" data-page="personal-panel"{% if is_team_owner or not guilds %} disabled style="opacity: 0.4; cursor: not-allowed;"{% endif %}>
                             Personal panel
                         </button>
 
-                        <button class="menu-item{% if not has_team or not guilds %} disabled{% endif %}" data-page="team-panel"{% if not has_team or not guilds %} disabled style="opacity: 0.4; cursor: not-allowed;"{% endif %}>
+                        <button class="menu-item{% if is_team_owner and guilds %} active{% elif not has_team or not guilds %} disabled{% endif %}" data-page="team-panel"{% if not has_team or not guilds %} disabled style="opacity: 0.4; cursor: not-allowed;"{% endif %}>
                             Team panel
                         </button>
 
@@ -723,7 +723,7 @@
                 <!-- Main Content Area (uses styles.css classes) -->
                 <div class="main-content-wrapper">
                     <!-- Page: Personal Panel -->
-                    <div id="page-personal-panel" class="page-content" style="height: 100%; display: flex; flex-direction: column;">
+                    <div id="page-personal-panel" class="page-content" style="height: 100%; display: {% if is_team_owner %}none{% else %}flex{% endif %}; flex-direction: column;">
                     {% if guilds %}
                     <div class="main-layout" style="height: 100%;">
                         <!-- Left: Discord-style Server Sidebar -->
@@ -857,7 +857,7 @@
                     <!-- End Page: Personal Panel -->
 
                     <!-- Page: Team Panel -->
-                    <div id="page-team-panel" class="page-content" style="height: 100%; display: none;">
+                    <div id="page-team-panel" class="page-content" style="height: 100%; display: {% if is_team_owner and guilds %}flex{% else %}none{% endif %}; flex-direction: column;">
                     {% if has_team and guilds %}
                     <div class="main-layout" style="height: 100%;">
                         <!-- Left: Discord-style Server Sidebar -->
@@ -940,13 +940,13 @@
                         <!-- Vertical Divider -->
                         <div class="panel-divider"></div>
 
-                        <!-- Middle: Team Message Display (Read-only) -->
+                        <!-- Middle: Message Composer Only -->
                         <div style="flex: 1; display: flex; flex-direction: column; height: 100%; background: transparent; padding: 0 0.75rem; border: none; box-sizing: border-box;">
                             <!-- Team panel label - matching view-mode-toggle position -->
                             <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
                                 <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Team panel (message set by team owner)</span>
                             </div>
-                            <!-- Team Message Display -->
+                            <!-- Message Composer -->
                             <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
                                 <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
                                     <!-- Emoji button - top right corner (disabled) -->
@@ -955,11 +955,11 @@
                                     </button>
                                     <!-- Character count - bottom right corner -->
                                     <span id="team-char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1; pointer-events: none;">{{ (team.team_message or '')|length }}/2000</span>
-                                    <!-- Textarea - read only for team message -->
-                                    <textarea id="team-message-input" class="message-input" placeholder="No team message set by owner" readonly style="flex: 1; width: 100%; padding: 8px; padding-top: 8px; padding-right: 40px; padding-bottom: 32px; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; box-sizing: border-box; line-height: 1.4; vertical-align: top; cursor: not-allowed; opacity: 0.8;">{{ team.team_message or '' }}</textarea>
+                                    <!-- Textarea with padding barriers for emoji (top-right) and counter (bottom-right) -->
+                                    <textarea id="team-message-input" class="message-input" placeholder="No team message set" readonly style="flex: 1; width: 100%; padding: 8px; padding-top: 8px; padding-right: 40px; padding-bottom: 32px; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; box-sizing: border-box; line-height: 1.4; vertical-align: top;">{{ team.team_message or '' }}</textarea>
                                 </div>
                                 <div class="message-footer" style="flex-shrink: 0; padding: 0.75rem 0;">
-                                    <button id="team-send-btn" class="send-button" {% if not team or not team.team_message %}disabled{% endif %} style="width: 100%; justify-content: center;">
+                                    <button id="team-send-btn" class="send-button"{% if not team or not team.team_message %} disabled{% endif %} style="width: 100%; justify-content: center;">
                                         Send
                                     </button>
                                 </div>
@@ -996,7 +996,17 @@
                     </div>
 
                     <!-- Page: Team Management -->
-                    <div id="page-team-management" class="page-content" style="height: 100%; display: none;">
+                    <div id="page-team-management" class="page-content" style="height: 100%; display: none; flex-direction: row;">
+                        <!-- Left Half -->
+                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; padding: 0.75rem; box-sizing: border-box;">
+                        </div>
+
+                        <!-- Vertical Divider -->
+                        <div class="panel-divider"></div>
+
+                        <!-- Right Half -->
+                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; padding: 0.75rem; box-sizing: border-box;">
+                        </div>
                     </div>
 
                     <!-- Page: Analytics -->
@@ -1204,9 +1214,38 @@
             const menuItems = document.querySelectorAll('.menu-item[data-page]');
             const pageContents = document.querySelectorAll('.page-content');
 
+            // Server-side validated access flags (cannot be bypassed via inspect element)
+            const hasGuilds = {{ 'true' if guilds else 'false' }};
+            const hasTeam = {{ 'true' if has_team else 'false' }};
+            const isTeamOwner = {{ 'true' if is_team_owner else 'false' }};
+
+            // Set correct initial page display for team owners
+            if (isTeamOwner && hasGuilds) {
+                pageContents.forEach(page => {
+                    if (page.id === 'page-team-panel') {
+                        page.style.display = 'flex';
+                    } else if (page.id === 'page-personal-panel') {
+                        page.style.display = 'none';
+                    }
+                });
+            }
+
             menuItems.forEach(item => {
                 item.addEventListener('click', () => {
+                    // Skip if button is disabled (server-side check)
+                    if (item.disabled || item.classList.contains('disabled')) {
+                        return;
+                    }
+
                     const targetPage = item.dataset.page;
+
+                    // Server-side validated access control (cannot bypass with inspect element)
+                    if (targetPage === 'personal-panel' && (!hasGuilds || isTeamOwner)) {
+                        return;
+                    }
+                    if (targetPage === 'team-panel' && (!hasTeam || !hasGuilds)) {
+                        return;
+                    }
 
                     // Update active state on menu items
                     menuItems.forEach(mi => mi.classList.remove('active'));

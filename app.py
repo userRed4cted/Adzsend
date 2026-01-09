@@ -1774,6 +1774,24 @@ def cancel_plan():
         print(f"[ERROR] Cancel plan error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/cancel')
+def dev_cancel_plan():
+    """DEV ONLY: Quick route to reset subscription to free plan."""
+    from database import cancel_subscription
+
+    if 'user' not in session:
+        return redirect(url_for('home'))
+
+    try:
+        user = get_user_by_discord_id(session['user']['id'])
+        if user:
+            cancel_subscription(user['id'])
+            print(f"[DEV] Plan reset to free for {session['user']['username']}")
+        return redirect(url_for('panel'))
+    except Exception as e:
+        print(f"[DEV ERROR] Cancel error: {str(e)}")
+        return redirect(url_for('panel'))
+
 @app.route('/api/flag-self', methods=['POST'])
 @rate_limit('api')
 def api_flag_self():

@@ -95,7 +95,6 @@ SUBSCRIPTION_PLANS = {
             '500 message posts per week',
             'Unlimited channel and server selections',
             'Advanced analytics',
-            'Post with multiple Discord account',
             'Personal use',
         ],
 
@@ -154,7 +153,6 @@ SUBSCRIPTION_PLANS = {
             'x3 or x5 (of Pro) message posting',
             'Unlimited channel and server selections',
             'Advanced analytics',
-            'Post with multiple Discord account',
             'Personal use',
         ],
         'message_limit': 1500,  # x5=2500 -1 = unlimited

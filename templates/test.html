@@ -431,11 +431,36 @@
             flex-direction: column;
             gap: 2px;
             padding: 0 0.5rem;
+            overflow-x: hidden;
+        }
+
+        /* Center no-selection and loading messages exactly in the middle of the channels-list */
+        .channels-list {
+            position: relative;
+        }
+
+        .channels-list .no-selection,
+        .channels-list .loading-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #81828A;
+            font-size: 0.95rem;
+            padding: 0;
+            margin: 0;
+            width: max-content;
         }
 
         .channels-list .channel-item {
-            display: flex;
-            align-items: center;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            flex-wrap: nowrap !important;
             gap: 0.5rem;
             padding: 0.4rem 0.5rem;
             border-radius: 4px;
@@ -443,6 +468,8 @@
             background: transparent;
             border: none;
             transition: none;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .channels-list .channel-item:hover {
@@ -481,6 +508,7 @@
             font-size: 0.9rem;
             font-weight: 500;
             flex: 1;
+            min-width: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -492,15 +520,24 @@
 
         /* Right side container for status tag and tick icon */
         .channels-list .channel-item .channel-right {
-            display: none;
-            align-items: center;
+            display: none !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            flex-wrap: nowrap !important;
             gap: 0.5rem;
             margin-left: auto;
             flex-shrink: 0;
+            position: absolute;
+            right: 0.5rem;
         }
 
         .channels-list .channel-item.selected .channel-right {
-            display: flex;
+            display: flex !important;
+        }
+
+        /* Make channel-item position relative for absolute positioning of channel-right */
+        .channels-list .channel-item {
+            position: relative;
         }
 
         .channels-list .channel-item .channel-tick {
@@ -521,17 +558,16 @@
             display: none;
             background: #121215;
             color: #81828A;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             font-weight: 500;
-            padding: 0.2rem 0.4rem;
-            border-radius: 4px;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
             white-space: nowrap;
-            width: 90px;
+            width: 85px;
             text-align: center;
             flex-shrink: 0;
-            line-height: normal;
+            line-height: 1;
             box-sizing: border-box;
-            height: auto;
         }
 
         .channels-list .channel-item.failed .channel-status-tag {
@@ -684,6 +720,8 @@
 
                 <!-- Main Content Area (uses styles.css classes) -->
                 <div class="main-content-wrapper">
+                    <!-- Page: Personal Panel -->
+                    <div id="page-personal-panel" class="page-content" style="height: 100%; display: flex; flex-direction: column;">
                     {% if guilds %}
                     <div class="main-layout" style="height: 100%;">
                         <!-- Left: Discord-style Server Sidebar -->
@@ -756,8 +794,8 @@
                             </div>
 
                             <!-- Selected Channels Mode List -->
-                            <div class="selected-channels-mode-section" style="display: none; flex: 1; flex-direction: column; min-height: 0;">
-                                <div id="selected-channels-mode-list" class="channels-list selected-channels-mode" style="flex: 1; overflow-y: auto; min-height: 0;">
+                            <div class="selected-channels-mode-section" style="display: none; flex: 1; flex-direction: column; min-height: 0; overflow: hidden;">
+                                <div id="selected-channels-mode-list" class="channels-list selected-channels-mode" style="flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0;">
                                     <div class="no-selection">No channels selected</div>
                                 </div>
                             </div>
@@ -813,6 +851,24 @@
                         </div>
                         {% endif %}
                     {% endif %}
+                    </div>
+                    <!-- End Page: Personal Panel -->
+
+                    <!-- Page: Team Panel -->
+                    <div id="page-team-panel" class="page-content" style="height: 100%; display: none;">
+                    </div>
+
+                    <!-- Page: Team Management -->
+                    <div id="page-team-management" class="page-content" style="height: 100%; display: none;">
+                    </div>
+
+                    <!-- Page: Analytics -->
+                    <div id="page-analytics" class="page-content" style="height: 100%; display: none;">
+                    </div>
+
+                    <!-- Page: Interval -->
+                    <div id="page-interval" class="page-content" style="height: 100%; display: none;">
+                    </div>
                 </div>
             </div>
         </div>
@@ -873,6 +929,31 @@
             if (event.persisted) {
                 window.location.reload();
             }
+        });
+
+        // Side menu page switching
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuItems = document.querySelectorAll('.menu-item[data-page]');
+            const pageContents = document.querySelectorAll('.page-content');
+
+            menuItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const targetPage = item.dataset.page;
+
+                    // Update active state on menu items
+                    menuItems.forEach(mi => mi.classList.remove('active'));
+                    item.classList.add('active');
+
+                    // Show/hide pages
+                    pageContents.forEach(page => {
+                        if (page.id === `page-${targetPage}`) {
+                            page.style.display = 'flex';
+                        } else {
+                            page.style.display = 'none';
+                        }
+                    });
+                });
+            });
         });
 
         // Wait for all elements to load before initializing
@@ -994,22 +1075,7 @@
                     const statusText = failedInfo?.type === 'ratelimit' ? 'Rate limited' : 'Missing permission';
                     const statusTagHtml = isFailed ? `<span class="channel-status-tag">${statusText}</span>` : '';
 
-                    return `
-                        <div class="channel-item selected${failedClass}"
-                             data-channel-id="${channel.id}"
-                             data-channel-name="${channel.name}"
-                             data-guild-id="${channel.guildId}"
-                             data-guild-name="${channel.guildName}"
-                             data-guild-icon="${channel.guildIcon || ''}">
-                            ${serverIconHtml}
-                            <span class="channel-hash">#</span>
-                            <span class="channel-name">${channel.name}</span>
-                            <div class="channel-right">
-                                ${statusTagHtml}
-                                <img class="channel-tick" src="{{ url_for('static', filename='x.png') }}" alt="x">
-                            </div>
-                        </div>
-                    `;
+                    return `<div class="channel-item selected${failedClass}" data-channel-id="${channel.id}" data-channel-name="${channel.name}" data-guild-id="${channel.guildId}" data-guild-name="${channel.guildName}" data-guild-icon="${channel.guildIcon || ''}">${serverIconHtml}<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right">${statusTagHtml}<img class="channel-tick" src="{{ url_for('static', filename='x.png') }}" alt="x"></div></div>`;
                 }).join('');
 
                 // Add click handlers to remove channels
@@ -1153,21 +1219,7 @@
                         : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
 
                     // No failed status shown in channels-only mode
-                    return `
-                        <div class="channel-item ${isSelected ? 'selected' : ''}"
-                             data-channel-id="${channel.id}"
-                             data-channel-name="${channel.name}"
-                             data-guild-id="${channel.guildId}"
-                             data-guild-name="${channel.guildName}"
-                             data-guild-icon="${channel.guildIcon || ''}">
-                            ${serverIconHtml}
-                            <span class="channel-hash">#</span>
-                            <span class="channel-name">${channel.name}</span>
-                            <div class="channel-right">
-                                <img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓">
-                            </div>
-                        </div>
-                    `;
+                    return `<div class="channel-item ${isSelected ? 'selected' : ''}" data-channel-id="${channel.id}" data-channel-name="${channel.name}" data-guild-id="${channel.guildId}" data-guild-name="${channel.guildName}" data-guild-icon="${channel.guildIcon || ''}">${serverIconHtml}<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right"><img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓"></div></div>`;
                 }).join('');
 
                 // Add click handlers
@@ -1641,13 +1693,7 @@
                     channelItem.dataset.channelId = channel.id;
 
                     // Discord-style layout: # name tick (no failed status in servers mode)
-                    channelItem.innerHTML = `
-                        <span class="channel-hash">#</span>
-                        <span class="channel-name">${channel.name}</span>
-                        <div class="channel-right">
-                            <img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓">
-                        </div>
-                    `;
+                    channelItem.innerHTML = `<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right"><img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓"></div>`;
 
                     // Click anywhere on channel item to toggle selection
                     channelItem.addEventListener('click', () => {
@@ -1852,7 +1898,7 @@
                                 <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
                             </div>
                             <div class="result-content">
-                                ${succeeded.map(ch => `<div class="channel-item"># ${ch}</div>`).join('')}
+                                ${succeeded.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
                             </div>
                         </div>
                     `;
@@ -1867,7 +1913,7 @@
                                 <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
                             </div>
                             <div class="result-content">
-                                ${rateLimited.map(ch => `<div class="channel-item"># ${ch}</div>`).join('')}
+                                ${rateLimited.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
                             </div>
                         </div>
                     `;
@@ -1882,7 +1928,7 @@
                                 <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
                             </div>
                             <div class="result-content">
-                                ${failed.map(ch => `<div class="channel-item"># ${ch}</div>`).join('')}
+                                ${failed.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
                             </div>
                         </div>
                     `;
@@ -1941,7 +1987,7 @@
                             background: rgba(255, 255, 255, 0.2);
                             border-radius: 3px;
                         }
-                        .channel-item {
+                        .result-channel-item {
                             padding: 0 !important;
                             margin: 0 !important;
                             color: #81828A;

@@ -1202,6 +1202,10 @@ body {
     text-align: center;
     padding: 1.5rem;
     font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
 }
 
 .loading-container {
@@ -1212,7 +1216,44 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 4px;
+    height: 100%;
+}
+
+/* Discord-style bouncing dots loader */
+.loading-dots {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.loading-dots .dot {
+    width: 8px;
+    height: 8px;
+    background-color: #81828A;
+    border-radius: 50%;
+    animation: discord-bounce 1.4s ease-in-out infinite;
+}
+
+.loading-dots .dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.loading-dots .dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-dots .dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes discord-bounce {
+    0%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-8px);
+    }
 }
 
 /* Selected Channels Display */

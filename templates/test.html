@@ -6,8 +6,6 @@
     <title>Test Panel - New Design</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
-    <!-- Emoji Picker -->
-    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
     {% include 'partials/config_styles.html' %}
     <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
     <script src="{{ url_for('static', filename='status_polling.js') }}"></script>
@@ -692,7 +690,7 @@
                             <!-- Channels Only List (Channels Only Mode) -->
                             <div class="channels-only-section" style="display: none; flex: 1; flex-direction: column; min-height: 0;">
                                 <div id="channels-only-list" class="channels-list" style="flex: 1; overflow-y: auto;">
-                                    <div class="no-selection">Loading channels...</div>
+                                    <div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>
                                 </div>
                             </div>
 
@@ -717,22 +715,18 @@
                         <div class="panel-divider"></div>
 
                         <!-- Middle: Message Composer Only -->
-                        <div class="action-panel" style="display: flex; flex-direction: column; height: 100%;">
+                        <div class="action-panel" style="display: flex; flex-direction: column; height: 100%; align-items: center; justify-content: center;">
                             <!-- Message Composer -->
-                            <div class="message-section" style="flex: 1; display: flex; flex-direction: column;">
-                                <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; padding: 0.75rem; min-height: 0; position: relative;">
-                                    <!-- Emoji button - top right -->
-                                    <button id="emoji-btn" type="button" style="position: absolute; top: 0.5rem; right: 0.5rem; background: transparent; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; z-index: 2;">
+                            <div class="message-section" style="display: flex; flex-direction: column; width: 100%; max-width: 500px; padding: 0 1rem;">
+                                <div class="message-input-container" style="display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; min-height: 150px; position: relative;">
+                                    <!-- Emoji button - top right corner -->
+                                    <button id="emoji-btn" type="button" style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: pointer; padding: 0; z-index: 2;">
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
                                     </button>
-                                    <!-- Emoji picker popup -->
-                                    <div id="emoji-picker-container" style="display: none; position: absolute; top: 2rem; right: 0.5rem; z-index: 100;">
-                                        <emoji-picker></emoji-picker>
-                                    </div>
-                                    <!-- Character count - bottom right -->
-                                    <span id="char-count" style="position: absolute; bottom: 0.5rem; right: 0.75rem; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1;">200</span>
-                                    <!-- Textarea with padding to avoid overlapping emoji and counter -->
-                                    <textarea id="message-input" class="message-input" placeholder="Message" maxlength="2000" style="flex: 1; padding: 0; padding-top: 0; padding-right: 2rem; padding-bottom: 1.5rem; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; min-height: 0;"></textarea>
+                                    <!-- Character count - bottom right corner -->
+                                    <span id="char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1; pointer-events: none;">2000</span>
+                                    <!-- Textarea with padding barriers for emoji (top-right) and counter (bottom-right) -->
+                                    <textarea id="message-input" class="message-input" placeholder="Message" maxlength="2000" style="flex: 1; width: 100%; padding: 8px; padding-top: 8px; padding-right: 40px; padding-bottom: 32px; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; min-height: 120px; box-sizing: border-box; line-height: 1.4; vertical-align: top;"></textarea>
                                 </div>
                                 <div class="message-footer" style="margin-top: 0.75rem;">
                                     <button id="send-btn" class="send-button" disabled style="width: 100%; justify-content: center;">
@@ -835,8 +829,7 @@
             const charCount = document.getElementById('char-count');
             const channelSearch = document.getElementById('channel-search');
             const searchTagsContainer = document.getElementById('search-tags');
-            const emojiBtn = document.getElementById('emoji-btn');
-            const MESSAGE_LIMIT = 200; // Character limit for messages
+            const MESSAGE_LIMIT = 2000; // Character limit for messages
 
             let guilds = [];
             let serverChannels = {}; // Cache for channels by guild ID
@@ -1072,7 +1065,7 @@
                 if (allChannels.length === 0) {
                     if (!hasLoadedChannels) {
                         // Channels haven't been loaded yet - show loading message
-                        channelsOnlyList.innerHTML = '<div class="no-selection">Loading channels...</div>';
+                        channelsOnlyList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
                     } else if (channelsOnlySearchText || channelsOnlySearchTags.length > 0) {
                         // Channels loaded but filtered to empty
                         channelsOnlyList.innerHTML = '<div class="no-selection">No channels match search</div>';
@@ -1496,7 +1489,7 @@
 
                 // Load channels if not cached
                 if (!serverChannels[guildId]) {
-                    channelsList.innerHTML = '<div class="loading-container"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"></path></svg> Loading channels...</div>';
+                    channelsList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
 
                     try {
                         const response = await fetch(`/api/guild/${guildId}/channels`);
@@ -1731,7 +1724,8 @@
             // Update send button state
             function updateSendButton() {
                 if (sendBtn && messageInput) {
-                    sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                    const isOverLimit = messageInput.value.length > MESSAGE_LIMIT;
+                    sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim() || isOverLimit;
                 }
             }
 
@@ -1759,56 +1753,7 @@
                 });
             }
 
-            // Emoji button - opens native emoji picker
-            if (emojiBtn && messageInput) {
-                emojiBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    // Focus the textarea first
-                    messageInput.focus();
-
-                    // Try to trigger native emoji picker
-                    // Method 1: Check if browser supports the new showPicker API for text inputs
-                    if (navigator.userAgent.includes('Windows')) {
-                        // On Windows, we can't programmatically trigger Win+. but we can show a hint
-                        // Some Chromium browsers support triggering via execCommand or input events
-                    }
-
-                    // Method 2: For Chromium-based browsers, try using the Clipboard API trick
-                    // This creates a contenteditable div that can trigger emoji picker in some browsers
-                    try {
-                        const selection = window.getSelection();
-                        const range = document.createRange();
-
-                        // Create a temporary contenteditable element
-                        const tempDiv = document.createElement('div');
-                        tempDiv.contentEditable = 'true';
-                        tempDiv.style.cssText = 'position:fixed;top:50%;left:50%;opacity:0;pointer-events:none;';
-                        document.body.appendChild(tempDiv);
-                        tempDiv.focus();
-
-                        // Trigger input method (may open emoji picker on some systems)
-                        if (window.InputEvent && typeof InputEvent === 'function') {
-                            const inputEvent = new InputEvent('beforeinput', {
-                                inputType: 'insertText',
-                                data: null,
-                                bubbles: true,
-                                cancelable: true
-                            });
-                            tempDiv.dispatchEvent(inputEvent);
-                        }
-
-                        // Clean up and refocus
-                        setTimeout(() => {
-                            document.body.removeChild(tempDiv);
-                            messageInput.focus();
-                        }, 100);
-                    } catch (err) {
-                        // Fallback - just keep focus on textarea
-                        console.log('Emoji picker: Use Win+. (Windows) or Cmd+Ctrl+Space (Mac)');
-                    }
-                });
-            }
+            // Emoji button is just an icon - no picker functionality
 
             // Show collapsible send results
             async function showSendResults(succeeded, rateLimited, failed) {

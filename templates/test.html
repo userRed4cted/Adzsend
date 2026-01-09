@@ -6,6 +6,8 @@
     <title>Test Panel - New Design</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
+    <!-- Emoji Picker -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
     {% include 'partials/config_styles.html' %}
     <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
     <script src="{{ url_for('static', filename='status_polling.js') }}"></script>
@@ -268,6 +270,11 @@
             color: #dcddde;
             font-weight: 500;
             font-size: 0.85rem;
+        }
+
+        /* Selected channels mode - channels list with x.png for remove */
+        .selected-channels-mode .channels-list .channel-item .channel-tick {
+            content: url("{{ url_for('static', filename='x.png') }}");
         }
 
         /* Reduced height searchbar for selection panel */
@@ -649,6 +656,10 @@
                                     <input type="radio" name="view-mode" value="channels">
                                     <span>All channels</span>
                                 </label>
+                                <label>
+                                    <input type="radio" name="view-mode" value="selected">
+                                    <span>Selected channels</span>
+                                </label>
                             </div>
 
                             <!-- Channels Header (Servers Mode) -->
@@ -684,41 +695,48 @@
                                     <div class="no-selection">Loading channels...</div>
                                 </div>
                             </div>
+
+                            <!-- Selected Channels Mode Header -->
+                            <div class="unified-header selected-channels-mode-header" style="display: none;">
+                                <div class="header-section">
+                                    <div class="channels-search">
+                                        <input type="text" id="selected-channels-mode-search" class="search-input" placeholder="Search selected channels">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Selected Channels Mode List -->
+                            <div class="selected-channels-mode-section" style="display: none; flex: 1; flex-direction: column; min-height: 0;">
+                                <div id="selected-channels-mode-list" class="channels-list selected-channels-mode" style="flex: 1; overflow-y: auto;">
+                                    <div class="no-selection">No channels selected</div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Vertical Divider -->
                         <div class="panel-divider"></div>
 
-                        <!-- Middle: Selected Channels and Message -->
-                        <div class="action-panel">
-                            <!-- Unified Header for Middle Panel -->
-                            <div class="unified-header">
-                                <div class="header-section">
-                                    <div class="panel-header">Selected channels</div>
-                                    <div class="selected-search-container">
-                                        <input type="text" id="selected-search" class="search-input" placeholder="Search">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Selected Channels -->
-                            <div class="selected-section">
-                                <button class="clear-all-btn" id="clear-all-btn" style="display: none;">Clear all selected channels</button>
-                                <div id="selected-channels-tags" class="selected-channels-tags">
-                                    <div class="no-selection">No channels selected</div>
-                                </div>
-                            </div>
-
+                        <!-- Middle: Message Composer Only -->
+                        <div class="action-panel" style="display: flex; flex-direction: column; height: 100%;">
                             <!-- Message Composer -->
-                            <div class="message-section">
-                                <textarea id="message-input" class="message-input" placeholder="Enter your message here..." maxlength="2000"></textarea>
-                                <div class="message-footer">
-                                    <span class="char-count"><span id="char-count">0</span>/2000</span>
-                                    <button id="send-btn" class="send-button" disabled>
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                                        </svg>
+                            <div class="message-section" style="flex: 1; display: flex; flex-direction: column;">
+                                <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; padding: 0.75rem; min-height: 0; position: relative;">
+                                    <!-- Emoji button - top right -->
+                                    <button id="emoji-btn" type="button" style="position: absolute; top: 0.5rem; right: 0.5rem; background: transparent; border: none; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; z-index: 2;">
+                                        <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
+                                    </button>
+                                    <!-- Emoji picker popup -->
+                                    <div id="emoji-picker-container" style="display: none; position: absolute; top: 2rem; right: 0.5rem; z-index: 100;">
+                                        <emoji-picker></emoji-picker>
+                                    </div>
+                                    <!-- Character count - bottom right -->
+                                    <span id="char-count" style="position: absolute; bottom: 0.5rem; right: 0.75rem; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1;">200</span>
+                                    <!-- Textarea with padding to avoid overlapping emoji and counter -->
+                                    <textarea id="message-input" class="message-input" placeholder="Message" maxlength="2000" style="flex: 1; padding: 0; padding-top: 0; padding-right: 2rem; padding-bottom: 1.5rem; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; min-height: 0;"></textarea>
+                                </div>
+                                <div class="message-footer" style="margin-top: 0.75rem;">
+                                    <button id="send-btn" class="send-button" disabled style="width: 100%; justify-content: center;">
+                                        <img src="{{ url_for('static', filename='favicon.png') }}" alt="Send" style="width: 16px; height: 16px; filter: brightness(0);">
                                         Send
                                     </button>
                                 </div>
@@ -815,33 +833,37 @@
             const messageInput = document.getElementById('message-input');
             const sendBtn = document.getElementById('send-btn');
             const charCount = document.getElementById('char-count');
-            const selectedChannelsTags = document.getElementById('selected-channels-tags');
             const channelSearch = document.getElementById('channel-search');
             const searchTagsContainer = document.getElementById('search-tags');
-            const selectedSearch = document.getElementById('selected-search');
+            const emojiBtn = document.getElementById('emoji-btn');
+            const MESSAGE_LIMIT = 200; // Character limit for messages
 
             let guilds = [];
             let serverChannels = {}; // Cache for channels by guild ID
             let selectedChannels = []; // Array for multiple channel selection
             let selectedGuild = null; // Currently selected guild
             let searchTags = []; // Search filter tags
-            let selectedSearchText = ''; // Selected channels search filter
             let currentServerColor = 'rgba(21, 216, 188, 0.6)'; // Current server's dominant color
             let isSending = false; // Track if messages are being sent
             let failedChannels = new Map(); // Track channels that failed to send with failure type
-            let viewMode = 'servers'; // 'servers' or 'channels'
+            let viewMode = 'servers'; // 'servers', 'channels', or 'selected'
             let channelsOnlySearchText = ''; // Search filter for channels-only mode
             let channelsOnlySearchTags = []; // Search filter tags for channels-only mode
+            let selectedChannelsModeSearchText = ''; // Search filter for selected channels mode
             const maxChannelsPerServer = {{ plan_status.max_channels_per_server if plan_status and plan_status.max_channels_per_server is defined else 2 }}; // -1 = unlimited
 
             // View mode toggle elements
             const viewModeRadios = document.querySelectorAll('input[name="view-mode"]');
             const serversModeHeader = document.querySelector('.servers-mode-header');
             const channelsOnlyHeader = document.querySelector('.channels-only-header');
+            const selectedChannelsModeHeader = document.querySelector('.selected-channels-mode-header');
             const serversModeSections = document.querySelectorAll('.servers-mode-section');
             const channelsOnlySection = document.querySelector('.channels-only-section');
+            const selectedChannelsModeSection = document.querySelector('.selected-channels-mode-section');
             const channelsOnlyList = document.getElementById('channels-only-list');
+            const selectedChannelsModeList = document.getElementById('selected-channels-mode-list');
             const channelsOnlySearch = document.getElementById('channels-only-search');
+            const selectedChannelsModeSearch = document.getElementById('selected-channels-mode-search');
             const channelsOnlySearchTagsContainer = document.getElementById('channels-only-search-tags');
 
             // View mode toggle handler (radio buttons)
@@ -852,21 +874,108 @@
 
                     viewMode = mode;
 
-                    // Toggle visibility
+                    // Hide all headers and sections first
+                    serversModeHeader.style.display = 'none';
+                    channelsOnlyHeader.style.display = 'none';
+                    selectedChannelsModeHeader.style.display = 'none';
+                    serversModeSections.forEach(s => s.style.display = 'none');
+                    channelsOnlySection.style.display = 'none';
+                    selectedChannelsModeSection.style.display = 'none';
+
+                    // Show the appropriate mode
                     if (mode === 'servers') {
                         serversModeHeader.style.display = '';
-                        channelsOnlyHeader.style.display = 'none';
                         serversModeSections.forEach(s => s.style.display = '');
-                        channelsOnlySection.style.display = 'none';
-                    } else {
-                        serversModeHeader.style.display = 'none';
+                    } else if (mode === 'channels') {
                         channelsOnlyHeader.style.display = '';
-                        serversModeSections.forEach(s => s.style.display = 'none');
                         channelsOnlySection.style.display = 'flex';
                         renderChannelsOnlyMode();
+                    } else if (mode === 'selected') {
+                        selectedChannelsModeHeader.style.display = '';
+                        selectedChannelsModeSection.style.display = 'flex';
+                        renderSelectedChannelsMode();
                     }
                 });
             });
+
+            // Selected channels mode search handler
+            if (selectedChannelsModeSearch) {
+                selectedChannelsModeSearch.addEventListener('input', (e) => {
+                    selectedChannelsModeSearchText = e.target.value.toLowerCase();
+                    renderSelectedChannelsMode();
+                });
+            }
+
+            // Render channels in selected channels mode (shows selected channels with x.png to remove)
+            function renderSelectedChannelsMode() {
+                if (!selectedChannelsModeList) return;
+
+                if (selectedChannels.length === 0) {
+                    selectedChannelsModeList.innerHTML = '<div class="no-selection">No channels selected</div>';
+                    return;
+                }
+
+                // Filter by search text
+                let filteredChannels = selectedChannels;
+                if (selectedChannelsModeSearchText) {
+                    filteredChannels = selectedChannels.filter(ch =>
+                        ch.name.toLowerCase().includes(selectedChannelsModeSearchText) ||
+                        ch.guildName.toLowerCase().includes(selectedChannelsModeSearchText)
+                    );
+                }
+
+                if (filteredChannels.length === 0) {
+                    selectedChannelsModeList.innerHTML = '<div class="no-selection">No channels match search</div>';
+                    return;
+                }
+
+                selectedChannelsModeList.innerHTML = filteredChannels.map(channel => {
+                    const iconUrl = channel.guildIcon
+                        ? `https://cdn.discordapp.com/icons/${channel.guildId}/${channel.guildIcon}.png`
+                        : null;
+
+                    const serverIconHtml = iconUrl
+                        ? `<img class="server-icon-small" src="${iconUrl}" alt="">`
+                        : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
+
+                    return `
+                        <div class="channel-item selected"
+                             data-channel-id="${channel.id}"
+                             data-channel-name="${channel.name}"
+                             data-guild-id="${channel.guildId}"
+                             data-guild-name="${channel.guildName}"
+                             data-guild-icon="${channel.guildIcon || ''}">
+                            ${serverIconHtml}
+                            <span class="channel-hash">#</span>
+                            <span class="channel-name">${channel.name}</span>
+                            <img class="channel-tick" src="{{ url_for('static', filename='x.png') }}" alt="x">
+                        </div>
+                    `;
+                }).join('');
+
+                // Add click handlers to remove channels
+                selectedChannelsModeList.querySelectorAll('.channel-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const channelId = item.dataset.channelId;
+                        const guildId = item.dataset.guildId;
+
+                        // Remove from selected channels
+                        selectedChannels = selectedChannels.filter(ch =>
+                            !(ch.id === channelId && ch.guildId === guildId)
+                        );
+
+                        saveSelectedChannels();
+                        renderSelectedChannelsMode();
+                        updateServerCount(guildId);
+                        updateSendButton();
+
+                        // Also update other views if they exist
+                        if (selectedGuild && selectedGuild.id === guildId) {
+                            renderChannels();
+                        }
+                    });
+                });
+            }
 
             // Channels-only search handler
             if (channelsOnlySearch) {
@@ -1089,9 +1198,7 @@
                 const saved = localStorage.getItem('messageText');
                 if (saved && messageInput) {
                     messageInput.value = saved;
-                    if (charCount) {
-                        charCount.textContent = saved.length;
-                    }
+                    updateCharCount();
                 }
             }
 
@@ -1112,11 +1219,7 @@
                         if (data.draft_message !== null && data.draft_message !== undefined && messageInput) {
                             messageInput.value = data.draft_message;
                             localStorage.setItem('messageText', data.draft_message);
-
-                            // Update character count
-                            if (charCount) {
-                                charCount.textContent = data.draft_message.length;
-                            }
+                            updateCharCount();
                         }
 
                         return true;
@@ -1223,14 +1326,6 @@
                 });
             }
 
-            // Handle selected channels search input
-            if (selectedSearch) {
-                selectedSearch.addEventListener('input', (e) => {
-                    selectedSearchText = e.target.value.toLowerCase();
-                    updateSelectedDisplay();
-                });
-            }
-
             // Render Discord-style server sidebar icons
             function renderServers() {
                 if (!serverSidebar) return;
@@ -1328,6 +1423,7 @@
                 // Update selected display
                 updateSelectedDisplay();
                 updateSendButton();
+                updateCharCount(); // Initialize character count display
 
                 // Preload all channels in background for faster channel-only mode
                 preloadAllChannels();
@@ -1612,121 +1708,23 @@
                 }
             }
 
-            // Update only a specific channel's failed status without rebuilding the list
+            // Update only a specific channel's failed status - now just refreshes views
             function updateFailedChannelStatus(channel) {
-                const channelKey = `${channel.guildId}-${channel.id}`;
-                const failureInfo = failedChannels.get(channelKey);
-                const tagElement = selectedChannelsTags.querySelector(`[data-channel-key="${channelKey}"]`);
-
-                if (!tagElement) return;
-
-                // Remove existing failure classes and labels
-                tagElement.classList.remove('failed-channel', 'rate-limited');
-                const existingLabel = tagElement.querySelector('.failure-label');
-                if (existingLabel) existingLabel.remove();
-
-                // Add new failure status if needed
-                if (failureInfo) {
-                    if (failureInfo.type === 'ratelimit') {
-                        tagElement.classList.add('rate-limited');
-                        const label = document.createElement('span');
-                        label.className = 'failure-label ratelimit';
-                        label.textContent = 'Rate limited';
-                        tagElement.insertBefore(label, tagElement.querySelector('.tag-remove'));
-                    } else {
-                        tagElement.classList.add('failed-channel');
-                        const label = document.createElement('span');
-                        label.className = 'failure-label permission';
-                        label.textContent = 'Missing permission';
-                        tagElement.insertBefore(label, tagElement.querySelector('.tag-remove'));
-                    }
+                // Refresh the selected channels mode view if active
+                if (viewMode === 'selected') {
+                    renderSelectedChannelsMode();
                 }
             }
 
-            // Update selected channels display
+            // Update selected channels display (now just updates the selected channels mode view)
             function updateSelectedDisplay() {
-                if (selectedChannels.length > 0) {
-                    // Filter channels by search text
-                    let filteredChannels = selectedChannels;
-                    if (selectedSearchText) {
-                        filteredChannels = selectedChannels.filter(channel =>
-                            channel.name.toLowerCase().includes(selectedSearchText) ||
-                            channel.guildName.toLowerCase().includes(selectedSearchText)
-                        );
-                    }
-
-                    if (filteredChannels.length === 0) {
-                        selectedChannelsTags.innerHTML = '<div class="no-selection">No channels match search</div>';
-                    } else {
-                        let tagsHtml = '';
-                        filteredChannels.forEach(channel => {
-                            const iconHtml = channel.guildIcon
-                                ? `<img src="https://cdn.discordapp.com/icons/${channel.guildId}/${channel.guildIcon}.png" alt="${channel.guildName}">`
-                                : `<span>${channel.guildName.charAt(0).toUpperCase()}</span>`;
-
-                            const channelKey = `${channel.guildId}-${channel.id}`;
-                            const failureInfo = failedChannels.get(channelKey);
-
-                            let failedClass = '';
-                            let labelHtml = '';
-
-                            if (failureInfo) {
-                                if (failureInfo.type === 'ratelimit') {
-                                    failedClass = ' rate-limited';
-                                    labelHtml = '<span class="failure-label ratelimit">Rate limited</span>';
-                                } else {
-                                    failedClass = ' failed-channel';
-                                    labelHtml = '<span class="failure-label permission">Missing permission</span>';
-                                }
-                            }
-
-                            tagsHtml += `
-                                <div class="selected-tag${failedClass}" data-channel-key="${channelKey}">
-                                    <div class="tag-icon">${iconHtml}</div>
-                                    <div class="tag-text">#${channel.name}</div>
-                                    ${labelHtml}
-                                    <button class="tag-remove" data-channel-id="${channel.id}" data-guild-id="${channel.guildId}">✕</button>
-                                </div>
-                            `;
-                        });
-                        selectedChannelsTags.innerHTML = tagsHtml;
-
-                        // Add event listeners for remove buttons
-                        selectedChannelsTags.querySelectorAll('.tag-remove').forEach(btn => {
-                            btn.addEventListener('click', () => {
-                                const channelId = btn.dataset.channelId;
-                                const guildId = btn.dataset.guildId;
-                                selectedChannels = selectedChannels.filter(ch =>
-                                    !(ch.id === channelId && ch.guildId === guildId)
-                                );
-                                saveSelectedChannels();
-                                updateSelectedDisplay();
-                                if (selectedGuild && selectedGuild.id === guildId) {
-                                    renderChannels();
-                                }
-                                updateServerCount(guildId);
-                                updateSendButton();
-                            });
-                        });
-                    }
-
-                    // Show external clear all button
-                    const clearAllBtn = document.getElementById('clear-all-btn');
-                    clearAllBtn.style.display = 'block';
-                    clearAllBtn.onclick = () => {
-                        selectedChannels = [];
-                        saveSelectedChannels();
-                        updateSelectedDisplay();
-                        if (selectedGuild) {
-                            renderChannels();
-                        }
-                        guilds.forEach(g => updateServerCount(g.id));
-                        updateSendButton();
-                    };
-                } else {
-                    selectedChannelsTags.innerHTML = '<div class="no-selection">No channels selected</div>';
-                    const clearAllBtn = document.getElementById('clear-all-btn');
-                    clearAllBtn.style.display = 'none';
+                // Update selected channels mode view if it's active
+                if (viewMode === 'selected') {
+                    renderSelectedChannelsMode();
+                }
+                // Also update channels-only mode to reflect selection changes
+                if (viewMode === 'channels') {
+                    renderChannelsOnlyMode();
                 }
             }
 
@@ -1737,14 +1735,78 @@
                 }
             }
 
+            // Update character count display
+            function updateCharCount() {
+                if (charCount && messageInput) {
+                    const remaining = MESSAGE_LIMIT - messageInput.value.length;
+                    charCount.textContent = remaining;
+
+                    // Apply red color when negative (over limit)
+                    if (remaining < 0) {
+                        charCount.style.color = '#991a35'; // Red from delete account button gradient
+                    } else {
+                        charCount.style.color = '#81828A'; // Default grey
+                    }
+                }
+            }
+
             // Message input listener
             if (messageInput) {
                 messageInput.addEventListener('input', function() {
-                    if (charCount) {
-                        charCount.textContent = this.value.length;
-                    }
+                    updateCharCount();
                     saveMessageText();
                     updateSendButton();
+                });
+            }
+
+            // Emoji button - opens native emoji picker
+            if (emojiBtn && messageInput) {
+                emojiBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Focus the textarea first
+                    messageInput.focus();
+
+                    // Try to trigger native emoji picker
+                    // Method 1: Check if browser supports the new showPicker API for text inputs
+                    if (navigator.userAgent.includes('Windows')) {
+                        // On Windows, we can't programmatically trigger Win+. but we can show a hint
+                        // Some Chromium browsers support triggering via execCommand or input events
+                    }
+
+                    // Method 2: For Chromium-based browsers, try using the Clipboard API trick
+                    // This creates a contenteditable div that can trigger emoji picker in some browsers
+                    try {
+                        const selection = window.getSelection();
+                        const range = document.createRange();
+
+                        // Create a temporary contenteditable element
+                        const tempDiv = document.createElement('div');
+                        tempDiv.contentEditable = 'true';
+                        tempDiv.style.cssText = 'position:fixed;top:50%;left:50%;opacity:0;pointer-events:none;';
+                        document.body.appendChild(tempDiv);
+                        tempDiv.focus();
+
+                        // Trigger input method (may open emoji picker on some systems)
+                        if (window.InputEvent && typeof InputEvent === 'function') {
+                            const inputEvent = new InputEvent('beforeinput', {
+                                inputType: 'insertText',
+                                data: null,
+                                bubbles: true,
+                                cancelable: true
+                            });
+                            tempDiv.dispatchEvent(inputEvent);
+                        }
+
+                        // Clean up and refocus
+                        setTimeout(() => {
+                            document.body.removeChild(tempDiv);
+                            messageInput.focus();
+                        }, 100);
+                    } catch (err) {
+                        // Fallback - just keep focus on textarea
+                        console.log('Emoji picker: Use Win+. (Windows) or Cmd+Ctrl+Space (Mac)');
+                    }
                 });
             }
 

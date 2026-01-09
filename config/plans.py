@@ -94,8 +94,8 @@ SUBSCRIPTION_PLANS = {
         'features': [
             '500 message posts per week',
             'Unlimited channel and server selections',
-            'Analytics and insights',
-            'Optional different messages for different channels',
+            'Advanced analytics',
+            'Post with multiple Discord account',
             'Personal use',
         ],
 
@@ -138,7 +138,7 @@ SUBSCRIPTION_PLANS = {
 
         # FEATURE FLAGS
         'analytics_and_insights': True,
-        'multi_discord_accounts': False,
+        'multi_discord_accounts': True,
         'multi_variation_message': True,
         'max_channels_per_server': -1,  # -1 = unlimited
     },
@@ -153,14 +153,13 @@ SUBSCRIPTION_PLANS = {
         'features': [
             'x3 or x5 (of Pro) message posting',
             'Unlimited channel and server selections',
-            'Analytics and insights',
-            'Optional different messages for different channels',
-            'Able to add multiple accounts for message posting',
+            'Advanced analytics',
+            'Post with multiple Discord account',
             'Personal use',
         ],
-        'message_limit': -1,  # -1 = unlimited
+        'message_limit': 1500,  # x5=2500 -1 = unlimited
         'usage_type': 'amount',
-        'allowance_period': 'monthly',
+        'allowance_period': 'Weekly',
         'glow_color': 'rgba(21, 216, 188, 0.6)',
         'savings_text': '$12.50 per month',
         'savings_color': '#15d8bc',
@@ -302,8 +301,8 @@ BUSINESS_PLANS = {
         'features': [
             '5000 message posts per week across all members',
             'Unlimited channel and server selections',
-            'Analytics and insights',
-            'Team message management + sync',
+            'Advanced analytics',
+            'Team management',
             'Up to 15 team members',
         ],
 
@@ -347,8 +346,8 @@ BUSINESS_PLANS = {
         'features': [
             'Unlimited message posting',
             'Unlimited channel and server selections',
-            'Analytics and insights',
-            'Team message management + sync',
+            'Advanced analytics',
+            'Team management',
             'Up to 40 team members',
         ],
         'message_limit': -1,  # -1 = unlimited

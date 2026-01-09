@@ -492,11 +492,17 @@
 
         .channels-list .channel-item .channel-tick {
             display: none;
-            width: 11px;
-            height: 11px;
+            width: 22px;
+            height: 22px;
             flex-shrink: 0;
             filter: brightness(0) saturate(100%);
             margin-left: auto;
+        }
+
+        /* Keep x.png at smaller size */
+        .channels-list .channel-item .channel-tick[alt="x"] {
+            width: 11px;
+            height: 11px;
         }
 
         .channels-list .channel-item.selected .channel-tick {
@@ -513,9 +519,10 @@
             padding: 0.2rem 0.4rem;
             border-radius: 4px;
             white-space: nowrap;
-            min-width: 85px;
+            width: 90px;
             text-align: center;
             margin-left: auto;
+            flex-shrink: 0;
         }
 
         .channels-list .channel-item.failed .channel-status-tag {
@@ -721,14 +728,14 @@
 
                             <!-- Channels List (Servers Mode) -->
                             <div class="channels-section servers-mode-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                                <div id="channels-list" class="channels-list" style="flex: 1; overflow-y: auto;">
+                                <div id="channels-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0;">
                                     <div class="no-selection">Select a server to view channels</div>
                                 </div>
                             </div>
 
                             <!-- Channels Only List (Channels Only Mode) -->
                             <div class="channels-only-section" style="display: none; flex: 1; flex-direction: column; min-height: 0;">
-                                <div id="channels-only-list" class="channels-list" style="flex: 1; overflow-y: auto;">
+                                <div id="channels-only-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0;">
                                     <div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>
                                 </div>
                             </div>
@@ -737,14 +744,14 @@
                             <div class="unified-header selected-channels-mode-header" style="display: none;">
                                 <div class="header-section">
                                     <div class="channels-search">
-                                        <input type="text" id="selected-channels-mode-search" class="search-input" placeholder="Search selected channels">
+                                        <input type="text" id="selected-channels-mode-search" class="search-input" placeholder="Search">
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Selected Channels Mode List -->
                             <div class="selected-channels-mode-section" style="display: none; flex: 1; flex-direction: column; min-height: 0;">
-                                <div id="selected-channels-mode-list" class="channels-list selected-channels-mode" style="flex: 1; overflow-y: auto;">
+                                <div id="selected-channels-mode-list" class="channels-list selected-channels-mode" style="flex: 1; overflow-y: auto; min-height: 0;">
                                     <div class="no-selection">No channels selected</div>
                                 </div>
                             </div>
@@ -769,7 +776,6 @@
                                 </div>
                                 <div class="message-footer" style="flex-shrink: 0; padding: 0.75rem 0;">
                                     <button id="send-btn" class="send-button" disabled style="width: 100%; justify-content: center;">
-                                        <img src="{{ url_for('static', filename='favicon.png') }}" alt="Send" style="width: 16px; height: 16px; filter: brightness(0);">
                                         Send
                                     </button>
                                 </div>

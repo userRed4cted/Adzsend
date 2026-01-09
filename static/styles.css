@@ -1202,16 +1202,12 @@ body {
     text-align: center;
     padding: 1.5rem;
     font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-    min-height: 100%;
 }
 
 /* When channels-list only contains a no-selection or loading message, center it */
 .channels-list:has(.no-selection),
 .channels-list:has(.loading-container) {
+    display: flex;
     justify-content: center;
     align-items: center;
 }
@@ -1225,8 +1221,6 @@ body {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    flex: 1;
-    min-height: 100%;
 }
 
 /* Discord-style bouncing dots loader */

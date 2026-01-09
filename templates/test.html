@@ -490,23 +490,30 @@
             color: #121215;
         }
 
-        .channels-list .channel-item .channel-tick {
+        /* Right side container for status tag and tick icon */
+        .channels-list .channel-item .channel-right {
             display: none;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .channels-list .channel-item.selected .channel-right {
+            display: flex;
+        }
+
+        .channels-list .channel-item .channel-tick {
             width: 22px;
             height: 22px;
             flex-shrink: 0;
             filter: brightness(0) saturate(100%);
-            margin-left: auto;
         }
 
         /* Keep x.png at smaller size */
         .channels-list .channel-item .channel-tick[alt="x"] {
             width: 11px;
             height: 11px;
-        }
-
-        .channels-list .channel-item.selected .channel-tick {
-            display: block;
         }
 
         /* Failed channel status tag */
@@ -521,12 +528,16 @@
             white-space: nowrap;
             width: 90px;
             text-align: center;
-            margin-left: auto;
             flex-shrink: 0;
+            line-height: normal;
+            box-sizing: border-box;
+            height: auto;
         }
 
         .channels-list .channel-item.failed .channel-status-tag {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Failed channel styling - red gradient background */
@@ -541,11 +552,6 @@
         .channels-list .channel-item.failed .channel-hash,
         .channels-list .channel-item.failed .channel-name {
             color: #121215;
-        }
-
-        .channels-list .channel-item.failed .channel-tick {
-            display: block;
-            filter: brightness(0) saturate(100%);
         }
 
         /* Server icon for channels-only mode */
@@ -761,12 +767,16 @@
                         <div class="panel-divider"></div>
 
                         <!-- Middle: Message Composer Only -->
-                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; background: transparent; padding: 0 0.75rem; padding-top: 2.75rem; border: none; box-sizing: border-box;">
+                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; background: transparent; padding: 0 0.75rem; border: none; box-sizing: border-box;">
+                            <!-- Personal panel label - matching view-mode-toggle position -->
+                            <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
+                                <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Personal panel</span>
+                            </div>
                             <!-- Message Composer -->
                             <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
                                 <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
-                                    <!-- Emoji button - top right corner -->
-                                    <button id="emoji-btn" type="button" style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: pointer; padding: 0; z-index: 2;">
+                                    <!-- Emoji button - top right corner (disabled) -->
+                                    <button id="emoji-btn" type="button" disabled style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: not-allowed; padding: 0; z-index: 2; opacity: 0.4;">
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
                                     </button>
                                     <!-- Character count - bottom right corner -->
@@ -994,8 +1004,10 @@
                             ${serverIconHtml}
                             <span class="channel-hash">#</span>
                             <span class="channel-name">${channel.name}</span>
-                            ${statusTagHtml}
-                            <img class="channel-tick" src="{{ url_for('static', filename='x.png') }}" alt="x">
+                            <div class="channel-right">
+                                ${statusTagHtml}
+                                <img class="channel-tick" src="{{ url_for('static', filename='x.png') }}" alt="x">
+                            </div>
                         </div>
                     `;
                 }).join('');
@@ -1140,16 +1152,9 @@
                         ? `<img class="server-icon-small" src="${iconUrl}" alt="">`
                         : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
 
-                    // Check if channel failed
-                    const channelKey = `${channel.guildId}-${channel.id}`;
-                    const failedInfo = failedChannels.get(channelKey);
-                    const isFailed = isSelected && !!failedInfo;
-                    const failedClass = isFailed ? ' failed' : '';
-                    const statusText = failedInfo?.type === 'ratelimit' ? 'Rate limited' : 'Missing permission';
-                    const statusTagHtml = isFailed ? `<span class="channel-status-tag">${statusText}</span>` : '';
-
+                    // No failed status shown in channels-only mode
                     return `
-                        <div class="channel-item ${isSelected ? 'selected' : ''}${failedClass}"
+                        <div class="channel-item ${isSelected ? 'selected' : ''}"
                              data-channel-id="${channel.id}"
                              data-channel-name="${channel.name}"
                              data-guild-id="${channel.guildId}"
@@ -1158,8 +1163,9 @@
                             ${serverIconHtml}
                             <span class="channel-hash">#</span>
                             <span class="channel-name">${channel.name}</span>
-                            ${statusTagHtml}
-                            <img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓">
+                            <div class="channel-right">
+                                <img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓">
+                            </div>
                         </div>
                     `;
                 }).join('');
@@ -1630,23 +1636,17 @@
                         ch.id === channel.id && ch.guildId === selectedGuild.id
                     );
 
-                    // Check if channel failed
-                    const channelKey = `${selectedGuild.id}-${channel.id}`;
-                    const failedInfo = failedChannels.get(channelKey);
-                    const isFailed = isSelected && !!failedInfo;
-                    const statusText = failedInfo?.type === 'ratelimit' ? 'Rate limited' : 'Missing permission';
-
                     const channelItem = document.createElement('div');
-                    channelItem.className = `channel-item ${isSelected ? 'selected' : ''}${isFailed ? ' failed' : ''}`;
+                    channelItem.className = `channel-item ${isSelected ? 'selected' : ''}`;
                     channelItem.dataset.channelId = channel.id;
 
-                    // Discord-style layout: # name [status-tag] tick
-                    const statusTagHtml = isFailed ? `<span class="channel-status-tag">${statusText}</span>` : '';
+                    // Discord-style layout: # name tick (no failed status in servers mode)
                     channelItem.innerHTML = `
                         <span class="channel-hash">#</span>
                         <span class="channel-name">${channel.name}</span>
-                        ${statusTagHtml}
-                        <img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓">
+                        <div class="channel-right">
+                            <img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓">
+                        </div>
                     `;
 
                     // Click anywhere on channel item to toggle selection
@@ -1772,15 +1772,11 @@
                 }
             }
 
-            // Update only a specific channel's failed status - refreshes all relevant views
+            // Update only a specific channel's failed status - only refreshes Selected channels view
             function updateFailedChannelStatus(channel) {
-                // Refresh the current view to show failed status
+                // Failed status only shows in Selected channels mode
                 if (viewMode === 'selected') {
                     renderSelectedChannelsMode();
-                } else if (viewMode === 'channels') {
-                    renderChannelsOnlyMode();
-                } else if (viewMode === 'servers' && selectedGuild) {
-                    renderChannels();
                 }
             }
 
@@ -2049,7 +2045,7 @@
 
                         isSending = true;
                         sendBtn.disabled = true;
-                        sendBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"></path></svg> <span id="send-progress">Sending...</span>';
+                        sendBtn.innerHTML = '<span id="send-progress">Sending...</span>';
 
                         // Send messages one by one for real-time usage tracking
                         let succeededChannels = [];
@@ -2134,7 +2130,7 @@
                         } finally {
                             isSending = false;
                             sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
-                            sendBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg> Send';
+                            sendBtn.innerHTML = 'Send';
                         }
                     }
                 });

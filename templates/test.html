@@ -434,13 +434,14 @@
             overflow-x: hidden;
         }
 
-        /* Center no-selection and loading messages exactly in the middle of the channels-list */
-        .channels-list {
+        /* Selection panel needs position relative for absolute centering of messages */
+        .selection-panel {
             position: relative;
         }
 
-        .channels-list .no-selection,
-        .channels-list .loading-container {
+        /* Center no-selection and loading messages exactly in the middle of the selection-panel */
+        .selection-panel .no-selection,
+        .selection-panel .loading-container {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -454,6 +455,7 @@
             padding: 0;
             margin: 0;
             width: max-content;
+            z-index: 1;
         }
 
         .channels-list .channel-item {
@@ -688,11 +690,11 @@
                     <div class="menu-section">
                         <div class="menu-category">Main</div>
 
-                        <button class="menu-item active" data-page="personal-panel">
+                        <button class="menu-item active{% if not guilds %} disabled{% endif %}" data-page="personal-panel"{% if not guilds %} disabled style="opacity: 0.4; cursor: not-allowed;"{% endif %}>
                             Personal panel
                         </button>
 
-                        <button class="menu-item" data-page="team-panel">
+                        <button class="menu-item{% if not has_team or not guilds %} disabled{% endif %}" data-page="team-panel"{% if not has_team or not guilds %} disabled style="opacity: 0.4; cursor: not-allowed;"{% endif %}>
                             Team panel
                         </button>
 
@@ -856,6 +858,141 @@
 
                     <!-- Page: Team Panel -->
                     <div id="page-team-panel" class="page-content" style="height: 100%; display: none;">
+                    {% if has_team and guilds %}
+                    <div class="main-layout" style="height: 100%;">
+                        <!-- Left: Discord-style Server Sidebar -->
+                        <div class="server-sidebar" id="team-server-sidebar">
+                            <!-- Server icons will be populated by JavaScript -->
+                        </div>
+
+                        <!-- Divider after server sidebar -->
+                        <div class="server-sidebar-divider"></div>
+
+                        <!-- Channel Selection -->
+                        <div class="selection-panel" id="team-selection-panel">
+                            <!-- View Mode Toggle with Radio Buttons - Centered -->
+                            <div class="view-mode-toggle">
+                                <label>
+                                    <input type="radio" name="team-view-mode" value="servers" checked>
+                                    <span>Selected server</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="team-view-mode" value="channels">
+                                    <span>All channels</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="team-view-mode" value="selected">
+                                    <span>Selected channels</span>
+                                </label>
+                            </div>
+
+                            <!-- Channels Header (Servers Mode) -->
+                            <div class="unified-header team-servers-mode-header">
+                                <div class="header-section">
+                                    <div class="channels-search">
+                                        <input type="text" id="team-channel-search" class="search-input" placeholder="Search (press enter to add tag)">
+                                        <div class="search-tags" id="team-search-tags"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Channels Only Mode Header -->
+                            <div class="unified-header team-channels-only-header" style="display: none;">
+                                <div class="header-section">
+                                    <div class="channels-search">
+                                        <input type="text" id="team-channels-only-search" class="search-input" placeholder="Search (press enter to add tag)">
+                                        <div class="search-tags" id="team-channels-only-search-tags"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Channels List (Servers Mode) -->
+                            <div class="channels-section team-servers-mode-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                                <div id="team-channels-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0;">
+                                    <div class="no-selection">Select a server to view channels</div>
+                                </div>
+                            </div>
+
+                            <!-- Channels Only List (Channels Only Mode) -->
+                            <div class="team-channels-only-section" style="display: none; flex: 1; flex-direction: column; min-height: 0;">
+                                <div id="team-channels-only-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0;">
+                                    <div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>
+                                </div>
+                            </div>
+
+                            <!-- Selected Channels Mode Header -->
+                            <div class="unified-header team-selected-channels-mode-header" style="display: none;">
+                                <div class="header-section">
+                                    <div class="channels-search">
+                                        <input type="text" id="team-selected-channels-mode-search" class="search-input" placeholder="Search">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Selected Channels Mode List -->
+                            <div class="team-selected-channels-mode-section" style="display: none; flex: 1; flex-direction: column; min-height: 0; overflow: hidden;">
+                                <div id="team-selected-channels-mode-list" class="channels-list selected-channels-mode" style="flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0;">
+                                    <div class="no-selection">No channels selected</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vertical Divider -->
+                        <div class="panel-divider"></div>
+
+                        <!-- Middle: Team Message Display (Read-only) -->
+                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; background: transparent; padding: 0 0.75rem; border: none; box-sizing: border-box;">
+                            <!-- Team panel label - matching view-mode-toggle position -->
+                            <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
+                                <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Team panel (message set by team owner)</span>
+                            </div>
+                            <!-- Team Message Display -->
+                            <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
+                                <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
+                                    <!-- Emoji button - top right corner (disabled) -->
+                                    <button id="team-emoji-btn" type="button" disabled style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: not-allowed; padding: 0; z-index: 2; opacity: 0.4;">
+                                        <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
+                                    </button>
+                                    <!-- Character count - bottom right corner -->
+                                    <span id="team-char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1; pointer-events: none;">{{ (team.team_message or '')|length }}/2000</span>
+                                    <!-- Textarea - read only for team message -->
+                                    <textarea id="team-message-input" class="message-input" placeholder="No team message set by owner" readonly style="flex: 1; width: 100%; padding: 8px; padding-top: 8px; padding-right: 40px; padding-bottom: 32px; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; box-sizing: border-box; line-height: 1.4; vertical-align: top; cursor: not-allowed; opacity: 0.8;">{{ team.team_message or '' }}</textarea>
+                                </div>
+                                <div class="message-footer" style="flex-shrink: 0; padding: 0.75rem 0;">
+                                    <button id="team-send-btn" class="send-button" {% if not team or not team.team_message %}disabled{% endif %} style="width: 100%; justify-content: center;">
+                                        Send
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    {% elif has_team and not guilds %}
+                        {% if not discord_linked %}
+                        <!-- No Discord account linked -->
+                        <div class="empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+                            <h2 style="color: #dcddde; font-size: 1.5rem; margin-bottom: 1rem;">No Discord account linked</h2>
+                            <button class="discord-btn" onclick="window.location.href='{{ url_for('settings') }}'" style="padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                                </svg>
+                                Link Discord Account
+                            </button>
+                        </div>
+                        {% else %}
+                        <!-- Discord linked but no servers -->
+                        <div class="empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+                            <h2 style="color: #dcddde; font-size: 1.5rem;">Not in any Discord servers with linked account</h2>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                    <!-- No team access -->
+                    <div class="empty-state" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+                        <h2 style="color: #dcddde; font-size: 1.5rem;">No team access</h2>
+                        <p style="color: #81828A; margin-top: 0.5rem;">You need to be part of a team to use this panel.</p>
+                    </div>
+                    {% endif %}
                     </div>
 
                     <!-- Page: Team Management -->
@@ -930,6 +1067,137 @@
                 window.location.reload();
             }
         });
+
+        // Global function to show collapsible send results (used by both Personal and Team panels)
+        async function showSendResults(succeeded, rateLimited, failed) {
+            // Determine title and icon
+            let title, icon;
+            if (succeeded.length === 0 && (rateLimited.length > 0 || failed.length > 0)) {
+                title = 'Failed to send';
+                icon = 'error';
+            } else {
+                title = 'Send succeeded';
+                icon = 'success';
+            }
+
+            // Build collapsible sections HTML
+            let sectionsHTML = '';
+
+            // Success section
+            if (succeeded.length > 0) {
+                sectionsHTML += `
+                    <div class="result-section collapsed">
+                        <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                            <span>Send succeeded (${succeeded.length} Channel${succeeded.length !== 1 ? 's' : ''})</span>
+                            <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
+                        </div>
+                        <div class="result-content">
+                            ${succeeded.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Rate limited section
+            if (rateLimited.length > 0) {
+                sectionsHTML += `
+                    <div class="result-section collapsed">
+                        <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                            <span>Send rate limited (${rateLimited.length} Channel${rateLimited.length !== 1 ? 's' : ''})</span>
+                            <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
+                        </div>
+                        <div class="result-content">
+                            ${rateLimited.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Failed section
+            if (failed.length > 0) {
+                sectionsHTML += `
+                    <div class="result-section collapsed">
+                        <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
+                            <span>Send failed (${failed.length} Channel${failed.length !== 1 ? 's' : ''})</span>
+                            <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
+                        </div>
+                        <div class="result-content">
+                            ${failed.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Create custom modal
+            const modalHTML = `
+                <style>
+                    .result-section {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        display: block !important;
+                    }
+                    .result-section.collapsed .result-content {
+                        display: none;
+                    }
+                    .result-section.collapsed .collapse-icon {
+                        transform: rotate(180deg);
+                    }
+                    .result-header {
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        cursor: pointer;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        font-weight: 500;
+                        color: #dcddde;
+                        user-select: none;
+                        font-size: 0.85rem;
+                        line-height: 1;
+                    }
+                    .result-header:hover {
+                        opacity: 0.8;
+                    }
+                    .result-header span {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        line-height: 1;
+                    }
+                    .result-content {
+                        max-height: 150px;
+                        overflow-y: auto;
+                        overflow-x: hidden;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        scroll-behavior: auto;
+                    }
+                    .result-content::-webkit-scrollbar {
+                        width: 5px;
+                    }
+                    .result-content::-webkit-scrollbar-track {
+                        background: transparent;
+                    }
+                    .result-content::-webkit-scrollbar-thumb {
+                        background: rgba(255, 255, 255, 0.2);
+                        border-radius: 3px;
+                    }
+                    .result-channel-item {
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        color: #81828A;
+                        font-size: 0.75rem;
+                        background: transparent;
+                        line-height: 1;
+                        display: block !important;
+                    }
+                </style>
+                <div style="max-height: 300px; overflow-y: auto; overflow-x: hidden; scroll-behavior: auto; padding: 0 !important; margin: 0 !important; display: flex; flex-direction: column; gap: 0;">
+                    ${sectionsHTML}
+                </div>
+            `;
+
+            await showAlert(modalHTML, title, { icon: icon, allowHtml: true });
+        }
 
         // Side menu page switching
         document.addEventListener('DOMContentLoaded', function() {
@@ -1872,139 +2140,6 @@
 
             // Emoji button is just an icon - no picker functionality
 
-            // Show collapsible send results
-            async function showSendResults(succeeded, rateLimited, failed) {
-                const totalAttempted = succeeded.length + rateLimited.length + failed.length;
-
-                // Determine title and icon
-                let title, icon;
-                if (succeeded.length === 0 && (rateLimited.length > 0 || failed.length > 0)) {
-                    title = 'Failed to send';
-                    icon = 'error';
-                } else {
-                    title = 'Send succeeded';
-                    icon = 'success';
-                }
-
-                // Build collapsible sections HTML
-                let sectionsHTML = '';
-
-                // Success section
-                if (succeeded.length > 0) {
-                    sectionsHTML += `
-                        <div class="result-section collapsed">
-                            <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                                <span>Send succeeded (${succeeded.length} Channel${succeeded.length !== 1 ? 's' : ''})</span>
-                                <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
-                            </div>
-                            <div class="result-content">
-                                ${succeeded.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // Rate limited section
-                if (rateLimited.length > 0) {
-                    sectionsHTML += `
-                        <div class="result-section collapsed">
-                            <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                                <span>Send rate limited (${rateLimited.length} Channel${rateLimited.length !== 1 ? 's' : ''})</span>
-                                <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
-                            </div>
-                            <div class="result-content">
-                                ${rateLimited.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // Failed section
-                if (failed.length > 0) {
-                    sectionsHTML += `
-                        <div class="result-section collapsed">
-                            <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                                <span>Send failed (${failed.length} Channel${failed.length !== 1 ? 's' : ''})</span>
-                                <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
-                            </div>
-                            <div class="result-content">
-                                ${failed.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // Create custom modal
-                const modalHTML = `
-                    <style>
-                        .result-section {
-                            margin: 0 !important;
-                            padding: 0 !important;
-                            display: block !important;
-                        }
-                        .result-section.collapsed .result-content {
-                            display: none;
-                        }
-                        .result-section.collapsed .collapse-icon {
-                            transform: rotate(180deg);
-                        }
-                        .result-header {
-                            padding: 0 !important;
-                            margin: 0 !important;
-                            cursor: pointer;
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            font-weight: 500;
-                            color: #dcddde;
-                            user-select: none;
-                            font-size: 0.85rem;
-                            line-height: 1;
-                        }
-                        .result-header:hover {
-                            opacity: 0.8;
-                        }
-                        .result-header span {
-                            margin: 0 !important;
-                            padding: 0 !important;
-                            line-height: 1;
-                        }
-                        .result-content {
-                            max-height: 150px;
-                            overflow-y: auto;
-                            overflow-x: hidden;
-                            padding: 0 !important;
-                            margin: 0 !important;
-                            scroll-behavior: auto;
-                        }
-                        .result-content::-webkit-scrollbar {
-                            width: 5px;
-                        }
-                        .result-content::-webkit-scrollbar-track {
-                            background: transparent;
-                        }
-                        .result-content::-webkit-scrollbar-thumb {
-                            background: rgba(255, 255, 255, 0.2);
-                            border-radius: 3px;
-                        }
-                        .result-channel-item {
-                            padding: 0 !important;
-                            margin: 0 !important;
-                            color: #81828A;
-                            font-size: 0.75rem;
-                            background: transparent;
-                            line-height: 1;
-                            display: block !important;
-                        }
-                    </style>
-                    <div style="max-height: 300px; overflow-y: auto; overflow-x: hidden; scroll-behavior: auto; padding: 0 !important; margin: 0 !important; display: flex; flex-direction: column; gap: 0;">
-                        ${sectionsHTML}
-                    </div>
-                `;
-
-                await showAlert(modalHTML, title, { icon: icon, allowHtml: true });
-            }
-
             // Send button handler
             if (sendBtn) {
                 sendBtn.addEventListener('click', async function() {
@@ -2184,6 +2319,885 @@
 
             // Initialize on load
             initializeUI();
+        });
+
+        // ============================================
+        // TEAM PANEL JavaScript
+        // Separate functionality for the Team panel
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if team panel elements exist
+            const teamServerSidebar = document.getElementById('team-server-sidebar');
+            if (!teamServerSidebar) return; // Exit if no team panel
+
+            const teamChannelsList = document.getElementById('team-channels-list');
+            const teamMessageInput = document.getElementById('team-message-input');
+            const teamSendBtn = document.getElementById('team-send-btn');
+            const teamCharCount = document.getElementById('team-char-count');
+            const teamChannelSearch = document.getElementById('team-channel-search');
+            const teamSearchTagsContainer = document.getElementById('team-search-tags');
+            const MESSAGE_LIMIT = 2000;
+
+            let teamGuilds = [];
+            let teamServerChannels = {}; // Cache for channels by guild ID
+            let teamSelectedChannels = []; // Array for multiple channel selection
+            let teamSelectedGuild = null; // Currently selected guild
+            let teamSearchTags = []; // Search filter tags
+            let teamCurrentServerColor = 'rgba(21, 216, 188, 0.6)';
+            let teamIsSending = false;
+            let teamFailedChannels = new Map();
+            let teamViewMode = 'servers';
+            let teamChannelsOnlySearchText = '';
+            let teamChannelsOnlySearchTags = [];
+            let teamSelectedChannelsModeSearchText = '';
+            const teamMaxChannelsPerServer = {{ plan_status.max_channels_per_server if plan_status and plan_status.max_channels_per_server is defined else 2 }};
+
+            // Team panel view mode toggle elements
+            const teamViewModeRadios = document.querySelectorAll('input[name="team-view-mode"]');
+            const teamServersModeHeader = document.querySelector('.team-servers-mode-header');
+            const teamChannelsOnlyHeader = document.querySelector('.team-channels-only-header');
+            const teamSelectedChannelsModeHeader = document.querySelector('.team-selected-channels-mode-header');
+            const teamServersModeSections = document.querySelectorAll('.team-servers-mode-section');
+            const teamChannelsOnlySection = document.querySelector('.team-channels-only-section');
+            const teamSelectedChannelsModeSection = document.querySelector('.team-selected-channels-mode-section');
+            const teamChannelsOnlyList = document.getElementById('team-channels-only-list');
+            const teamSelectedChannelsModeList = document.getElementById('team-selected-channels-mode-list');
+            const teamChannelsOnlySearch = document.getElementById('team-channels-only-search');
+            const teamSelectedChannelsModeSearch = document.getElementById('team-selected-channels-mode-search');
+            const teamChannelsOnlySearchTagsContainer = document.getElementById('team-channels-only-search-tags');
+
+            // Team view mode toggle handler
+            teamViewModeRadios.forEach(radio => {
+                radio.addEventListener('change', () => {
+                    const mode = radio.value;
+                    if (mode === teamViewMode) return;
+
+                    teamViewMode = mode;
+
+                    // Hide all headers and sections first
+                    teamServersModeHeader.style.display = 'none';
+                    teamChannelsOnlyHeader.style.display = 'none';
+                    teamSelectedChannelsModeHeader.style.display = 'none';
+                    teamServersModeSections.forEach(s => s.style.display = 'none');
+                    teamChannelsOnlySection.style.display = 'none';
+                    teamSelectedChannelsModeSection.style.display = 'none';
+
+                    // Show the appropriate mode
+                    if (mode === 'servers') {
+                        teamServersModeHeader.style.display = '';
+                        teamServersModeSections.forEach(s => s.style.display = '');
+                    } else if (mode === 'channels') {
+                        teamChannelsOnlyHeader.style.display = '';
+                        teamChannelsOnlySection.style.display = 'flex';
+                        teamRenderChannelsOnlyMode();
+                    } else if (mode === 'selected') {
+                        teamSelectedChannelsModeHeader.style.display = '';
+                        teamSelectedChannelsModeSection.style.display = 'flex';
+                        teamRenderSelectedChannelsMode();
+                    }
+                });
+            });
+
+            // Team selected channels mode search handler
+            if (teamSelectedChannelsModeSearch) {
+                teamSelectedChannelsModeSearch.addEventListener('input', (e) => {
+                    teamSelectedChannelsModeSearchText = e.target.value.toLowerCase();
+                    teamRenderSelectedChannelsMode();
+                });
+            }
+
+            // Render channels in team selected channels mode
+            function teamRenderSelectedChannelsMode() {
+                if (!teamSelectedChannelsModeList) return;
+
+                if (teamSelectedChannels.length === 0) {
+                    teamSelectedChannelsModeList.innerHTML = '<div class="no-selection">No channels selected</div>';
+                    return;
+                }
+
+                let filteredChannels = teamSelectedChannels;
+                if (teamSelectedChannelsModeSearchText) {
+                    filteredChannels = teamSelectedChannels.filter(ch =>
+                        ch.name.toLowerCase().includes(teamSelectedChannelsModeSearchText) ||
+                        ch.guildName.toLowerCase().includes(teamSelectedChannelsModeSearchText)
+                    );
+                }
+
+                if (filteredChannels.length === 0) {
+                    teamSelectedChannelsModeList.innerHTML = '<div class="no-selection">No channels match search</div>';
+                    return;
+                }
+
+                teamSelectedChannelsModeList.innerHTML = filteredChannels.map(channel => {
+                    const iconUrl = channel.guildIcon
+                        ? `https://cdn.discordapp.com/icons/${channel.guildId}/${channel.guildIcon}.png`
+                        : null;
+
+                    const serverIconHtml = iconUrl
+                        ? `<img class="server-icon-small" src="${iconUrl}" alt="">`
+                        : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
+
+                    const channelKey = `${channel.guildId}-${channel.id}`;
+                    const failedInfo = teamFailedChannels.get(channelKey);
+                    const isFailed = !!failedInfo;
+                    const failedClass = isFailed ? ' failed' : '';
+                    const statusText = failedInfo?.type === 'ratelimit' ? 'Rate limited' : 'Missing permission';
+                    const statusTagHtml = isFailed ? `<span class="channel-status-tag">${statusText}</span>` : '';
+
+                    return `<div class="channel-item selected${failedClass}" data-channel-id="${channel.id}" data-channel-name="${channel.name}" data-guild-id="${channel.guildId}" data-guild-name="${channel.guildName}" data-guild-icon="${channel.guildIcon || ''}">${serverIconHtml}<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right">${statusTagHtml}<img class="channel-tick" src="{{ url_for('static', filename='x.png') }}" alt="x"></div></div>`;
+                }).join('');
+
+                // Add click handlers to remove channels
+                teamSelectedChannelsModeList.querySelectorAll('.channel-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const channelId = item.dataset.channelId;
+                        const guildId = item.dataset.guildId;
+
+                        teamSelectedChannels = teamSelectedChannels.filter(ch =>
+                            !(ch.id === channelId && ch.guildId === guildId)
+                        );
+
+                        teamSaveSelectedChannels();
+                        teamRenderSelectedChannelsMode();
+                        teamUpdateServerCount(guildId);
+                        teamUpdateSendButton();
+
+                        if (teamSelectedGuild && teamSelectedGuild.id === guildId) {
+                            teamRenderChannels();
+                        }
+                    });
+                });
+            }
+
+            // Team channels-only search handler
+            if (teamChannelsOnlySearch) {
+                teamChannelsOnlySearch.addEventListener('input', (e) => {
+                    teamChannelsOnlySearchText = e.target.value.toLowerCase();
+                    teamRenderChannelsOnlyMode();
+                });
+                teamChannelsOnlySearch.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && teamChannelsOnlySearch.value.trim()) {
+                        teamAddChannelsOnlySearchTag(teamChannelsOnlySearch.value);
+                    }
+                });
+            }
+
+            function teamAddChannelsOnlySearchTag(text) {
+                if (teamChannelsOnlySearchTags.length >= 6) {
+                    showTagLimitModal();
+                    return;
+                }
+                if (!teamChannelsOnlySearchTags.includes(text.toLowerCase()) && text.trim()) {
+                    teamChannelsOnlySearchTags.push(text.toLowerCase());
+                    teamUpdateChannelsOnlySearchTagsDisplay();
+                    teamChannelsOnlySearch.value = '';
+                    teamChannelsOnlySearchText = '';
+                    teamRenderChannelsOnlyMode();
+                }
+            }
+
+            function teamRemoveChannelsOnlySearchTag(tag) {
+                teamChannelsOnlySearchTags = teamChannelsOnlySearchTags.filter(t => t !== tag);
+                teamUpdateChannelsOnlySearchTagsDisplay();
+                teamRenderChannelsOnlyMode();
+            }
+
+            function teamUpdateChannelsOnlySearchTagsDisplay() {
+                if (!teamChannelsOnlySearchTagsContainer) return;
+                teamChannelsOnlySearchTagsContainer.innerHTML = '';
+                teamChannelsOnlySearchTags.forEach(tag => {
+                    const tagEl = document.createElement('div');
+                    tagEl.className = 'search-tag';
+                    tagEl.innerHTML = `
+                        ${tag}
+                        <span class="search-tag-remove" data-tag="${tag}">✕</span>
+                    `;
+                    tagEl.querySelector('.search-tag-remove').addEventListener('click', () => {
+                        teamRemoveChannelsOnlySearchTag(tag);
+                    });
+                    teamChannelsOnlySearchTagsContainer.appendChild(tagEl);
+                });
+            }
+
+            // Render channels in team channels-only mode
+            function teamRenderChannelsOnlyMode() {
+                if (!teamChannelsOnlyList) return;
+
+                const hasLoadedChannels = Object.keys(teamServerChannels).length > 0;
+
+                let allChannels = [];
+                for (const guild of teamGuilds) {
+                    const channels = teamServerChannels[guild.id] || [];
+                    for (const channel of channels) {
+                        allChannels.push({
+                            ...channel,
+                            guildId: guild.id,
+                            guildName: guild.name,
+                            guildIcon: guild.icon
+                        });
+                    }
+                }
+
+                if (teamChannelsOnlySearchTags.length > 0) {
+                    allChannels = allChannels.filter(ch =>
+                        teamChannelsOnlySearchTags.some(tag =>
+                            ch.name.toLowerCase().includes(tag) ||
+                            ch.guildName.toLowerCase().includes(tag)
+                        )
+                    );
+                }
+
+                if (teamChannelsOnlySearchText) {
+                    allChannels = allChannels.filter(ch =>
+                        ch.name.toLowerCase().includes(teamChannelsOnlySearchText) ||
+                        ch.guildName.toLowerCase().includes(teamChannelsOnlySearchText)
+                    );
+                }
+
+                if (allChannels.length === 0) {
+                    if (!hasLoadedChannels) {
+                        teamChannelsOnlyList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
+                    } else if (teamChannelsOnlySearchText || teamChannelsOnlySearchTags.length > 0) {
+                        teamChannelsOnlyList.innerHTML = '<div class="no-selection">No channels match search</div>';
+                    } else {
+                        teamChannelsOnlyList.innerHTML = '<div class="no-selection">No channels found</div>';
+                    }
+                    return;
+                }
+
+                teamChannelsOnlyList.innerHTML = allChannels.map(channel => {
+                    const isSelected = teamSelectedChannels.some(ch => ch.id === channel.id);
+                    const iconUrl = channel.guildIcon
+                        ? `https://cdn.discordapp.com/icons/${channel.guildId}/${channel.guildIcon}.png`
+                        : null;
+
+                    const serverIconHtml = iconUrl
+                        ? `<img class="server-icon-small" src="${iconUrl}" alt="">`
+                        : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
+
+                    return `<div class="channel-item ${isSelected ? 'selected' : ''}" data-channel-id="${channel.id}" data-channel-name="${channel.name}" data-guild-id="${channel.guildId}" data-guild-name="${channel.guildName}" data-guild-icon="${channel.guildIcon || ''}">${serverIconHtml}<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right"><img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓"></div></div>`;
+                }).join('');
+
+                teamChannelsOnlyList.querySelectorAll('.channel-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const channelId = item.dataset.channelId;
+                        const channelName = item.dataset.channelName;
+                        const guildId = item.dataset.guildId;
+                        const guildName = item.dataset.guildName;
+                        const guildIcon = item.dataset.guildIcon;
+
+                        teamToggleChannelSelection({
+                            id: channelId,
+                            name: channelName,
+                            guildId: guildId,
+                            guildName: guildName,
+                            guildIcon: guildIcon
+                        });
+
+                        const isNowSelected = teamSelectedChannels.some(ch => ch.id === channelId);
+                        if (isNowSelected) {
+                            item.classList.add('selected');
+                        } else {
+                            item.classList.remove('selected');
+                        }
+                    });
+                });
+            }
+
+            // Warn user before leaving if team messages are being sent
+            window.addEventListener('beforeunload', (e) => {
+                if (teamIsSending) {
+                    e.preventDefault();
+                    e.returnValue = '';
+                    return '';
+                }
+            });
+
+            // Load team saved data from localStorage
+            function teamLoadSelectedChannels() {
+                const saved = localStorage.getItem('teamSelectedChannels');
+                if (saved) {
+                    try {
+                        teamSelectedChannels = JSON.parse(saved);
+                    } catch (e) {
+                        console.error('Error loading saved team channels:', e);
+                        teamSelectedChannels = [];
+                    }
+                }
+            }
+
+            // Save team selected channels to localStorage
+            function teamSaveSelectedChannels() {
+                localStorage.setItem('teamSelectedChannels', JSON.stringify(teamSelectedChannels));
+            }
+
+            // Add team search tag
+            function teamAddSearchTag(text) {
+                if (teamSearchTags.length >= 6) {
+                    showTagLimitModal();
+                    return;
+                }
+                if (!teamSearchTags.includes(text.toLowerCase()) && text.trim()) {
+                    teamSearchTags.push(text.toLowerCase());
+                    teamUpdateSearchTagsDisplay();
+                    teamChannelSearch.value = '';
+                    if (teamSelectedGuild) {
+                        teamRenderChannels();
+                    }
+                }
+            }
+
+            function teamRemoveSearchTag(tag) {
+                teamSearchTags = teamSearchTags.filter(t => t !== tag);
+                teamUpdateSearchTagsDisplay();
+                if (teamSelectedGuild) {
+                    teamRenderChannels();
+                }
+            }
+
+            function teamUpdateSearchTagsDisplay() {
+                teamSearchTagsContainer.innerHTML = '';
+                teamSearchTags.forEach(tag => {
+                    const tagEl = document.createElement('div');
+                    tagEl.className = 'search-tag';
+                    tagEl.innerHTML = `
+                        ${tag}
+                        <span class="search-tag-remove" data-tag="${tag}">✕</span>
+                    `;
+                    tagEl.querySelector('.search-tag-remove').addEventListener('click', () => {
+                        teamRemoveSearchTag(tag);
+                    });
+                    teamSearchTagsContainer.appendChild(tagEl);
+                });
+            }
+
+            // Handle team channel search input
+            if (teamChannelSearch) {
+                teamChannelSearch.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && teamChannelSearch.value.trim()) {
+                        teamAddSearchTag(teamChannelSearch.value);
+                    }
+                });
+            }
+
+            // Render team server sidebar icons
+            function teamRenderServers() {
+                if (!teamServerSidebar) return;
+
+                teamServerSidebar.innerHTML = '';
+
+                if (!teamGuilds || teamGuilds.length === 0) {
+                    return;
+                }
+
+                teamGuilds.forEach(guild => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'server-icon-wrapper';
+                    wrapper.dataset.guildId = guild.id;
+                    wrapper.title = guild.name;
+
+                    const iconHtml = guild.icon
+                        ? `<img src="https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=96" alt="${guild.name}">`
+                        : `<span class="server-icon-placeholder">${guild.name.charAt(0).toUpperCase()}</span>`;
+
+                    wrapper.innerHTML = `
+                        <div class="server-icon-pill"></div>
+                        <div class="server-icon-holder">
+                            ${iconHtml}
+                        </div>
+                    `;
+
+                    wrapper.addEventListener('click', () => teamSelectServer(guild));
+                    teamServerSidebar.appendChild(wrapper);
+
+                    if (teamSelectedGuild && teamSelectedGuild.id === guild.id) {
+                        wrapper.classList.add('active');
+                    }
+                });
+            }
+
+            // Preload all channels for team guilds
+            async function teamPreloadAllChannels() {
+                const promises = teamGuilds.map(async (guild) => {
+                    if (!teamServerChannels[guild.id]) {
+                        try {
+                            const response = await fetch(`/api/guild/${guild.id}/channels`);
+                            const data = await response.json();
+
+                            if (data.token_invalid) {
+                                return;
+                            }
+
+                            if (data.channels) {
+                                teamServerChannels[guild.id] = data.channels.filter(ch => ch.type === 0).sort((a, b) => a.position - b.position);
+                            } else {
+                                teamServerChannels[guild.id] = [];
+                            }
+
+                            if (teamViewMode === 'channels') {
+                                teamRenderChannelsOnlyMode();
+                            }
+                        } catch (error) {
+                            console.error(`Error preloading team channels for ${guild.name}:`, error);
+                            teamServerChannels[guild.id] = [];
+                        }
+                    }
+                });
+
+                await Promise.all(promises);
+            }
+
+            // Initialize team UI
+            async function teamInitializeUI() {
+                teamLoadSelectedChannels();
+
+                teamGuilds = {{ guilds|tojson }};
+
+                // Remove selected channels from servers that no longer exist
+                const guildIds = new Set(teamGuilds.map(g => g.id));
+                const originalLength = teamSelectedChannels.length;
+                teamSelectedChannels = teamSelectedChannels.filter(ch => guildIds.has(ch.guildId));
+
+                if (teamSelectedChannels.length !== originalLength) {
+                    teamSaveSelectedChannels();
+                }
+
+                teamRenderServers();
+                teamUpdateSelectedDisplay();
+                teamUpdateSendButton();
+
+                teamPreloadAllChannels();
+            }
+
+            // Extract dominant color from image (team version)
+            function teamGetDominantColor(imageUrl, callback) {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    let r = 0, g = 0, b = 0, count = 0;
+
+                    for (let i = 0; i < data.length; i += 40) {
+                        r += data[i];
+                        g += data[i + 1];
+                        b += data[i + 2];
+                        count++;
+                    }
+
+                    r = Math.floor(r / count);
+                    g = Math.floor(g / count);
+                    b = Math.floor(b / count);
+
+                    callback(`rgb(${r}, ${g}, ${b})`);
+                };
+                img.onerror = function() {
+                    callback('rgba(21, 216, 188, 0.6)');
+                };
+                img.src = imageUrl;
+            }
+
+            // Select a server and load its channels (team version)
+            async function teamSelectServer(guild) {
+                teamSelectedGuild = guild;
+                const guildId = guild.id;
+
+                document.querySelectorAll('#team-server-sidebar .server-icon-wrapper').forEach(item => {
+                    item.classList.remove('active');
+                });
+
+                const activeItem = teamServerSidebar.querySelector(`[data-guild-id="${guildId}"]`);
+                if (activeItem) {
+                    activeItem.classList.add('active');
+                }
+
+                if (guild.icon) {
+                    const iconUrl = `https://cdn.discordapp.com/icons/${guildId}/${guild.icon}.png`;
+                    teamGetDominantColor(iconUrl, (color) => {
+                        if (teamSelectedGuild && teamSelectedGuild.id === guildId) {
+                            teamCurrentServerColor = color;
+                        }
+                    });
+                } else {
+                    teamCurrentServerColor = 'rgba(21, 216, 188, 0.6)';
+                }
+
+                if (!teamServerChannels[guildId]) {
+                    teamChannelsList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
+
+                    try {
+                        const response = await fetch(`/api/guild/${guildId}/channels`);
+
+                        if (!teamSelectedGuild || teamSelectedGuild.id !== guildId) {
+                            return;
+                        }
+
+                        const data = await response.json();
+
+                        if (data.token_invalid) {
+                            window.location.href = '/settings';
+                            return;
+                        }
+
+                        if (!response.ok) {
+                            return;
+                        }
+
+                        if (data.channels) {
+                            teamServerChannels[guildId] = data.channels.filter(ch => ch.type === 0).sort((a, b) => a.position - b.position);
+                        } else {
+                            teamServerChannels[guildId] = [];
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching team channels:`, error);
+                        teamServerChannels[guildId] = [];
+                    }
+                }
+
+                if (teamSelectedGuild && teamSelectedGuild.id === guildId) {
+                    teamRenderChannels();
+                }
+
+                if (teamViewMode === 'channels') {
+                    teamRenderChannelsOnlyMode();
+                }
+            }
+
+            // Render channels for selected team server
+            function teamRenderChannels() {
+                if (!teamSelectedGuild) {
+                    teamChannelsList.innerHTML = '<div class="no-selection">Select a server to view channels</div>';
+                    return;
+                }
+
+                teamChannelsList.innerHTML = '';
+                const channels = teamServerChannels[teamSelectedGuild.id] || [];
+
+                if (channels.length === 0) {
+                    teamChannelsList.innerHTML = '<div class="no-selection">No channels found</div>';
+                    return;
+                }
+
+                let filteredChannels = channels;
+                if (teamSearchTags.length > 0) {
+                    filteredChannels = channels.filter(channel =>
+                        teamSearchTags.some(tag => channel.name.toLowerCase().includes(tag))
+                    );
+                }
+
+                if (filteredChannels.length === 0) {
+                    teamChannelsList.innerHTML = '<div class="no-selection">No channels match search</div>';
+                    return;
+                }
+
+                filteredChannels.forEach(channel => {
+                    const isSelected = teamSelectedChannels.some(ch =>
+                        ch.id === channel.id && ch.guildId === teamSelectedGuild.id
+                    );
+
+                    const channelItem = document.createElement('div');
+                    channelItem.className = `channel-item ${isSelected ? 'selected' : ''}`;
+                    channelItem.dataset.channelId = channel.id;
+
+                    channelItem.innerHTML = `<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right"><img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓"></div>`;
+
+                    channelItem.addEventListener('click', () => {
+                        const currentlySelected = teamSelectedChannels.some(ch =>
+                            ch.id === channel.id && ch.guildId === teamSelectedGuild.id
+                        );
+                        teamToggleChannel(channel, !currentlySelected);
+                    });
+
+                    teamChannelsList.appendChild(channelItem);
+                });
+            }
+
+            // Toggle team channel selection for channels-only mode
+            function teamToggleChannelSelection(channel) {
+                const isCurrentlySelected = teamSelectedChannels.some(ch =>
+                    ch.id === channel.id && ch.guildId === channel.guildId
+                );
+
+                if (!isCurrentlySelected) {
+                    if (teamMaxChannelsPerServer !== -1) {
+                        const currentServerChannelCount = teamSelectedChannels.filter(ch =>
+                            ch.guildId === channel.guildId
+                        ).length;
+
+                        if (currentServerChannelCount >= teamMaxChannelsPerServer) {
+                            showChannelLimitModal(teamMaxChannelsPerServer);
+                            return;
+                        }
+                    }
+
+                    teamSelectedChannels.push({
+                        id: channel.id,
+                        name: channel.name,
+                        guildId: channel.guildId,
+                        guildName: channel.guildName,
+                        guildIcon: channel.guildIcon || null
+                    });
+                    const channelKey = `${channel.guildId}-${channel.id}`;
+                    teamFailedChannels.delete(channelKey);
+                } else {
+                    teamSelectedChannels = teamSelectedChannels.filter(ch =>
+                        !(ch.id === channel.id && ch.guildId === channel.guildId)
+                    );
+                }
+
+                teamSaveSelectedChannels();
+                teamUpdateServerCount(channel.guildId);
+                teamUpdateSelectedDisplay();
+                teamUpdateSendButton();
+            }
+
+            // Toggle team channel selection
+            function teamToggleChannel(channel, isChecked) {
+                if (!teamSelectedGuild) return;
+
+                const isCurrentlySelected = teamSelectedChannels.some(ch =>
+                    ch.id === channel.id && ch.guildId === teamSelectedGuild.id
+                );
+
+                if (isChecked && !isCurrentlySelected) {
+                    if (teamMaxChannelsPerServer !== -1) {
+                        const currentServerChannelCount = teamSelectedChannels.filter(ch =>
+                            ch.guildId === teamSelectedGuild.id
+                        ).length;
+
+                        if (currentServerChannelCount >= teamMaxChannelsPerServer) {
+                            showChannelLimitModal(teamMaxChannelsPerServer);
+                            return;
+                        }
+                    }
+
+                    teamSelectedChannels.push({
+                        id: channel.id,
+                        name: channel.name,
+                        guildId: teamSelectedGuild.id,
+                        guildName: teamSelectedGuild.name,
+                        guildIcon: teamSelectedGuild.icon || null
+                    });
+                    const channelKey = `${teamSelectedGuild.id}-${channel.id}`;
+                    teamFailedChannels.delete(channelKey);
+                } else if (!isChecked && isCurrentlySelected) {
+                    teamSelectedChannels = teamSelectedChannels.filter(ch =>
+                        !(ch.id === channel.id && ch.guildId === teamSelectedGuild.id)
+                    );
+                }
+
+                teamSaveSelectedChannels();
+                teamRenderChannels();
+                teamUpdateServerCount(teamSelectedGuild.id);
+                teamUpdateSelectedDisplay();
+                teamUpdateSendButton();
+            }
+
+            // Update count badge on team server
+            function teamUpdateServerCount(guildId) {
+                const count = teamSelectedChannels.filter(ch => ch.guildId === guildId).length;
+                const serverItem = teamServerSidebar.querySelector(`[data-guild-id="${guildId}"]`);
+                if (serverItem) {
+                    const countEl = serverItem.querySelector('.server-count');
+                    if (countEl) {
+                        if (count > 0) {
+                            countEl.textContent = `${count} selected`;
+                            countEl.style.display = 'block';
+                            serverItem.classList.add('has-selection');
+                        } else {
+                            countEl.style.display = 'none';
+                            serverItem.classList.remove('has-selection');
+                        }
+                    }
+                }
+            }
+
+            // Update team failed channel status
+            function teamUpdateFailedChannelStatus(channel) {
+                if (teamViewMode === 'selected') {
+                    teamRenderSelectedChannelsMode();
+                }
+            }
+
+            // Update team selected channels display
+            function teamUpdateSelectedDisplay() {
+                if (teamViewMode === 'selected') {
+                    teamRenderSelectedChannelsMode();
+                }
+                if (teamViewMode === 'channels') {
+                    teamRenderChannelsOnlyMode();
+                }
+            }
+
+            // Update team send button state
+            function teamUpdateSendButton() {
+                if (teamSendBtn && teamMessageInput) {
+                    // Team message is read-only - check if there's a team message set
+                    const teamMessage = teamMessageInput.value.trim();
+                    teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessage;
+                }
+            }
+
+            // Team send button handler
+            if (teamSendBtn) {
+                teamSendBtn.addEventListener('click', async function() {
+                    const teamMessage = teamMessageInput ? teamMessageInput.value.trim() : '';
+                    if (teamSelectedChannels.length > 0 && teamMessage) {
+                        // Check for filtered content before proceeding
+                        const filteredWords = {{ BLACKLISTED_WORDS|tojson }};
+                        const phraseExceptions = {{ PHRASE_EXCEPTIONS|tojson }};
+
+                        function isWordInException(word, messageLower) {
+                            const wordLower = word.toLowerCase();
+                            const exceptions = phraseExceptions[wordLower] || [];
+
+                            if (exceptions.length === 0) return false;
+
+                            let startIndex = 0;
+                            while (true) {
+                                const pos = messageLower.indexOf(wordLower, startIndex);
+                                if (pos === -1) break;
+
+                                const wordEnd = pos + wordLower.length;
+                                let isException = false;
+
+                                for (const exception of exceptions) {
+                                    const excLower = exception.toLowerCase();
+                                    const excPos = messageLower.indexOf(excLower);
+                                    if (excPos !== -1 && excPos <= pos && (excPos + excLower.length) >= wordEnd) {
+                                        isException = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!isException) return false;
+
+                                startIndex = pos + 1;
+                            }
+
+                            return true;
+                        }
+
+                        const messageLower = teamMessage.toLowerCase();
+                        let foundWords = [];
+
+                        for (const word of filteredWords) {
+                            if (messageLower.includes(word.toLowerCase())) {
+                                if (!isWordInException(word, messageLower)) {
+                                    foundWords.push(word);
+                                }
+                            }
+                        }
+
+                        if (foundWords.length > 0) {
+                            try {
+                                await fetch('/api/flag-self', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-Token': '{{ csrf_token }}'
+                                    },
+                                    body: JSON.stringify({ words: foundWords })
+                                });
+                            } catch (e) {
+                                console.error('Failed to report flagged content:', e);
+                            }
+
+                            await showAlert(`Banned words used\n\nThe team message contains prohibited content:\n• ${foundWords.join('\n• ')}\n\nPlease contact the team owner to update the message.`, 'Warning');
+                            return;
+                        }
+
+                        // Show confirmation popup
+                        const channelCount = teamSelectedChannels.length;
+                        const confirmed = await showConfirm(`Send team message to ${channelCount} channel${channelCount !== 1 ? 's' : ''}?`, 'Send Team Message', { confirmText: 'Send' });
+                        if (!confirmed) return;
+
+                        teamFailedChannels.clear();
+
+                        teamIsSending = true;
+                        teamSendBtn.disabled = true;
+                        teamSendBtn.innerHTML = '<span id="team-send-progress">Sending...</span>';
+
+                        let succeededChannels = [];
+                        let rateLimitedChannels = [];
+                        let failedChannelsList = [];
+
+                        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+                        const customDelay = parseInt('{{ user_data.message_delay }}') || 1000;
+                        const progressEl = document.getElementById('team-send-progress');
+
+                        try {
+                            for (let i = 0; i < teamSelectedChannels.length; i++) {
+                                const channel = teamSelectedChannels[i];
+
+                                if (progressEl) {
+                                    progressEl.textContent = `Sending ${i + 1}/${teamSelectedChannels.length}...`;
+                                }
+
+                                const response = await fetch('/api/send-message-single', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-Token': '{{ csrf_token }}'
+                                    },
+                                    body: JSON.stringify({
+                                        channel: channel,
+                                        message: teamMessage
+                                    })
+                                });
+
+                                const result = await response.json();
+
+                                if (response.ok && result.success) {
+                                    succeededChannels.push(channel.name);
+                                    const channelKey = `${channel.guildId}-${channel.id}`;
+                                    teamFailedChannels.delete(channelKey);
+                                    teamUpdateFailedChannelStatus(channel);
+                                } else if (result.token_invalid) {
+                                    window.location.href = '/settings';
+                                    return;
+                                } else if (result.limit_reached) {
+                                    await showAlert('Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to settings page...', 'Limit reached');
+                                    window.location.href = '/settings';
+                                    return;
+                                } else if (response.status === 429) {
+                                    const channelKey = `${channel.guildId}-${channel.id}`;
+                                    teamFailedChannels.set(channelKey, { type: 'ratelimit' });
+                                    rateLimitedChannels.push(channel.name);
+                                    teamUpdateFailedChannelStatus(channel);
+                                } else {
+                                    const channelKey = `${channel.guildId}-${channel.id}`;
+                                    teamFailedChannels.set(channelKey, { type: 'permission' });
+                                    failedChannelsList.push(channel.name);
+                                    teamUpdateFailedChannelStatus(channel);
+                                }
+
+                                if (i < teamSelectedChannels.length - 1 && customDelay > 0) {
+                                    await delay(customDelay);
+                                }
+                            }
+
+                            await showSendResults(succeededChannels, rateLimitedChannels, failedChannelsList);
+                        } catch (error) {
+                            console.error('Team send error:', error);
+                            await showAlert(`Error sending team message: ${error.message}`, 'Error');
+                        } finally {
+                            teamIsSending = false;
+                            teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessage;
+                            teamSendBtn.innerHTML = 'Send';
+                        }
+                    }
+                });
+            }
+
+            // Initialize team panel on load
+            teamInitializeUI();
         });
     </script>
 </body>

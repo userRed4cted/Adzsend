@@ -36,7 +36,7 @@ SUBSCRIPTION_PLANS = {
         'features': [
             '30 messages per day',
             '2 channels per server',
-            'Personal use',
+            'Personal panel',
         ],
 
         # MESSAGE LIMIT
@@ -95,7 +95,7 @@ SUBSCRIPTION_PLANS = {
             '500 message posts per week',
             'Unlimited channel and server selections',
             'Advanced analytics',
-            'Personal use',
+            'Personal panel',
         ],
 
         # MESSAGE LIMIT
@@ -153,7 +153,7 @@ SUBSCRIPTION_PLANS = {
             'x3 or x5 (of Pro) message posting',
             'Unlimited channel and server selections',
             'Advanced analytics',
-            'Personal use',
+            'Personal panel',
         ],
         'message_limit': 1500,  # x5=2500 -1 = unlimited
         'usage_type': 'amount',
@@ -302,6 +302,7 @@ BUSINESS_PLANS = {
             'Advanced analytics',
             'Team management',
             'Up to 15 team members',
+            'Team panel for owner and members',
         ],
 
         # MESSAGE LIMIT
@@ -347,6 +348,7 @@ BUSINESS_PLANS = {
             'Advanced analytics',
             'Team management',
             'Up to 40 team members',
+            'Team panel for owner and members',
         ],
         'message_limit': -1,  # -1 = unlimited
         'usage_type': 'amount',

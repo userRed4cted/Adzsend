@@ -1021,12 +1021,42 @@ def test_page():
     plan_status = get_plan_status(user['id'])
     user_data = get_user_data(user['id'])
 
+    # Check if user has team access (owner or member)
+    from database import get_business_team_by_owner, get_business_team_by_member, get_discord_oauth_info, get_active_subscription, create_business_team
+    from config import BUSINESS_PLANS
+    team = get_business_team_by_owner(user['id'])
+
+    if not team:
+        # Check if user has an active business subscription but no team
+        subscription = get_active_subscription(user['id'])
+        if subscription and subscription.get('plan_id', '').startswith('team_plan_'):
+            plan_config = BUSINESS_PLANS.get(subscription['plan_id'], {})
+            max_members = plan_config.get('max_members', 3)
+            team_id = create_business_team(user['id'], subscription['id'], max_members)
+            team = get_business_team_by_owner(user['id'])
+
+    if not team:
+        # Check by main discord_id
+        team = get_business_team_by_member(session['user']['id'])
+
+    if not team:
+        # Also check by OAuth-linked Discord ID
+        oauth_info = get_discord_oauth_info(user['id'])
+        if oauth_info and oauth_info.get('oauth_discord_id'):
+            team = get_business_team_by_member(oauth_info['oauth_discord_id'])
+
+    has_team = team is not None
+    is_owner = is_business_owner(user['id']) if has_team else False
+
     return render_template('test.html',
         discord_info=discord_info,
         discord_linked=discord_linked,
         guilds=guilds,
         plan_status=plan_status,
         user_data=user_data,
+        team=team,
+        has_team=has_team,
+        is_team_owner=is_owner,
         BLACKLISTED_WORDS=BLACKLISTED_WORDS,
         PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS
     )

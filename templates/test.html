@@ -1010,7 +1010,7 @@
                     <div id="page-team-management" class="page-content" style="height: 100%; display: none; flex-direction: row;">
                         {% if is_team_owner and team %}
                         <!-- Left Half: Team Members Management -->
-                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%;">
+                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; position: relative;">
                             <!-- Radio Toggle -->
                             <div class="view-mode-toggle">
                                 <label>
@@ -1042,13 +1042,16 @@
                                 </div>
                             </div>
 
+                            <!-- Empty state messages (centered in entire left half) -->
+                            {% set pending_members = members|default([])|selectattr('invitation_status', 'equalto', 'pending')|list %}
+                            {% set accepted_members = members|default([])|selectattr('invitation_status', 'equalto', 'accepted')|list %}
+                            <div id="mgmt-add-empty" class="no-selection" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); {% if pending_members|length > 0 %}display: none;{% endif %}">No pending invitations</div>
+                            <div id="mgmt-members-empty" class="no-selection" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none;">No team members yet</div>
+
                             <!-- Add Mode List (Only pending invitations) -->
-                            <div class="channels-section mgmt-add-mode-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding-top: 0; position: relative;">
-                                <div id="mgmt-add-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0; position: relative;">
-                                    {% set pending_members = members|default([])|selectattr('invitation_status', 'equalto', 'pending')|list %}
-                                    {% if pending_members|length == 0 %}
-                                        <div class="no-selection" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">No pending invitations</div>
-                                    {% else %}
+                            <div class="channels-section mgmt-add-mode-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding-top: 0;">
+                                <div id="mgmt-add-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0;">
+                                    {% if pending_members|length > 0 %}
                                         {% for member in pending_members %}
                                             <div class="channel-item mgmt-member-item" data-adzsend-id="{{ member.member_adzsend_id }}" data-status="pending" style="cursor: default;">
                                                 <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
@@ -1064,12 +1067,9 @@
                             </div>
 
                             <!-- Team Members Mode List (Only accepted members) -->
-                            <div class="channels-section mgmt-members-mode-section" style="display: none; flex: 1; flex-direction: column; min-height: 0; padding-top: 0; position: relative;">
-                                <div id="mgmt-members-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0; position: relative;">
-                                    {% set accepted_members = members|default([])|selectattr('invitation_status', 'equalto', 'accepted')|list %}
-                                    {% if accepted_members|length == 0 %}
-                                        <div class="no-selection" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">No team members yet</div>
-                                    {% else %}
+                            <div class="channels-section mgmt-members-mode-section" style="display: none; flex: 1; flex-direction: column; min-height: 0; padding-top: 0;">
+                                <div id="mgmt-members-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0;">
+                                    {% if accepted_members|length > 0 %}
                                         {% for member in accepted_members %}
                                             <div class="channel-item mgmt-member-item" data-adzsend-id="{{ member.member_adzsend_id }}" data-status="accepted" style="cursor: default;">
                                                 <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
@@ -3794,6 +3794,8 @@
             const mgmtMembersModeSection = document.querySelector('.mgmt-members-mode-section');
             const mgmtAddList = document.getElementById('mgmt-add-list');
             const mgmtMembersList = document.getElementById('mgmt-members-list');
+            const mgmtAddEmpty = document.getElementById('mgmt-add-empty');
+            const mgmtMembersEmpty = document.getElementById('mgmt-members-empty');
 
             // Track saved message to detect changes
             let savedMessage = mgmtMessageInput ? mgmtMessageInput.value : '';
@@ -3837,7 +3839,9 @@
                     const message = mgmtMessageInput ? mgmtMessageInput.value : '';
 
                     mgmtSaveBtn.disabled = true;
-                    mgmtSaveBtn.textContent = 'Saving...';
+                    // Use visibility:hidden on text to maintain button size, position dots absolutely centered
+                    mgmtSaveBtn.innerHTML = '<span style="visibility: hidden;">Save</span><div class="loading-dots" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+                    mgmtSaveBtn.style.position = 'relative';
 
                     try {
                         const response = await fetch('/api/team/set-team-message', {
@@ -3862,17 +3866,17 @@
                             }
 
                             savedMessage = message;
-                            mgmtSaveBtn.textContent = 'Save';
+                            mgmtSaveBtn.innerHTML = 'Save';
                             updateMgmtSaveButton();
                         } else {
                             await showAlert(result.error || 'Failed to save team message', 'Error');
-                            mgmtSaveBtn.textContent = 'Save';
+                            mgmtSaveBtn.innerHTML = 'Save';
                             updateMgmtSaveButton();
                         }
                     } catch (error) {
                         console.error('Save team message error:', error);
                         await showAlert('Failed to save team message: ' + error.message, 'Error');
-                        mgmtSaveBtn.textContent = 'Save';
+                        mgmtSaveBtn.innerHTML = 'Save';
                         updateMgmtSaveButton();
                     }
                 });
@@ -3895,12 +3899,18 @@
                         if (mgmtMembersModeHeader) mgmtMembersModeHeader.style.display = 'none';
                         if (mgmtAddModeSection) mgmtAddModeSection.style.display = 'flex';
                         if (mgmtMembersModeSection) mgmtMembersModeSection.style.display = 'none';
+                        // Show/hide empty states
+                        if (mgmtMembersEmpty) mgmtMembersEmpty.style.display = 'none';
+                        updateEmptyStates();
                     } else {
                         // Show Team members mode
                         if (mgmtAddModeHeader) mgmtAddModeHeader.style.display = 'none';
                         if (mgmtMembersModeHeader) mgmtMembersModeHeader.style.display = '';
                         if (mgmtAddModeSection) mgmtAddModeSection.style.display = 'none';
                         if (mgmtMembersModeSection) mgmtMembersModeSection.style.display = 'flex';
+                        // Show/hide empty states
+                        if (mgmtAddEmpty) mgmtAddEmpty.style.display = 'none';
+                        updateEmptyStates();
                     }
                 });
             });
@@ -3910,20 +3920,26 @@
             // =====================
 
             function updateEmptyStates() {
+                // Get current mode
+                const currentMode = document.querySelector('input[name="mgmt-view-mode"]:checked');
+                const isAddMode = currentMode ? currentMode.value === 'add' : true;
+
                 // Check Add list
-                if (mgmtAddList) {
+                if (mgmtAddList && mgmtAddEmpty) {
                     const items = mgmtAddList.querySelectorAll('.mgmt-member-item');
-                    const noSelection = mgmtAddList.querySelector('.no-selection');
-                    if (items.length === 0 && !noSelection) {
-                        mgmtAddList.innerHTML = '<div class="no-selection" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">No pending invitations</div>';
+                    if (items.length === 0 && isAddMode) {
+                        mgmtAddEmpty.style.display = '';
+                    } else {
+                        mgmtAddEmpty.style.display = 'none';
                     }
                 }
                 // Check Members list
-                if (mgmtMembersList) {
+                if (mgmtMembersList && mgmtMembersEmpty) {
                     const items = mgmtMembersList.querySelectorAll('.mgmt-member-item');
-                    const noSelection = mgmtMembersList.querySelector('.no-selection');
-                    if (items.length === 0 && !noSelection) {
-                        mgmtMembersList.innerHTML = '<div class="no-selection" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">No team members yet</div>';
+                    if (items.length === 0 && !isAddMode) {
+                        mgmtMembersEmpty.style.display = '';
+                    } else {
+                        mgmtMembersEmpty.style.display = 'none';
                     }
                 }
             }
@@ -3967,9 +3983,8 @@
                             if (response.ok && result.success) {
                                 this.value = '';
 
-                                // Remove "No pending invitations" message if present
-                                const noSelection = mgmtAddList.querySelector('.no-selection');
-                                if (noSelection) noSelection.remove();
+                                // Hide empty state message
+                                if (mgmtAddEmpty) mgmtAddEmpty.style.display = 'none';
 
                                 // Add new member item to the list
                                 const newItem = document.createElement('div');

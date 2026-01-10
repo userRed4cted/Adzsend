@@ -1375,7 +1375,7 @@ def remove_team_member_by_adzsend_id(team_id, adzsend_id):
     conn = get_db()
     cursor = conn.cursor()
     # First get the user's discord_id from their adzsend_id
-    cursor.execute('SELECT discord_id FROM user_data WHERE adzsend_id = ?', (adzsend_id,))
+    cursor.execute('SELECT discord_id FROM users WHERE adzsend_id = ?', (adzsend_id,))
     result = cursor.fetchone()
     if result:
         member_discord_id = result[0]

@@ -1008,10 +1008,10 @@
         async function copyToClipboard(text) {
             try {
                 await navigator.clipboard.writeText(text);
-                await showAlert('Copied to clipboard', 'Success', { icon: 'success' });
+                alert('Copied to clipboard');
             } catch (err) {
                 console.error('Copy failed:', err);
-                await showAlert('Failed to copy to clipboard', 'Error', { icon: 'error' });
+                alert('Failed to copy to clipboard');
             }
         }
 
@@ -1079,9 +1079,9 @@
         async function copyMessage() {
             try {
                 await navigator.clipboard.writeText(currentMessageContent);
-                await showAlert('Copied to clipboard', 'Success', { icon: 'success' });
+                alert('Copied to clipboard');
             } catch (err) {
-                await showAlert('Failed to copy to clipboard', 'Error', { icon: 'error' });
+                alert('Failed to copy to clipboard');
             }
         }
 

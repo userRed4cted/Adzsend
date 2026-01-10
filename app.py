@@ -1048,6 +1048,16 @@ def test_page():
     has_team = team is not None
     is_owner = is_business_owner(user['id']) if has_team else False
 
+    # Get team management data if user is team owner
+    members = []
+    member_stats = []
+    active_member_count = 0
+    if is_owner and team:
+        from database import get_team_members, get_team_member_stats, get_team_member_count
+        members = get_team_members(team['id'], include_all=True)
+        member_stats = get_team_member_stats(team['id'])
+        active_member_count = get_team_member_count(team['id'])
+
     return render_template('test.html',
         discord_info=discord_info,
         discord_linked=discord_linked,
@@ -1057,6 +1067,9 @@ def test_page():
         team=team,
         has_team=has_team,
         is_team_owner=is_owner,
+        members=members,
+        member_stats=member_stats,
+        active_member_count=active_member_count,
         BLACKLISTED_WORDS=BLACKLISTED_WORDS,
         PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS
     )
@@ -2048,7 +2061,7 @@ def add_team_member_api():
         success = add_team_member(team['id'], member_discord_id, username, avatar)
 
         if success:
-            return {'success': True, 'message': 'Member added successfully'}, 200
+            return {'success': True, 'message': 'Member added successfully', 'discord_id': member_discord_id}, 200
         else:
             return {'success': False, 'error': 'Member already exists in the team'}, 400
 
@@ -2059,7 +2072,7 @@ def add_team_member_api():
 @app.route('/api/team/remove-member', methods=['POST'])
 @rate_limit('api')
 def remove_team_member_api():
-    """Remove a member from the team."""
+    """Remove a member from the team by Adzsend ID."""
     # CSRF protection
     csrf_error = check_csrf()
     if csrf_error:
@@ -2074,19 +2087,19 @@ def remove_team_member_api():
             return {'success': False, 'error': 'User not found'}, 404
 
         # Check if user owns a business team
-        from database import get_business_team_by_owner, remove_team_member
+        from database import get_business_team_by_owner, remove_team_member_by_adzsend_id
         team = get_business_team_by_owner(user['id'])
 
         if not team:
             return {'success': False, 'error': 'No business team found'}, 404
 
         data = request.get_json()
-        member_discord_id = data.get('discord_id')
+        adzsend_id = data.get('adzsend_id')
 
-        if not member_discord_id:
-            return {'success': False, 'error': 'Discord ID required'}, 400
+        if not adzsend_id:
+            return {'success': False, 'error': 'Adzsend ID required'}, 400
 
-        remove_team_member(team['id'], member_discord_id)
+        remove_team_member_by_adzsend_id(team['id'], adzsend_id)
         return {'success': True, 'message': 'Member removed successfully'}, 200
 
     except Exception as e:

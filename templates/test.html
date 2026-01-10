@@ -578,6 +578,17 @@
             justify-content: center;
         }
 
+        /* Team Management member items - always show right side */
+        .channels-list .channel-item.mgmt-member-item .channel-right {
+            display: flex !important;
+        }
+
+        .channels-list .channel-item.mgmt-member-item .channel-status-tag {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         /* Failed channel styling - red gradient background */
         .channels-list .channel-item.failed {
             background: linear-gradient(to bottom, #991a35, #6b1226);
@@ -702,7 +713,7 @@
 
                         <div class="menu-category">Management</div>
 
-                        <button class="menu-item" data-page="team-management">
+                        <button class="menu-item{% if not is_team_owner %} disabled{% endif %}" data-page="team-management"{% if not is_team_owner %} disabled style="opacity: 0.4; cursor: not-allowed;"{% endif %}>
                             Team management
                         </button>
 
@@ -954,7 +965,7 @@
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
                                     </button>
                                     <!-- Character count - bottom right corner -->
-                                    <span id="team-char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1; pointer-events: none;">{{ (team.team_message or '')|length }}/2000</span>
+                                    <span id="team-char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1; pointer-events: none;">{{ 2000 - (team.team_message or '')|length }}</span>
                                     <!-- Textarea with padding barriers for emoji (top-right) and counter (bottom-right) -->
                                     <textarea id="team-message-input" class="message-input" placeholder="No team message set" readonly style="flex: 1; width: 100%; padding: 8px; padding-top: 8px; padding-right: 40px; padding-bottom: 32px; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; box-sizing: border-box; line-height: 1.4; vertical-align: top;">{{ team.team_message or '' }}</textarea>
                                 </div>
@@ -997,8 +1008,123 @@
 
                     <!-- Page: Team Management -->
                     <div id="page-team-management" class="page-content" style="height: 100%; display: none; flex-direction: row;">
-                        <!-- Left Half -->
-                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; padding: 0.75rem; box-sizing: border-box;">
+                        {% if is_team_owner and team %}
+                        <!-- Left Half: Team Members Management -->
+                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%;">
+                            <!-- Radio Toggle -->
+                            <div class="view-mode-toggle">
+                                <label>
+                                    <input type="radio" name="mgmt-view-mode" value="add" checked>
+                                    <span>Add</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="mgmt-view-mode" value="members">
+                                    <span>Team members</span>
+                                </label>
+                            </div>
+
+                            <!-- Add Mode Header (search bar + member count) -->
+                            <div class="unified-header mgmt-add-mode-header">
+                                <div class="header-section">
+                                    <div class="channels-search">
+                                        <input type="text" id="mgmt-add-search" class="search-input" placeholder="Search Adzsend ID (press enter to add)">
+                                    </div>
+                                </div>
+                                <div id="mgmt-member-count-add" style="display: flex; justify-content: center; padding: 0.25rem 0 0 0;">
+                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">{{ active_member_count|default(0) }}/15 team members</span>
+                                </div>
+                            </div>
+
+                            <!-- Team Members Mode Header (member count only, no search bar) -->
+                            <div class="unified-header mgmt-members-mode-header" style="display: none;">
+                                <div id="mgmt-member-count-members" style="display: flex; justify-content: center; padding: 0.5rem 0;">
+                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">{{ active_member_count|default(0) }}/15 team members</span>
+                                </div>
+                            </div>
+
+                            <!-- Add Mode List (Only pending invitations) -->
+                            <div class="channels-section mgmt-add-mode-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding-top: 0; position: relative;">
+                                <div id="mgmt-add-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0; position: relative;">
+                                    {% set pending_members = members|default([])|selectattr('invitation_status', 'equalto', 'pending')|list %}
+                                    {% if pending_members|length == 0 %}
+                                        <div class="no-selection" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">No pending invitations</div>
+                                    {% else %}
+                                        {% for member in pending_members %}
+                                            <div class="channel-item mgmt-member-item" data-adzsend-id="{{ member.member_adzsend_id }}" data-status="pending" style="cursor: default;">
+                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                                                <span class="channel-name" style="font-family: monospace;">{{ member.member_adzsend_id or 'No ID' }}</span>
+                                                <div class="channel-right">
+                                                    <span class="channel-status-tag">Pending</span>
+                                                    <img class="mgmt-member-remove" src="{{ url_for('static', filename='x.png') }}" alt="x" style="width: 16px; height: 16px; cursor: pointer; opacity: 0.7;" data-action="cancel-invite">
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Team Members Mode List (Only accepted members) -->
+                            <div class="channels-section mgmt-members-mode-section" style="display: none; flex: 1; flex-direction: column; min-height: 0; padding-top: 0; position: relative;">
+                                <div id="mgmt-members-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0; position: relative;">
+                                    {% set accepted_members = members|default([])|selectattr('invitation_status', 'equalto', 'accepted')|list %}
+                                    {% if accepted_members|length == 0 %}
+                                        <div class="no-selection" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">No team members yet</div>
+                                    {% else %}
+                                        {% for member in accepted_members %}
+                                            <div class="channel-item mgmt-member-item" data-adzsend-id="{{ member.member_adzsend_id }}" data-status="accepted" style="cursor: default;">
+                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                                                <span class="channel-name" style="font-family: monospace;">{{ member.member_adzsend_id or 'No ID' }}</span>
+                                                <div class="channel-right">
+                                                    <span class="channel-status-tag">Team member</span>
+                                                    <img class="mgmt-member-remove" src="{{ url_for('static', filename='x.png') }}" alt="x" style="width: 16px; height: 16px; cursor: pointer; opacity: 0.7;" data-action="remove-member">
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vertical Divider -->
+                        <div class="panel-divider"></div>
+
+                        <!-- Right Half: Team Message (same UI as Personal panel) -->
+                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; background: transparent; padding: 0 0.75rem; border: none; box-sizing: border-box;">
+                            <!-- Team message label - matching view-mode-toggle position -->
+                            <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
+                                <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Team message</span>
+                            </div>
+                            <!-- Message Composer -->
+                            <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
+                                <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
+                                    <!-- Emoji button - top right corner (disabled) -->
+                                    <button id="mgmt-emoji-btn" type="button" disabled style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: not-allowed; padding: 0; z-index: 2; opacity: 0.4;">
+                                        <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
+                                    </button>
+                                    <!-- Character count - bottom right corner -->
+                                    <span id="mgmt-char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1; pointer-events: none;">{{ 2000 - (team.team_message or '')|length }}</span>
+                                    <!-- Textarea with padding barriers for emoji (top-right) and counter (bottom-right) -->
+                                    <textarea id="mgmt-team-message-input" class="message-input" placeholder="Message" style="flex: 1; width: 100%; padding: 8px; padding-top: 8px; padding-right: 40px; padding-bottom: 32px; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; box-sizing: border-box; line-height: 1.4; vertical-align: top;">{{ team.team_message or '' }}</textarea>
+                                </div>
+                                <div class="message-footer" style="flex-shrink: 0; padding: 0.75rem 0;">
+                                    <button id="mgmt-save-btn" class="send-button" style="width: 100%; justify-content: center;">
+                                        Save
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <!-- No access message -->
+                        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                            <div class="no-selection">You need to be a team owner to access this page</div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Page: Analytics -->
+                    <div id="page-analytics" class="page-content" style="height: 100%; display: none; flex-direction: row;">
+                        <!-- Left Half (empty for now) -->
+                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%;">
                         </div>
 
                         <!-- Vertical Divider -->
@@ -1009,10 +1135,6 @@
                         </div>
                     </div>
 
-                    <!-- Page: Analytics -->
-                    <div id="page-analytics" class="page-content" style="height: 100%; display: none;">
-                    </div>
-
                     <!-- Page: Interval -->
                     <div id="page-interval" class="page-content" style="height: 100%; display: none;">
                     </div>
@@ -1020,6 +1142,419 @@
             </div>
         </div>
     </div>
+
+    <!-- Analytics Dialog -->
+    <div class="analytics-dialog-overlay" id="analytics-dialog-overlay">
+        <div class="analytics-dialog">
+            <div class="analytics-dialog-header">
+                <h3 class="analytics-dialog-title" id="analytics-dialog-title">Member Analytics</h3>
+                <button class="analytics-dialog-close" onclick="closeAnalyticsDialog()">&times;</button>
+            </div>
+            <div class="analytics-tabs">
+                <button class="analytics-tab active" data-tab="information" onclick="switchAnalyticsTab('information')">Information</button>
+                <button class="analytics-tab" data-tab="dates" onclick="switchAnalyticsTab('dates')">Dates</button>
+            </div>
+            <div class="analytics-content">
+                <!-- Information Panel -->
+                <div class="analytics-panel active" id="panel-information">
+                    <div id="analytics-info-content">
+                        <div class="no-data-message">Loading...</div>
+                    </div>
+                </div>
+                <!-- Dates Panel -->
+                <div class="analytics-panel" id="panel-dates">
+                    <div class="date-range-container">
+                        <div class="date-input-group">
+                            <label>From</label>
+                            <input type="date" id="analytics-start-date">
+                        </div>
+                        <div class="date-input-group">
+                            <label>To</label>
+                            <input type="date" id="analytics-end-date">
+                        </div>
+                        <button class="apply-dates-btn" onclick="applyDateRange()">Apply</button>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-canvas-wrapper">
+                            <canvas id="analytics-chart" class="chart-canvas"></canvas>
+                            <div class="chart-tooltip" id="chart-tooltip"></div>
+                        </div>
+                        <div class="chart-summary" id="chart-summary">
+                            <div class="chart-summary-item">
+                                <div class="chart-summary-value" id="summary-total">0</div>
+                                <div class="chart-summary-label">Total Ads</div>
+                            </div>
+                            <div class="chart-summary-item">
+                                <div class="chart-summary-value" id="summary-avg">0</div>
+                                <div class="chart-summary-label">Daily Avg</div>
+                            </div>
+                            <div class="chart-summary-item">
+                                <div class="chart-summary-value" id="summary-peak">0</div>
+                                <div class="chart-summary-label">Peak Day</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Analytics Dialog Styles */
+        .analytics-dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .analytics-dialog-overlay.show {
+            display: flex;
+        }
+
+        .analytics-dialog {
+            background: #1a1a1d;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .analytics-dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #282930;
+        }
+
+        .analytics-dialog-title {
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .analytics-dialog-close {
+            background: none;
+            border: none;
+            color: #81828A;
+            cursor: pointer;
+            font-size: 1.5rem;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .analytics-dialog-close:hover {
+            color: #ffffff;
+        }
+
+        .analytics-tabs {
+            display: flex;
+            border-bottom: 1px solid #282930;
+        }
+
+        .analytics-tab {
+            flex: 1;
+            padding: 0.75rem;
+            background: none;
+            border: none;
+            color: #81828A;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        .analytics-tab:hover {
+            color: #dcddde;
+        }
+
+        .analytics-tab.active {
+            color: #15d8bc;
+            border-bottom-color: #15d8bc;
+        }
+
+        .analytics-content {
+            padding: 0.75rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .analytics-panel {
+            display: none;
+        }
+
+        .analytics-panel.active {
+            display: block;
+        }
+
+        .analytics-stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #282930;
+        }
+
+        .analytics-stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .analytics-stat-label {
+            color: #81828A;
+            font-size: 0.9rem;
+        }
+
+        .analytics-stat-value {
+            color: #dcddde;
+            font-weight: 600;
+        }
+
+        .analytics-progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #282930;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .analytics-progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #15d8bc, #006e59);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        /* Date picker styles */
+        .date-range-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .date-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .date-input-group label {
+            color: #81828A;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .date-input-group input {
+            background: #212227;
+            border: 1px solid #282930;
+            border-radius: 6px;
+            padding: 0.5rem;
+            color: #dcddde;
+            font-size: 0.85rem;
+        }
+
+        .date-input-group input:focus {
+            outline: none;
+            border-color: #15d8bc;
+        }
+
+        .date-input-group input[type="date"]::-webkit-calendar-picker-indicator {
+            background: url('/static/calendar.png') no-repeat center;
+            background-size: contain;
+            filter: brightness(0) invert(1);
+            cursor: pointer;
+        }
+
+        .apply-dates-btn {
+            background: transparent;
+            border: none;
+            color: #15d8bc;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: auto;
+        }
+
+        .apply-dates-btn:hover {
+            color: #10b89e;
+        }
+
+        /* Chart styles */
+        .chart-container {
+            background: #121215;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .chart-canvas-wrapper {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+        }
+
+        .chart-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            background: #282930;
+            color: #dcddde;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+            white-space: nowrap;
+        }
+
+        .chart-summary {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #282930;
+        }
+
+        .chart-summary-item {
+            text-align: center;
+        }
+
+        .chart-summary-value {
+            color: #15d8bc;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .chart-summary-label {
+            color: #81828A;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            margin-top: 0.25rem;
+        }
+
+        .no-data-message {
+            text-align: center;
+            color: #81828A;
+            padding: 2rem;
+        }
+
+        /* Member Stats Styles */
+        .member-stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .member-stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: #212227;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .member-stat-item:hover {
+            background: #2a2b32;
+        }
+
+        .member-stat-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .member-stat-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .member-stat-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .member-stat-username {
+            color: #dcddde;
+            font-weight: 500;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .member-stat-id {
+            color: #81828A;
+            font-size: 0.8rem;
+            font-family: 'gg sans', sans-serif;
+        }
+
+        .member-stat-usage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: #121215;
+            border-radius: 6px;
+            min-width: 80px;
+        }
+
+        .stat-number {
+            color: #15d8bc;
+            font-weight: 700;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        .stat-label {
+            color: #81828A;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 0.25rem;
+        }
+
+        .view-analytics-btn {
+            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            border: none;
+            color: #121215;
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-left: auto;
+        }
+
+        .view-analytics-btn:hover {
+            background: linear-gradient(to bottom, #10b89e, #004e40);
+        }
+    </style>
 
     <!-- Tag Limit Popup Modal -->
     <div id="tag-limit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
@@ -1244,6 +1779,9 @@
                         return;
                     }
                     if (targetPage === 'team-panel' && (!hasTeam || !hasGuilds)) {
+                        return;
+                    }
+                    if (targetPage === 'team-management' && !isTeamOwner) {
                         return;
                     }
 
@@ -3237,6 +3775,637 @@
 
             // Initialize team panel on load
             teamInitializeUI();
+        });
+    </script>
+
+    <!-- Team Management Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Message box elements
+            const mgmtMessageInput = document.getElementById('mgmt-team-message-input');
+            const mgmtCharCount = document.getElementById('mgmt-char-count');
+            const mgmtSaveBtn = document.getElementById('mgmt-save-btn');
+            const MESSAGE_LIMIT = 2000;
+
+            // Left half elements
+            const mgmtAddSearch = document.getElementById('mgmt-add-search');
+            const mgmtAddModeHeader = document.querySelector('.mgmt-add-mode-header');
+            const mgmtAddModeSection = document.querySelector('.mgmt-add-mode-section');
+            const mgmtMembersModeSection = document.querySelector('.mgmt-members-mode-section');
+            const mgmtAddList = document.getElementById('mgmt-add-list');
+            const mgmtMembersList = document.getElementById('mgmt-members-list');
+
+            // Track saved message to detect changes
+            let savedMessage = mgmtMessageInput ? mgmtMessageInput.value : '';
+
+            // =====================
+            // MESSAGE BOX FUNCTIONS
+            // =====================
+
+            function updateMgmtSaveButton() {
+                if (mgmtSaveBtn && mgmtMessageInput) {
+                    const isOverLimit = mgmtMessageInput.value.length > MESSAGE_LIMIT;
+                    const hasChanged = mgmtMessageInput.value !== savedMessage;
+                    mgmtSaveBtn.disabled = isOverLimit || !hasChanged;
+                }
+            }
+
+            function updateMgmtCharCount() {
+                if (mgmtCharCount && mgmtMessageInput) {
+                    const remaining = MESSAGE_LIMIT - mgmtMessageInput.value.length;
+                    mgmtCharCount.textContent = remaining;
+
+                    if (remaining < 0) {
+                        mgmtCharCount.style.color = '#991a35';
+                    } else {
+                        mgmtCharCount.style.color = '#81828A';
+                    }
+                }
+            }
+
+            if (mgmtMessageInput) {
+                mgmtMessageInput.addEventListener('input', function() {
+                    updateMgmtCharCount();
+                    updateMgmtSaveButton();
+                });
+            }
+
+            updateMgmtSaveButton();
+
+            if (mgmtSaveBtn) {
+                mgmtSaveBtn.addEventListener('click', async function() {
+                    const message = mgmtMessageInput ? mgmtMessageInput.value : '';
+
+                    mgmtSaveBtn.disabled = true;
+                    mgmtSaveBtn.textContent = 'Saving...';
+
+                    try {
+                        const response = await fetch('/api/team/set-team-message', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({ message: message })
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok && result.success) {
+                            const teamPanelTextarea = document.getElementById('team-message-input');
+                            if (teamPanelTextarea) {
+                                teamPanelTextarea.value = message;
+                            }
+                            const teamCharCount = document.getElementById('team-char-count');
+                            if (teamCharCount) {
+                                teamCharCount.textContent = MESSAGE_LIMIT - message.length;
+                            }
+
+                            savedMessage = message;
+                            mgmtSaveBtn.textContent = 'Save';
+                            updateMgmtSaveButton();
+                        } else {
+                            await showAlert(result.error || 'Failed to save team message', 'Error');
+                            mgmtSaveBtn.textContent = 'Save';
+                            updateMgmtSaveButton();
+                        }
+                    } catch (error) {
+                        console.error('Save team message error:', error);
+                        await showAlert('Failed to save team message: ' + error.message, 'Error');
+                        mgmtSaveBtn.textContent = 'Save';
+                        updateMgmtSaveButton();
+                    }
+                });
+            }
+
+            // =====================
+            // RADIO TOGGLE (Add / Team members)
+            // =====================
+
+            const mgmtMembersModeHeader = document.querySelector('.mgmt-members-mode-header');
+
+            const mgmtViewModeRadios = document.querySelectorAll('input[name="mgmt-view-mode"]');
+            mgmtViewModeRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const mode = this.value;
+
+                    if (mode === 'add') {
+                        // Show Add mode
+                        if (mgmtAddModeHeader) mgmtAddModeHeader.style.display = '';
+                        if (mgmtMembersModeHeader) mgmtMembersModeHeader.style.display = 'none';
+                        if (mgmtAddModeSection) mgmtAddModeSection.style.display = 'flex';
+                        if (mgmtMembersModeSection) mgmtMembersModeSection.style.display = 'none';
+                    } else {
+                        // Show Team members mode
+                        if (mgmtAddModeHeader) mgmtAddModeHeader.style.display = 'none';
+                        if (mgmtMembersModeHeader) mgmtMembersModeHeader.style.display = '';
+                        if (mgmtAddModeSection) mgmtAddModeSection.style.display = 'none';
+                        if (mgmtMembersModeSection) mgmtMembersModeSection.style.display = 'flex';
+                    }
+                });
+            });
+
+            // =====================
+            // HELPER: Update empty state messages
+            // =====================
+
+            function updateEmptyStates() {
+                // Check Add list
+                if (mgmtAddList) {
+                    const items = mgmtAddList.querySelectorAll('.mgmt-member-item');
+                    const noSelection = mgmtAddList.querySelector('.no-selection');
+                    if (items.length === 0 && !noSelection) {
+                        mgmtAddList.innerHTML = '<div class="no-selection" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">No pending invitations</div>';
+                    }
+                }
+                // Check Members list
+                if (mgmtMembersList) {
+                    const items = mgmtMembersList.querySelectorAll('.mgmt-member-item');
+                    const noSelection = mgmtMembersList.querySelector('.no-selection');
+                    if (items.length === 0 && !noSelection) {
+                        mgmtMembersList.innerHTML = '<div class="no-selection" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">No team members yet</div>';
+                    }
+                }
+            }
+
+            // =====================
+            // ADD MEMBER (search bar enter to add)
+            // =====================
+
+            if (mgmtAddSearch) {
+                // Only allow numeric input
+                mgmtAddSearch.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                });
+
+                mgmtAddSearch.addEventListener('keypress', async function(e) {
+                    if (e.key === 'Enter') {
+                        const adzsendId = this.value.trim();
+
+                        if (!adzsendId) {
+                            await showAlert('Please enter an Adzsend ID', 'Error');
+                            return;
+                        }
+
+                        if (!/^\d{18}$/.test(adzsendId)) {
+                            await showAlert('Adzsend ID must be exactly 18 digits', 'Error');
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch('/api/team/add-member', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-Token': '{{ csrf_token }}'
+                                },
+                                body: JSON.stringify({ adzsend_id: adzsendId })
+                            });
+
+                            const result = await response.json();
+
+                            if (response.ok && result.success) {
+                                this.value = '';
+
+                                // Remove "No pending invitations" message if present
+                                const noSelection = mgmtAddList.querySelector('.no-selection');
+                                if (noSelection) noSelection.remove();
+
+                                // Add new member item to the list
+                                const newItem = document.createElement('div');
+                                newItem.className = 'channel-item mgmt-member-item';
+                                newItem.dataset.adzsendId = adzsendId;
+                                newItem.dataset.status = 'pending';
+                                newItem.style.cursor = 'default';
+                                newItem.innerHTML = `
+                                    <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                                    <span class="channel-name" style="font-family: monospace;">${adzsendId}</span>
+                                    <div class="channel-right">
+                                        <span class="channel-status-tag">Pending</span>
+                                        <img class="mgmt-member-remove" src="{{ url_for('static', filename='x.png') }}" alt="x" style="width: 16px; height: 16px; cursor: pointer; opacity: 0.7;" data-action="cancel-invite">
+                                    </div>
+                                `;
+                                mgmtAddList.appendChild(newItem);
+                            } else {
+                                await showAlert(result.error || 'Failed to add member', 'Error');
+                            }
+                        } catch (error) {
+                            console.error('Add member error:', error);
+                            await showAlert('Failed to add member: ' + error.message, 'Error');
+                        }
+                    }
+                });
+            }
+
+            // =====================
+            // REMOVE HANDLERS (X button clicks)
+            // =====================
+
+            // Add list - cancel pending invite (no confirmation)
+            if (mgmtAddList) {
+                mgmtAddList.addEventListener('click', async function(e) {
+                    const removeBtn = e.target.closest('.mgmt-member-remove');
+                    if (!removeBtn) return;
+
+                    const memberItem = removeBtn.closest('.mgmt-member-item');
+                    if (!memberItem) return;
+
+                    const adzsendId = memberItem.dataset.adzsendId;
+
+                    try {
+                        const response = await fetch('/api/team/remove-member', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({ adzsend_id: adzsendId })
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok && result.success) {
+                            // Remove item from DOM instantly
+                            memberItem.remove();
+                            updateEmptyStates();
+                        } else {
+                            await showAlert(result.error || 'Failed to cancel invitation', 'Error');
+                        }
+                    } catch (error) {
+                        console.error('Cancel invitation error:', error);
+                        await showAlert('Failed to cancel invitation: ' + error.message, 'Error');
+                    }
+                });
+            }
+
+            // Members list - remove team member (with confirmation)
+            if (mgmtMembersList) {
+                mgmtMembersList.addEventListener('click', async function(e) {
+                    const removeBtn = e.target.closest('.mgmt-member-remove');
+                    if (!removeBtn) return;
+
+                    const memberItem = removeBtn.closest('.mgmt-member-item');
+                    if (!memberItem) return;
+
+                    const adzsendId = memberItem.dataset.adzsendId;
+
+                    const confirmed = await showConfirm('Remove this team member?', 'Remove Member', { confirmText: 'Remove' });
+                    if (!confirmed) return;
+
+                    try {
+                        const response = await fetch('/api/team/remove-member', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({ adzsend_id: adzsendId })
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok && result.success) {
+                            // Remove item from DOM instantly
+                            memberItem.remove();
+                            updateEmptyStates();
+                        } else {
+                            await showAlert(result.error || 'Failed to remove member', 'Error');
+                        }
+                    } catch (error) {
+                        console.error('Remove member error:', error);
+                        await showAlert('Failed to remove member: ' + error.message, 'Error');
+                    }
+                });
+            }
+        });
+    </script>
+
+    <!-- Analytics Dialog Script -->
+    <script>
+        // Analytics Dialog Variables
+        let currentMemberId = null;
+        let currentMemberName = null;
+        let memberJoinDate = null;
+        let serverDate = null;
+        let chartData = [];
+
+        function openAnalyticsDialog(memberId, memberName) {
+            currentMemberId = memberId;
+            currentMemberName = memberName;
+
+            document.getElementById('analytics-dialog-title').textContent = `Analytics: ${memberName}`;
+            document.getElementById('analytics-dialog-overlay').classList.add('show');
+
+            // Reset to information tab
+            switchAnalyticsTab('information');
+
+            // Set default date range (last 30 days)
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+
+            document.getElementById('analytics-start-date').value = startDate.toISOString().split('T')[0];
+            document.getElementById('analytics-end-date').value = endDate.toISOString().split('T')[0];
+
+            // Load information data
+            loadAnalyticsInfo();
+        }
+
+        function closeAnalyticsDialog() {
+            document.getElementById('analytics-dialog-overlay').classList.remove('show');
+            currentMemberId = null;
+            currentMemberName = null;
+        }
+
+        // Close on overlay click
+        document.getElementById('analytics-dialog-overlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAnalyticsDialog();
+            }
+        });
+
+        function switchAnalyticsTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.analytics-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabName);
+            });
+
+            // Update panels
+            document.querySelectorAll('.analytics-panel').forEach(panel => {
+                panel.classList.toggle('active', panel.id === `panel-${tabName}`);
+            });
+
+            // Load data for the tab
+            if (tabName === 'information') {
+                loadAnalyticsInfo();
+            } else if (tabName === 'dates') {
+                loadDailyStats();
+            }
+        }
+
+        async function loadAnalyticsInfo() {
+            const container = document.getElementById('analytics-info-content');
+            container.innerHTML = '<div class="no-data-message">Loading...</div>';
+
+            try {
+                const response = await fetch(`/api/team/member/${currentMemberId}/analytics`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const analytics = data.analytics;
+                    // Format date as mm/dd/yy
+                    const joinedDate = analytics.joined_at ? (() => {
+                        const d = new Date(analytics.joined_at);
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const year = String(d.getFullYear()).slice(-2);
+                        return `${month}/${day}/${year}`;
+                    })() : 'Unknown';
+
+                    // Store dates for calendar restrictions
+                    memberJoinDate = analytics.joined_at ? analytics.joined_at.split('T')[0] : null;
+                    serverDate = analytics.server_date || new Date().toISOString().split('T')[0];
+
+                    // Apply date restrictions to inputs
+                    const startInput = document.getElementById('analytics-start-date');
+                    const endInput = document.getElementById('analytics-end-date');
+                    if (memberJoinDate) {
+                        startInput.min = memberJoinDate;
+                        endInput.min = memberJoinDate;
+                    }
+                    startInput.max = serverDate;
+                    endInput.max = serverDate;
+
+                    // Adjust default date range if join date is more recent than 30 days ago
+                    if (memberJoinDate && new Date(memberJoinDate) > new Date(startInput.value)) {
+                        startInput.value = memberJoinDate;
+                    }
+
+                    container.innerHTML = `
+                        <div class="analytics-stat-row">
+                            <span class="analytics-stat-label">All-time ads sent</span>
+                            <span class="analytics-stat-value">${analytics.all_time.toLocaleString()}</span>
+                        </div>
+                        <div class="analytics-stat-row">
+                            <span class="analytics-stat-label">Current cycle ads</span>
+                            <span class="analytics-stat-value">${analytics.current_cycle.toLocaleString()}</span>
+                        </div>
+                        <div class="analytics-stat-row">
+                            <span class="analytics-stat-label">Joined team (mm/dd/yy)</span>
+                            <span class="analytics-stat-value">${joinedDate}</span>
+                        </div>
+                        <div class="analytics-stat-row" style="flex-direction: column; align-items: stretch;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span class="analytics-stat-label">Team contribution</span>
+                                <span class="analytics-stat-value">${analytics.percentage}%</span>
+                            </div>
+                            <div class="analytics-progress-bar">
+                                <div class="analytics-progress-fill" style="width: ${Math.min(analytics.percentage, 100)}%"></div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `<div class="no-data-message">${data.error || 'Failed to load analytics'}</div>`;
+                }
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                container.innerHTML = '<div class="no-data-message">Error loading analytics</div>';
+            }
+        }
+
+        async function loadDailyStats() {
+            const startDate = document.getElementById('analytics-start-date').value;
+            const endDate = document.getElementById('analytics-end-date').value;
+
+            try {
+                const response = await fetch(`/api/team/member/${currentMemberId}/daily-stats?start_date=${startDate}&end_date=${endDate}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    chartData = data.data.stats || [];
+
+                    // Update summary
+                    document.getElementById('summary-total').textContent = data.data.total.toLocaleString();
+                    document.getElementById('summary-avg').textContent = data.data.average.toFixed(1);
+                    document.getElementById('summary-peak').textContent = data.data.peak.toLocaleString();
+
+                    // Draw chart
+                    drawChart();
+                } else {
+                    console.error('Failed to load daily stats:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading daily stats:', error);
+            }
+        }
+
+        function applyDateRange() {
+            loadDailyStats();
+        }
+
+        function drawChart() {
+            const canvas = document.getElementById('analytics-chart');
+            const ctx = canvas.getContext('2d');
+            const wrapper = canvas.parentElement;
+
+            // Set canvas size
+            canvas.width = wrapper.offsetWidth;
+            canvas.height = wrapper.offsetHeight;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = { top: 20, right: 20, bottom: 30, left: 40 };
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            if (chartData.length === 0) {
+                ctx.fillStyle = '#81828A';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data for selected period', width / 2, height / 2);
+                return;
+            }
+
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+
+            // Find max value for scaling
+            const maxCount = Math.max(...chartData.map(d => d.count), 1);
+
+            // Calculate points
+            const points = chartData.map((d, i) => ({
+                x: padding.left + (i / (chartData.length - 1 || 1)) * chartWidth,
+                y: padding.top + chartHeight - (d.count / maxCount) * chartHeight,
+                date: d.date,
+                count: d.count
+            }));
+
+            // Draw gradient fill
+            if (points.length > 1) {
+                const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+                gradient.addColorStop(0, 'rgba(21, 216, 188, 0.3)');
+                gradient.addColorStop(1, 'rgba(21, 216, 188, 0)');
+
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, height - padding.bottom);
+                points.forEach(p => ctx.lineTo(p.x, p.y));
+                ctx.lineTo(points[points.length - 1].x, height - padding.bottom);
+                ctx.closePath();
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+
+            // Draw line
+            ctx.beginPath();
+            ctx.strokeStyle = '#15d8bc';
+            ctx.lineWidth = 2;
+            points.forEach((p, i) => {
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            });
+            ctx.stroke();
+
+            // Draw points
+            points.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#15d8bc';
+                ctx.fill();
+                ctx.strokeStyle = '#121215';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Draw Y-axis labels
+            ctx.fillStyle = '#81828A';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(maxCount.toString(), padding.left - 5, padding.top + 5);
+            ctx.fillText('0', padding.left - 5, height - padding.bottom + 5);
+
+            // Draw X-axis labels (first and last dates)
+            if (chartData.length > 0) {
+                ctx.textAlign = 'left';
+                ctx.fillText(formatDateShort(chartData[0].date), padding.left, height - 5);
+                ctx.textAlign = 'right';
+                ctx.fillText(formatDateShort(chartData[chartData.length - 1].date), width - padding.right, height - 5);
+            }
+
+            // Store points for tooltip
+            canvas.chartPoints = points;
+        }
+
+        function formatDateShort(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        // Chart tooltip
+        document.addEventListener('DOMContentLoaded', function() {
+            const chartCanvas = document.getElementById('analytics-chart');
+            const chartTooltip = document.getElementById('chart-tooltip');
+
+            if (chartCanvas && chartTooltip) {
+                chartCanvas.addEventListener('mousemove', function(e) {
+                    if (!this.chartPoints || this.chartPoints.length === 0) return;
+
+                    const rect = this.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+
+                    // Find closest point
+                    let closest = null;
+                    let minDist = Infinity;
+
+                    this.chartPoints.forEach(p => {
+                        const dist = Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
+                        if (dist < minDist && dist < 20) {
+                            minDist = dist;
+                            closest = p;
+                        }
+                    });
+
+                    if (closest) {
+                        chartTooltip.style.display = 'block';
+                        chartTooltip.innerHTML = `<strong>${closest.count} ads</strong><br>${formatDateShort(closest.date)}`;
+
+                        // Position tooltip below the point
+                        const tooltipHeight = chartTooltip.offsetHeight;
+                        const tooltipWidth = chartTooltip.offsetWidth;
+
+                        // Center horizontally under the point
+                        let left = closest.x - (tooltipWidth / 2);
+                        // Ensure it doesn't go off-screen horizontally
+                        if (left < 0) left = 0;
+                        if (left + tooltipWidth > rect.width) left = rect.width - tooltipWidth;
+
+                        // Position below the point
+                        let top = closest.y + 15;
+                        // If it would go off-screen below, position above instead
+                        if (top + tooltipHeight > rect.height) {
+                            top = closest.y - tooltipHeight - 10;
+                        }
+
+                        chartTooltip.style.left = left + 'px';
+                        chartTooltip.style.top = top + 'px';
+                    } else {
+                        chartTooltip.style.display = 'none';
+                    }
+                });
+
+                chartCanvas.addEventListener('mouseleave', function() {
+                    chartTooltip.style.display = 'none';
+                });
+            }
+        });
+
+        // Redraw chart on window resize
+        window.addEventListener('resize', function() {
+            if (document.getElementById('analytics-dialog-overlay').classList.contains('show') &&
+                document.getElementById('panel-dates').classList.contains('active')) {
+                drawChart();
+            }
         });
     </script>
 </body>

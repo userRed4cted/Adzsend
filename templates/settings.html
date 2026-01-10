@@ -632,9 +632,9 @@
             const adzsendIdInput = document.getElementById('adzsendIdInput');
             try {
                 await navigator.clipboard.writeText(adzsendIdInput.value);
-                await showAlert('Copied to clipboard', 'Success', { icon: 'success' });
+                alert('Copied to clipboard');
             } catch (err) {
-                await showAlert('Failed to copy to clipboard', 'Error', { icon: 'error' });
+                alert('Failed to copy to clipboard');
             }
         }
 

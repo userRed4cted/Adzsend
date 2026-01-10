@@ -579,14 +579,21 @@
         }
 
         /* Team Management member items - always show right side */
-        .channels-list .channel-item.mgmt-member-item .channel-right {
+        .channels-list .channel-item.mgmt-member-item .channel-right,
+        .channels-list .channel-item.analytics-member-item .channel-right {
             display: flex !important;
         }
 
-        .channels-list .channel-item.mgmt-member-item .channel-status-tag {
+        .channels-list .channel-item.mgmt-member-item .channel-status-tag,
+        .channels-list .channel-item.analytics-member-item .channel-status-tag {
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        /* Analytics View button hover */
+        .analytics-view-btn:hover {
+            opacity: 0.8;
         }
 
         /* Failed channel styling - red gradient background */
@@ -1107,24 +1114,56 @@
 
                         <!-- Right Half: Team Analytics -->
                         <div style="flex: 1; display: flex; flex-direction: column; height: 100%; position: relative;">
-                            <!-- Label (replaces radio toggle) -->
-                            <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
-                                <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Team analytics</span>
-                            </div>
+                            <!-- Top Half: Individual team member analytics -->
+                            <div style="flex: 1 1 50%; display: flex; flex-direction: column; min-height: 0; max-height: calc(50% - 0.5px);">
+                                <!-- Label -->
+                                <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
+                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Individual team member analytics</span>
+                                </div>
 
-                            <!-- Header (search bar) -->
-                            <div class="unified-header">
-                                <div class="header-section">
-                                    <div class="channels-search">
-                                        <input type="text" id="analytics-team-search" class="search-input" placeholder="Search">
+                                <!-- Header (search bar) -->
+                                <div class="unified-header">
+                                    <div class="header-section">
+                                        <div class="channels-search">
+                                            <input type="text" id="analytics-team-search" class="search-input" placeholder="Search">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- List Section -->
+                                <div class="channels-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding-top: 0;">
+                                    <div id="analytics-team-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0;">
+                                        <!-- Team Owner at top -->
+                                        {% if is_team_owner and user %}
+                                            <div class="channel-item analytics-member-item" data-adzsend-id="{{ user.adzsend_id }}" data-is-owner="true" style="cursor: pointer;">
+                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                                                <span class="channel-name">Owner (you)</span>
+                                            </div>
+                                        {% endif %}
+                                        <!-- Team Members -->
+                                        {% set accepted_members = members|default([])|selectattr('invitation_status', 'equalto', 'accepted')|list %}
+                                        {% for member in accepted_members %}
+                                            <div class="channel-item analytics-member-item" data-adzsend-id="{{ member.member_adzsend_id }}" style="cursor: pointer;">
+                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                                                <span class="channel-name" style="font-family: monospace;">{{ member.member_adzsend_id or 'No ID' }}</span>
+                                            </div>
+                                        {% endfor %}
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- List Section -->
-                            <div class="channels-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding-top: 0;">
-                                <div id="analytics-team-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0;">
+                            <!-- Horizontal Divider -->
+                            <div style="height: 1px; background: #222225; margin: 0; flex-shrink: 0;"></div>
+
+                            <!-- Bottom Half: Overall team analytics -->
+                            <div style="flex: 1 1 50%; display: flex; flex-direction: column; min-height: 0; max-height: calc(50% - 0.5px);">
+                                <!-- Label -->
+                                <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
+                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Overall team analytics</span>
                                 </div>
+
+                                <!-- Empty space for now -->
+                                <div style="flex: 1;"></div>
                             </div>
                         </div>
                     </div>
@@ -1159,11 +1198,11 @@
                 <div class="analytics-panel" id="panel-dates">
                     <div class="date-range-container">
                         <div class="date-input-group">
-                            <label>From</label>
+                            <label>From (mm/dd/yy)</label>
                             <input type="date" id="analytics-start-date">
                         </div>
                         <div class="date-input-group">
-                            <label>To</label>
+                            <label>To (mm/dd/yy)</label>
                             <input type="date" id="analytics-end-date">
                         </div>
                         <button class="apply-dates-btn" onclick="applyDateRange()">Apply</button>
@@ -1348,7 +1387,6 @@
         .date-input-group label {
             color: #81828A;
             font-size: 0.75rem;
-            text-transform: uppercase;
         }
 
         .date-input-group input {
@@ -4086,6 +4124,23 @@
                     }
                 });
             }
+
+            // Analytics page - Click entire row to open analytics
+            const analyticsTeamList = document.getElementById('analytics-team-list');
+            if (analyticsTeamList) {
+                analyticsTeamList.addEventListener('click', function(e) {
+                    const memberItem = e.target.closest('.analytics-member-item');
+                    if (!memberItem) return;
+
+                    const adzsendId = memberItem.dataset.adzsendId;
+                    const isOwner = memberItem.dataset.isOwner === 'true';
+                    const displayName = isOwner ? 'Owner (you)' : adzsendId;
+
+                    if (adzsendId) {
+                        openAnalyticsDialog(adzsendId, displayName);
+                    }
+                });
+            }
         });
     </script>
 
@@ -4105,19 +4160,24 @@
             document.getElementById('analytics-dialog-title').textContent = `Analytics: ${memberName}`;
             document.getElementById('analytics-dialog-overlay').classList.add('show');
 
-            // Reset to information tab
-            switchAnalyticsTab('information');
+            // Reset date restrictions (will be set properly after loading info)
+            const startInput = document.getElementById('analytics-start-date');
+            const endInput = document.getElementById('analytics-end-date');
+            startInput.min = '';
+            startInput.max = '';
+            endInput.min = '';
+            endInput.max = '';
 
-            // Set default date range (last 30 days)
+            // Set default date range (last 30 days) - will be adjusted after loading analytics
             const endDate = new Date();
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - 30);
 
-            document.getElementById('analytics-start-date').value = startDate.toISOString().split('T')[0];
-            document.getElementById('analytics-end-date').value = endDate.toISOString().split('T')[0];
+            startInput.value = startDate.toISOString().split('T')[0];
+            endInput.value = endDate.toISOString().split('T')[0];
 
-            // Load information data
-            loadAnalyticsInfo();
+            // Reset to information tab and load data
+            switchAnalyticsTab('information');
         }
 
         function closeAnalyticsDialog() {
@@ -4189,6 +4249,10 @@
                     if (memberJoinDate && new Date(memberJoinDate) > new Date(startInput.value)) {
                         startInput.value = memberJoinDate;
                     }
+                    // Adjust end date if it's after server date
+                    if (serverDate && new Date(endInput.value) > new Date(serverDate)) {
+                        endInput.value = serverDate;
+                    }
 
                     container.innerHTML = `
                         <div class="analytics-stat-row">
@@ -4221,6 +4285,35 @@
                 container.innerHTML = '<div class="no-data-message">Error loading analytics</div>';
             }
         }
+
+        // Date input change handlers to enforce restrictions
+        document.getElementById('analytics-start-date').addEventListener('change', function() {
+            if (memberJoinDate && this.value < memberJoinDate) {
+                this.value = memberJoinDate;
+            }
+            if (serverDate && this.value > serverDate) {
+                this.value = serverDate;
+            }
+            // Start date can't be after end date
+            const endInput = document.getElementById('analytics-end-date');
+            if (this.value > endInput.value) {
+                endInput.value = this.value;
+            }
+        });
+
+        document.getElementById('analytics-end-date').addEventListener('change', function() {
+            if (memberJoinDate && this.value < memberJoinDate) {
+                this.value = memberJoinDate;
+            }
+            if (serverDate && this.value > serverDate) {
+                this.value = serverDate;
+            }
+            // End date can't be before start date
+            const startInput = document.getElementById('analytics-start-date');
+            if (this.value < startInput.value) {
+                startInput.value = this.value;
+            }
+        });
 
         async function loadDailyStats() {
             const startDate = document.getElementById('analytics-start-date').value;

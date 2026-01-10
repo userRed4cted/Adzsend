@@ -1064,6 +1064,7 @@ def test_page():
         guilds=guilds,
         plan_status=plan_status,
         user_data=user_data,
+        user=user,
         team=team,
         has_team=has_team,
         is_team_owner=is_owner,
@@ -2148,10 +2149,10 @@ def set_team_message():
 
 # Team member analytics API endpoints
 
-@app.route('/api/team/member/<int:member_id>/analytics', methods=['GET'])
+@app.route('/api/team/member/<member_adzsend_id>/analytics', methods=['GET'])
 @rate_limit('api')
-def get_team_member_analytics(member_id):
-    """Get analytics data for a specific team member."""
+def get_team_member_analytics(member_adzsend_id):
+    """Get analytics data for a specific team member by their adzsend_id."""
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -2161,13 +2162,18 @@ def get_team_member_analytics(member_id):
             return {'success': False, 'error': 'User not found'}, 404
 
         # Check if user owns a business team
-        from database import get_business_team_by_owner, get_member_analytics
+        from database import get_business_team_by_owner, get_member_analytics, get_user_by_adzsend_id
         team = get_business_team_by_owner(user['id'])
 
         if not team:
             return {'success': False, 'error': 'You must be a team owner'}, 403
 
-        analytics = get_member_analytics(member_id, team['id'])
+        # Look up member by adzsend_id
+        member = get_user_by_adzsend_id(member_adzsend_id)
+        if not member:
+            return {'success': False, 'error': 'Member not found'}, 404
+
+        analytics = get_member_analytics(member['id'], team['id'])
         # Add server date for calendar restrictions
         analytics['server_date'] = datetime.now().strftime('%Y-%m-%d')
         return {'success': True, 'analytics': analytics}, 200
@@ -2177,10 +2183,10 @@ def get_team_member_analytics(member_id):
         return {'success': False, 'error': str(e)}, 500
 
 
-@app.route('/api/team/member/<int:member_id>/daily-stats', methods=['GET'])
+@app.route('/api/team/member/<member_adzsend_id>/daily-stats', methods=['GET'])
 @rate_limit('api')
-def get_team_member_daily_stats(member_id):
-    """Get daily message stats for a specific team member."""
+def get_team_member_daily_stats(member_adzsend_id):
+    """Get daily message stats for a specific team member by their adzsend_id."""
     if 'user' not in session:
         return {'success': False, 'error': 'Not logged in'}, 401
 
@@ -2190,17 +2196,22 @@ def get_team_member_daily_stats(member_id):
             return {'success': False, 'error': 'User not found'}, 404
 
         # Check if user owns a business team
-        from database import get_business_team_by_owner, get_member_daily_stats
+        from database import get_business_team_by_owner, get_member_daily_stats, get_user_by_adzsend_id
         team = get_business_team_by_owner(user['id'])
 
         if not team:
             return {'success': False, 'error': 'You must be a team owner'}, 403
 
+        # Look up member by adzsend_id
+        member = get_user_by_adzsend_id(member_adzsend_id)
+        if not member:
+            return {'success': False, 'error': 'Member not found'}, 404
+
         # Get date range from query params
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
 
-        stats = get_member_daily_stats(member_id, team['id'], start_date, end_date)
+        stats = get_member_daily_stats(member['id'], team['id'], start_date, end_date)
         return {'success': True, 'data': stats}, 200
 
     except Exception as e:

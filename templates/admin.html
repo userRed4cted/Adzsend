@@ -923,7 +923,7 @@
             const businessInfo = user.is_business_owner
                 ? 'Owner'
                 : user.is_business_member
-                    ? `Team member of ${(user.business_team_owner?.discord_id && !user.business_team_owner?.discord_id.startsWith('pending_') && user.business_team_owner?.discord_id !== 'no_discord_userid') ? user.business_team_owner.discord_id : 'Unknown'}`
+                    ? `Team member of ${user.business_team_owner?.adzsend_id || 'Unknown'}`
                     : 'No';
 
             const isAdmin = user.is_admin;

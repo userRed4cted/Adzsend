@@ -4193,6 +4193,12 @@
                 });
             }
 
+        });
+    </script>
+
+    <!-- Analytics Team List Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
             // Analytics page - Click entire row to open analytics
             const analyticsTeamList = document.getElementById('analytics-team-list');
             if (analyticsTeamList) {
@@ -4210,7 +4216,7 @@
                 });
             }
 
-            // Analytics team search functionality - search by Adzsend ID only
+            // Analytics team search functionality - search by Adzsend ID only (updates on each keystroke)
             const analyticsTeamSearch = document.getElementById('analytics-team-search');
             const analyticsTeamListForSearch = document.getElementById('analytics-team-list');
             if (analyticsTeamSearch && analyticsTeamListForSearch) {
@@ -4222,6 +4228,24 @@
                         const adzsendId = item.dataset.adzsendId || '';
 
                         // Show if search is empty, or if adzsend ID contains search value
+                        if (searchValue === '') {
+                            item.style.display = '';
+                        } else if (adzsendId.toLowerCase().includes(searchValue)) {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+
+                // Also handle keyup for immediate feedback
+                analyticsTeamSearch.addEventListener('keyup', function(e) {
+                    const searchValue = e.target.value.toLowerCase().trim();
+                    const memberItems = analyticsTeamListForSearch.querySelectorAll('.analytics-member-item');
+
+                    memberItems.forEach(item => {
+                        const adzsendId = item.dataset.adzsendId || '';
+
                         if (searchValue === '') {
                             item.style.display = '';
                         } else if (adzsendId.toLowerCase().includes(searchValue)) {

@@ -238,7 +238,7 @@ def home():
     is_admin_user = False
     is_owner = False
     if 'user' in session:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if user:
             plan_status = get_plan_status(user['id'])
             # Check if user has business access (owner or member)
@@ -554,7 +554,7 @@ def purchase():
     is_admin_user = False
     is_owner = False
     if 'user' in session:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if user:
             plan_status = get_plan_status(user['id'])
             has_business = has_business_access(user['id'], session['user']['id'])
@@ -712,7 +712,7 @@ def verify_code_api():
         from database import update_user_email
 
         # Get user
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return jsonify({'success': False, 'error': 'User not found'}), 404
 
@@ -820,7 +820,7 @@ def set_plan():
         billing_period = None  # One-time plans don't have billing periods
 
     # Get user from database
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     if not user:
         return jsonify({'success': False, 'error': 'User not found in database'}), 404
 
@@ -867,7 +867,7 @@ def update_token():
     if 'authenticated' not in session:
         return {'error': 'Unauthorized'}, 401
 
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     if not user:
         return {'error': 'User not found'}, 404
 
@@ -929,7 +929,7 @@ def panel():
         return redirect(url_for('login_page'))
 
     # Check if user has an active plan
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     if not user:
         session.clear()
         return redirect(url_for('login_page'))
@@ -951,7 +951,7 @@ def panel():
     guilds = []
     if discord_linked:
         # Decrypt token only when needed for API call
-        user_token = get_decrypted_token(session['user']['id'])
+        user_token = get_decrypted_token(user['discord_id'])
         if user_token:
             headers = {'Authorization': user_token}
 
@@ -965,7 +965,7 @@ def panel():
     user_data = get_user_data(user['id'])
 
     # Check if user has business access
-    has_business = has_business_access(user['id'], session['user']['id'])
+    has_business = has_business_access(user['id'], user['discord_id'])
 
     # Check if user is admin (use email from database)
     is_admin_user = is_admin(user.get('email'))
@@ -983,7 +983,7 @@ def test_page():
         return redirect(url_for('login_page'))
 
     # Get user info
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     if not user:
         session.clear()
         return redirect(url_for('login_page'))
@@ -995,7 +995,7 @@ def test_page():
 
     if discord_linked:
         # Decrypt token only when needed for API call
-        user_token = get_decrypted_token(session['user']['id'])
+        user_token = get_decrypted_token(user['discord_id'])
         if user_token:
             headers = {'Authorization': user_token}
             # Fetch Discord user info
@@ -1037,7 +1037,7 @@ def test_page():
 
     if not team:
         # Check by main discord_id
-        team = get_business_team_by_member(session['user']['id'])
+        team = get_business_team_by_member(user['discord_id'])
 
     if not team:
         # Also check by OAuth-linked Discord ID
@@ -1081,12 +1081,16 @@ def get_guild_channels(guild_id):
     if 'authenticated' not in session:
         return {'error': 'Unauthorized'}, 401
 
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return {'error': 'User not found'}, 404
+
     # Validate guild ID
     if not validate_discord_id(guild_id):
         return {'error': 'Invalid guild ID'}, 400
 
     # Decrypt token only when needed for API call
-    user_token = get_decrypted_token(session['user']['id'])
+    user_token = get_decrypted_token(user['discord_id'])
     if not user_token:
         return {'error': 'Token error'}, 401
     headers = {'Authorization': user_token}
@@ -1106,7 +1110,7 @@ def get_guild_channels(guild_id):
             return {'channels': text_channels}, 200
         elif resp.status_code == 401:
             # Token is invalid/expired - unlink Discord account
-            user = get_user_by_discord_id(session['user']['id'])
+            user = get_user_by_id(session.get('user_id'))
             if user:
                 full_unlink_discord_account(user['id'])
             return {'error': 'Token invalid', 'token_invalid': True}, 401
@@ -1129,7 +1133,7 @@ def send_message_single():
         return {'error': 'Unauthorized'}, 401
 
     # Get user
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     if not user:
         return {'error': 'User not found'}, 404
 
@@ -1142,14 +1146,14 @@ def send_message_single():
 
     if is_business:
         # For business sends, check owner's usage limits
-        from database import get_business_team_by_owner, get_business_team_by_member, get_user_by_id
+        from database import get_business_team_by_owner, get_business_team_by_member
         team = get_business_team_by_owner(user['id'])
         if team:
             # User is owner
             owner_user_id = user['id']
         else:
-            # User is member - get owner
-            team = get_business_team_by_member(session['user']['id'])
+            # User is member - get owner (use discord_id from user object)
+            team = get_business_team_by_member(user['discord_id'])
             if team:
                 owner_user_id = team['owner_user_id']
 
@@ -1166,7 +1170,7 @@ def send_message_single():
         return {'error': f'Cannot send message: {reason}', 'limit_reached': True}, 403
 
     # Decrypt token ONLY when sending - this is the secure approach
-    user_token = get_decrypted_token(session['user']['id'])
+    user_token = get_decrypted_token(user['discord_id'])
     if not user_token:
         return {'error': 'Token error'}, 401
     headers = {'Authorization': user_token, 'Content-Type': 'application/json'}
@@ -1260,8 +1264,12 @@ def send_message():
     if 'authenticated' not in session:
         return {'error': 'Unauthorized'}, 401
 
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return {'error': 'User not found'}, 404
+
     # Decrypt token ONLY when sending - this is the secure approach
-    user_token = get_decrypted_token(session['user']['id'])
+    user_token = get_decrypted_token(user['discord_id'])
     if not user_token:
         return {'error': 'Token error'}, 401
     headers = {'Authorization': user_token, 'Content-Type': 'application/json'}
@@ -1284,7 +1292,7 @@ def send_message():
             return {'error': f"Invalid channel ID: {ch.get('name', 'unknown')}"}, 400
 
     # Get user for limit checking and flagging
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     if not user:
         return {'error': 'User not found'}, 404
 
@@ -1350,7 +1358,7 @@ def team_management():
         session.clear()
         return redirect(url_for('login_page'))
 
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     if not user:
         session.clear()
         return redirect(url_for('login_page'))
@@ -1427,7 +1435,7 @@ def team_panel():
         session.clear()
         return redirect(url_for('login_page'))
 
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     if not user:
         session.clear()
         return redirect(url_for('login_page'))
@@ -1474,7 +1482,7 @@ def team_panel():
     guilds = []
     if discord_linked:
         # Decrypt token only when needed for API call
-        user_token = get_decrypted_token(session['user']['id'])
+        user_token = get_decrypted_token(user['discord_id'])
         if user_token:
             headers = {'Authorization': user_token}
             resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
@@ -1521,7 +1529,7 @@ def settings():
         return redirect(url_for('login_page'))
 
     # Get user from database
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     if not user:
         session.clear()
         return redirect(url_for('login_page'))
@@ -1644,7 +1652,7 @@ def api_change_email():
             return jsonify({'success': False, 'error': 'Email already in use'}), 400
 
         # Get current user
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return jsonify({'success': False, 'error': 'User not found'}), 404
 
@@ -1684,7 +1692,7 @@ def verify_email_change():
     code_rate_limited = is_code_rate_limited(email, 'email_change')
 
     # Get user info for dropdown menu (user is still logged in with their current email)
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     is_admin_user = is_admin(user.get('email')) if user else False
     has_business = has_business_access(user['id'], session['user']['id']) if user else False
     is_owner = is_business_owner(user['id']) if user else False
@@ -1734,7 +1742,7 @@ def api_verify_email_change():
             return jsonify({'success': False, 'error': error_msg or 'Invalid or expired code'}), 400
 
         # Get user
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return jsonify({'success': False, 'error': 'User not found'}), 404
 
@@ -1774,7 +1782,7 @@ def cancel_plan():
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return jsonify({'success': False, 'error': 'User not found'}), 404
 
@@ -1797,7 +1805,7 @@ def dev_cancel_plan():
         return redirect(url_for('home'))
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if user:
             cancel_subscription(user['id'])
             print(f"[DEV] Plan reset to free for {session['user']['username']}")
@@ -1821,7 +1829,7 @@ def api_flag_self():
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return jsonify({'success': False, 'error': 'User not found'}), 404
 
@@ -1853,7 +1861,7 @@ def api_save_user_data():
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return jsonify({'success': False, 'error': 'User not found'}), 404
 
@@ -1886,7 +1894,7 @@ def api_get_user_data():
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return jsonify({'success': False, 'error': 'User not found'}), 404
 
@@ -1911,7 +1919,7 @@ def status_check():
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return jsonify({'success': False, 'redirect': '/home'}), 401
 
@@ -1954,17 +1962,17 @@ def delete_account():
 
     try:
         user_data = session.get('user')
-        discord_id = user_data.get('id')
+        user_id = session.get('user_id')
         user_email = user_data.get('email')
 
         # Get the actual user from database to ensure we have correct ID
-        from database import delete_user, delete_user_by_email, get_user_by_discord_id
-        user = get_user_by_discord_id(discord_id)
+        from database import delete_user, delete_user_by_email
+        user = get_user_by_id(user_id)
 
         if user:
             # Delete user from database (this will cascade delete subscriptions and usage)
-            delete_user(discord_id)
-            print(f"[DELETE] Account deleted: {user_data.get('username')} (ID: {discord_id})")
+            delete_user(user['discord_id'])
+            print(f"[DELETE] Account deleted: {user_data.get('username')} (ID: {user_id})")
         elif user_email:
             # Fallback: delete by email if discord_id lookup fails
             delete_user_by_email(user_email)
@@ -1994,7 +2002,7 @@ def add_team_member_api():
         return {'success': False, 'error': 'Not logged in'}, 401
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return {'success': False, 'error': 'User not found'}, 404
 
@@ -2083,7 +2091,7 @@ def remove_team_member_api():
         return {'success': False, 'error': 'Not logged in'}, 401
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return {'success': False, 'error': 'User not found'}, 404
 
@@ -2119,7 +2127,7 @@ def set_team_message():
         return {'success': False, 'error': 'Not logged in'}, 401
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return {'success': False, 'error': 'User not found'}, 404
 
@@ -2157,7 +2165,7 @@ def get_team_member_analytics(member_adzsend_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return {'success': False, 'error': 'User not found'}, 404
 
@@ -2191,7 +2199,7 @@ def get_team_member_daily_stats(member_adzsend_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return {'success': False, 'error': 'User not found'}, 404
 
@@ -2217,6 +2225,61 @@ def get_team_member_daily_stats(member_adzsend_id):
     except Exception as e:
         import traceback
         print(f"[ERROR] Get member daily stats error: {str(e)}")
+        traceback.print_exc()
+        return {'success': False, 'error': str(e)}, 500
+
+
+# Personal analytics API endpoints
+
+@app.route('/api/personal/analytics', methods=['GET'])
+@rate_limit('api')
+def get_personal_analytics():
+    """Get personal analytics data for the current user."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    try:
+        user = get_user_by_id(session.get('user_id'))
+        if not user:
+            return {'success': False, 'error': 'User not found'}, 404
+
+        # Get account creation date (stored as signup_date in database)
+        account_created = user.get('signup_date', None)
+        server_date = datetime.now().strftime('%Y-%m-%d')
+
+        return {
+            'success': True,
+            'account_created': account_created,
+            'server_date': server_date
+        }, 200
+
+    except Exception as e:
+        print(f"[ERROR] Get personal analytics error: {str(e)}")
+        return {'success': False, 'error': str(e)}, 500
+
+
+@app.route('/api/personal/daily-stats', methods=['GET'])
+@rate_limit('api')
+def get_personal_daily_stats():
+    """Get daily message stats for the current user's personal usage."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    try:
+        user = get_user_by_id(session.get('user_id'))
+        if not user:
+            return {'success': False, 'error': 'User not found'}, 404
+
+        from database import get_personal_daily_stats
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        stats = get_personal_daily_stats(user['id'], start_date, end_date)
+        return {'success': True, 'data': stats}, 200
+
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Get personal daily stats error: {str(e)}")
         traceback.print_exc()
         return {'success': False, 'error': str(e)}, 500
 
@@ -2334,7 +2397,7 @@ def get_current_team():
     try:
         from database import get_current_team_for_member, get_business_team_by_owner, get_team_members
 
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return {'success': False, 'error': 'User not found'}, 404
 
@@ -2424,7 +2487,7 @@ def remove_member_from_list(member_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     try:
-        user = get_user_by_discord_id(session['user']['id'])
+        user = get_user_by_id(session.get('user_id'))
         if not user:
             return {'success': False, 'error': 'User not found'}, 404
 
@@ -2466,7 +2529,7 @@ def admin_panel():
         return redirect(url_for('login_page'))
 
     # Get user from database first
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     if not user:
         session.clear()
         return redirect(url_for('login_page'))
@@ -2499,7 +2562,7 @@ def admin_get_users():
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    user = get_user_by_discord_id(session['user']['id'])
+    user = get_user_by_id(session.get('user_id'))
     if not user or not is_admin(user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
@@ -2534,7 +2597,7 @@ def admin_search_user():
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    admin_user = get_user_by_discord_id(session['user']['id'])
+    admin_user = get_user_by_id(session.get('user_id'))
     if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
@@ -2596,7 +2659,7 @@ def admin_get_user_details(user_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    admin_user = get_user_by_discord_id(session['user']['id'])
+    admin_user = get_user_by_id(session.get('user_id'))
     if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
@@ -2633,7 +2696,7 @@ def admin_ban_user(user_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    admin_user = get_user_by_discord_id(session['user']['id'])
+    admin_user = get_user_by_id(session.get('user_id'))
     if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
@@ -2663,7 +2726,7 @@ def admin_unban_user(user_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    admin_user = get_user_by_discord_id(session['user']['id'])
+    admin_user = get_user_by_id(session.get('user_id'))
     if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
@@ -2688,7 +2751,7 @@ def admin_flag_user(user_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    admin_user = get_user_by_discord_id(session['user']['id'])
+    admin_user = get_user_by_id(session.get('user_id'))
     if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
@@ -2713,7 +2776,7 @@ def admin_unflag_user(user_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    admin_user = get_user_by_discord_id(session['user']['id'])
+    admin_user = get_user_by_id(session.get('user_id'))
     if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
@@ -2738,7 +2801,7 @@ def admin_delete_user(user_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    admin_user = get_user_by_discord_id(session['user']['id'])
+    admin_user = get_user_by_id(session.get('user_id'))
     if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
@@ -2762,7 +2825,7 @@ def admin_get_user_message(user_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    admin_user = get_user_by_discord_id(session['user']['id'])
+    admin_user = get_user_by_id(session.get('user_id'))
     if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
@@ -2786,7 +2849,7 @@ def admin_get_team_message(user_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    admin_user = get_user_by_discord_id(session['user']['id'])
+    admin_user = get_user_by_id(session.get('user_id'))
     if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
@@ -2820,7 +2883,7 @@ def admin_get_billing_history(user_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    admin_user = get_user_by_discord_id(session['user']['id'])
+    admin_user = get_user_by_id(session.get('user_id'))
     if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 
@@ -2840,7 +2903,7 @@ def admin_get_user_plan_status(user_id):
         return {'success': False, 'error': 'Not logged in'}, 401
 
     # Get user from database and check if admin using database email
-    admin_user = get_user_by_discord_id(session['user']['id'])
+    admin_user = get_user_by_id(session.get('user_id'))
     if not admin_user or not is_admin(admin_user.get('email')):
         return {'success': False, 'error': 'Unauthorized'}, 403
 

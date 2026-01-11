@@ -728,13 +728,6 @@
                             Analytics
                         </button>
 
-                        <div class="menu-divider"></div>
-
-                        <div class="menu-category">Settings</div>
-
-                        <button class="menu-item{% if not discord_linked %} disabled{% endif %}" data-page="interval"{% if not discord_linked %} disabled style="opacity: 0.4; cursor: not-allowed;"{% endif %}>
-                            Interval
-                        </button>
                     </div>
                 </div>
 
@@ -1018,7 +1011,7 @@
                                         {% for member in pending_members %}
                                             <div class="channel-item mgmt-member-item" data-adzsend-id="{{ member.member_adzsend_id }}" data-status="pending" style="cursor: default;">
                                                 <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
-                                                <span class="channel-name" style="font-family: monospace;">{{ member.member_adzsend_id or 'No ID' }}</span>
+                                                <span class="channel-name">{{ member.member_adzsend_id or 'No ID' }}</span>
                                                 <div class="channel-right">
                                                     <span class="channel-status-tag">Pending</span>
                                                     <img class="mgmt-member-remove" src="{{ url_for('static', filename='x.png') }}" alt="x" style="width: 16px; height: 16px; cursor: pointer; opacity: 0.7;" data-action="cancel-invite">
@@ -1036,7 +1029,7 @@
                                         {% for member in accepted_members %}
                                             <div class="channel-item mgmt-member-item" data-adzsend-id="{{ member.member_adzsend_id }}" data-status="accepted" style="cursor: default;">
                                                 <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
-                                                <span class="channel-name" style="font-family: monospace;">{{ member.member_adzsend_id or 'No ID' }}</span>
+                                                <span class="channel-name">{{ member.member_adzsend_id or 'No ID' }}</span>
                                                 <div class="channel-right">
                                                     <span class="channel-status-tag">Team member</span>
                                                     <img class="mgmt-member-remove" src="{{ url_for('static', filename='x.png') }}" alt="x" style="width: 16px; height: 16px; cursor: pointer; opacity: 0.7;" data-action="remove-member">
@@ -1093,18 +1086,52 @@
                                 <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Personal analytics</span>
                             </div>
 
-                            <!-- Header (search bar) -->
-                            <div class="unified-header">
-                                <div class="header-section">
-                                    <div class="channels-search">
-                                        <input type="text" id="analytics-personal-search" class="search-input" placeholder="Search">
+                            <!-- Personal Chart Section -->
+                            <div style="flex: 1; display: flex; flex-direction: column; padding: 1rem; min-height: 0;">
+                                <div class="date-range-container" style="margin-bottom: 1rem;">
+                                    <div class="date-input-group">
+                                        <label>From</label>
+                                        <input type="date" id="personal-start-date">
                                     </div>
+                                    <div class="date-input-group">
+                                        <label>To</label>
+                                        <input type="date" id="personal-end-date">
+                                    </div>
+                                    <button class="apply-dates-btn" onclick="applyPersonalDateRange()">Apply</button>
                                 </div>
-                            </div>
+                                <script>
+                                    // Set default dates immediately to avoid showing dd/mm/yyyy
+                                    (function() {
+                                        const today = new Date().toISOString().split('T')[0];
+                                        const thirtyDaysAgo = new Date();
+                                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                                        const startDate = thirtyDaysAgo.toISOString().split('T')[0];
 
-                            <!-- List Section -->
-                            <div class="channels-section" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding-top: 0;">
-                                <div id="analytics-personal-list" class="channels-list" style="flex: 1; overflow-y: auto; min-height: 0;">
+                                        const startInput = document.getElementById('personal-start-date');
+                                        const endInput = document.getElementById('personal-end-date');
+                                        if (startInput) startInput.value = startDate;
+                                        if (endInput) endInput.value = today;
+                                    })();
+                                </script>
+                                <div class="chart-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                                    <div class="chart-canvas-wrapper" style="flex: 1; min-height: 0;">
+                                        <canvas id="personal-analytics-chart" class="chart-canvas"></canvas>
+                                        <div class="chart-tooltip" id="personal-chart-tooltip"></div>
+                                    </div>
+                                    <div class="chart-summary" id="personal-chart-summary">
+                                        <div class="chart-summary-item">
+                                            <div class="chart-summary-value" id="personal-summary-total">0</div>
+                                            <div class="chart-summary-label">Total Ads</div>
+                                        </div>
+                                        <div class="chart-summary-item">
+                                            <div class="chart-summary-value" id="personal-summary-avg">0</div>
+                                            <div class="chart-summary-label">Daily Avg</div>
+                                        </div>
+                                        <div class="chart-summary-item">
+                                            <div class="chart-summary-value" id="personal-summary-peak">0</div>
+                                            <div class="chart-summary-label">Peak Day</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1125,7 +1152,7 @@
                                 <div class="unified-header">
                                     <div class="header-section">
                                         <div class="channels-search">
-                                            <input type="text" id="analytics-team-search" class="search-input" placeholder="Search">
+                                            <input type="text" id="analytics-team-search" class="search-input" placeholder="Search Adzsend ID">
                                         </div>
                                     </div>
                                 </div>
@@ -1137,7 +1164,7 @@
                                         {% if is_team_owner and user %}
                                             <div class="channel-item analytics-member-item" data-adzsend-id="{{ user.adzsend_id }}" data-is-owner="true" style="cursor: pointer;">
                                                 <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
-                                                <span class="channel-name">Owner (you)</span>
+                                                <span class="channel-name" style="display: flex; align-items: center; gap: 6px;">{{ user.adzsend_id }}<img src="{{ url_for('static', filename='OwnerDiscordCrown.png') }}" alt="Owner" title="Team owner" style="width: 16px; height: 16px;"></span>
                                             </div>
                                         {% endif %}
                                         <!-- Team Members -->
@@ -1145,7 +1172,7 @@
                                         {% for member in accepted_members %}
                                             <div class="channel-item analytics-member-item" data-adzsend-id="{{ member.member_adzsend_id }}" style="cursor: pointer;">
                                                 <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
-                                                <span class="channel-name" style="font-family: monospace;">{{ member.member_adzsend_id or 'No ID' }}</span>
+                                                <span class="channel-name">{{ member.member_adzsend_id or 'No ID' }}</span>
                                             </div>
                                         {% endfor %}
                                     </div>
@@ -1168,9 +1195,6 @@
                         </div>
                     </div>
 
-                    <!-- Page: Interval -->
-                    <div id="page-interval" class="page-content" style="height: 100%; display: none;">
-                    </div>
                 </div>
             </div>
         </div>
@@ -1198,15 +1222,29 @@
                 <div class="analytics-panel" id="panel-dates">
                     <div class="date-range-container">
                         <div class="date-input-group">
-                            <label>From (mm/dd/yy)</label>
+                            <label>From</label>
                             <input type="date" id="analytics-start-date">
                         </div>
                         <div class="date-input-group">
-                            <label>To (mm/dd/yy)</label>
+                            <label>To</label>
                             <input type="date" id="analytics-end-date">
                         </div>
                         <button class="apply-dates-btn" onclick="applyDateRange()">Apply</button>
                     </div>
+                    <script>
+                        // Set default dates immediately for analytics dialog
+                        (function() {
+                            const today = new Date().toISOString().split('T')[0];
+                            const thirtyDaysAgo = new Date();
+                            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                            const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+
+                            const startInput = document.getElementById('analytics-start-date');
+                            const endInput = document.getElementById('analytics-end-date');
+                            if (startInput) startInput.value = startDate;
+                            if (endInput) endInput.value = today;
+                        })();
+                    </script>
                     <div class="chart-container">
                         <div class="chart-canvas-wrapper">
                             <canvas id="analytics-chart" class="chart-canvas"></canvas>
@@ -1829,6 +1867,24 @@
                             page.style.display = 'none';
                         }
                     });
+
+                    // Redraw personal chart when analytics page becomes visible
+                    if (targetPage === 'analytics') {
+                        setTimeout(() => {
+                            if (typeof drawPersonalChart === 'function') {
+                                drawPersonalChart();
+                            }
+                        }, 50);
+                    }
+
+                    // Update team send button when team panel becomes visible
+                    if (targetPage === 'team-panel') {
+                        setTimeout(() => {
+                            if (typeof window.teamUpdateSendButton === 'function') {
+                                window.teamUpdateSendButton();
+                            }
+                        }, 50);
+                    }
                 });
             });
         });
@@ -2178,6 +2234,8 @@
                 if (saved) {
                     try {
                         selectedChannels = JSON.parse(saved);
+                        // Update send button state after loading channels
+                        updateSendButton();
                     } catch (e) {
                         console.error('Error loading saved channels:', e);
                         selectedChannels = [];
@@ -2190,6 +2248,8 @@
                 if (saved && messageInput) {
                     messageInput.value = saved;
                     updateCharCount();
+                    // Update send button state after loading message
+                    updateSendButton();
                 }
             }
 
@@ -2212,6 +2272,9 @@
                             localStorage.setItem('messageText', data.draft_message);
                             updateCharCount();
                         }
+
+                        // Update send button state after loading data
+                        updateSendButton();
 
                         return true;
                     } else {
@@ -3375,6 +3438,9 @@
                 teamUpdateSelectedDisplay();
                 teamUpdateSendButton();
 
+                // Also update after a slight delay to ensure DOM is fully ready
+                setTimeout(teamUpdateSendButton, 100);
+
                 teamPreloadAllChannels();
             }
 
@@ -3652,6 +3718,8 @@
                     teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessage;
                 }
             }
+            // Expose globally for page switch handler
+            window.teamUpdateSendButton = teamUpdateSendButton;
 
             // Team send button handler
             if (teamSendBtn) {
@@ -4026,7 +4094,7 @@
                                 newItem.style.cursor = 'default';
                                 newItem.innerHTML = `
                                     <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
-                                    <span class="channel-name" style="font-family: monospace;">${adzsendId}</span>
+                                    <span class="channel-name">${adzsendId}</span>
                                     <div class="channel-right">
                                         <span class="channel-status-tag">Pending</span>
                                         <img class="mgmt-member-remove" src="{{ url_for('static', filename='x.png') }}" alt="x" style="width: 16px; height: 16px; cursor: pointer; opacity: 0.7;" data-action="cancel-invite">
@@ -4134,11 +4202,34 @@
 
                     const adzsendId = memberItem.dataset.adzsendId;
                     const isOwner = memberItem.dataset.isOwner === 'true';
-                    const displayName = isOwner ? 'Owner (you)' : adzsendId;
+                    const displayName = isOwner ? `${adzsendId} (Owner)` : adzsendId;
 
                     if (adzsendId) {
                         openAnalyticsDialog(adzsendId, displayName);
                     }
+                });
+            }
+
+            // Analytics team search functionality - search by Adzsend ID only
+            const analyticsTeamSearch = document.getElementById('analytics-team-search');
+            const analyticsTeamListForSearch = document.getElementById('analytics-team-list');
+            if (analyticsTeamSearch && analyticsTeamListForSearch) {
+                analyticsTeamSearch.addEventListener('input', function(e) {
+                    const searchValue = e.target.value.toLowerCase().trim();
+                    const memberItems = analyticsTeamListForSearch.querySelectorAll('.analytics-member-item');
+
+                    memberItems.forEach(item => {
+                        const adzsendId = item.dataset.adzsendId || '';
+
+                        // Show if search is empty, or if adzsend ID contains search value
+                        if (searchValue === '') {
+                            item.style.display = '';
+                        } else if (adzsendId.toLowerCase().includes(searchValue)) {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
                 });
             }
         });
@@ -4507,6 +4598,290 @@
             if (document.getElementById('analytics-dialog-overlay').classList.contains('show') &&
                 document.getElementById('panel-dates').classList.contains('active')) {
                 drawChart();
+            }
+            // Also redraw personal chart if on analytics page
+            if (document.getElementById('page-analytics').style.display !== 'none') {
+                drawPersonalChart();
+            }
+        });
+
+        // Personal Analytics Chart
+        let personalChartData = [];
+        let personalAccountCreated = null;
+        let personalServerDate = null;
+
+        // Initialize personal analytics when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initPersonalAnalytics();
+            setupPersonalDateHandlers();
+        });
+
+        async function initPersonalAnalytics() {
+            const startInput = document.getElementById('personal-start-date');
+            const endInput = document.getElementById('personal-end-date');
+
+            if (!startInput || !endInput) {
+                console.log('Personal analytics inputs not found');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/personal/analytics');
+                const data = await response.json();
+
+                if (data.success) {
+                    personalAccountCreated = data.account_created ? data.account_created.split('T')[0] : null;
+                    personalServerDate = data.server_date || new Date().toISOString().split('T')[0];
+
+                    // Set date restrictions
+                    if (personalAccountCreated) {
+                        startInput.min = personalAccountCreated;
+                        endInput.min = personalAccountCreated;
+                    }
+                    startInput.max = personalServerDate;
+                    endInput.max = personalServerDate;
+
+                    // Set default date range (last 30 days or from account creation)
+                    const endDate = new Date(personalServerDate);
+                    const startDate = new Date(personalServerDate);
+                    startDate.setDate(startDate.getDate() - 30);
+
+                    // Format dates as YYYY-MM-DD
+                    let startValue = startDate.toISOString().split('T')[0];
+                    let endValue = endDate.toISOString().split('T')[0];
+
+                    // Adjust if account created after calculated start date
+                    if (personalAccountCreated && startValue < personalAccountCreated) {
+                        startValue = personalAccountCreated;
+                    }
+                    // Adjust if end date is after server date
+                    if (endValue > personalServerDate) {
+                        endValue = personalServerDate;
+                    }
+
+                    startInput.value = startValue;
+                    endInput.value = endValue;
+
+                    // Load initial data
+                    loadPersonalDailyStats();
+                } else {
+                    console.error('Personal analytics API error:', data.error);
+                }
+            } catch (error) {
+                console.error('Error initializing personal analytics:', error);
+            }
+        }
+
+        // Setup date input change handlers for personal analytics
+        function setupPersonalDateHandlers() {
+            const startInput = document.getElementById('personal-start-date');
+            const endInput = document.getElementById('personal-end-date');
+
+            if (startInput) {
+                startInput.addEventListener('change', function() {
+                    if (personalAccountCreated && this.value < personalAccountCreated) {
+                        this.value = personalAccountCreated;
+                    }
+                    if (personalServerDate && this.value > personalServerDate) {
+                        this.value = personalServerDate;
+                    }
+                    if (endInput && this.value > endInput.value) {
+                        endInput.value = this.value;
+                    }
+                });
+            }
+
+            if (endInput) {
+                endInput.addEventListener('change', function() {
+                    if (personalAccountCreated && this.value < personalAccountCreated) {
+                        this.value = personalAccountCreated;
+                    }
+                    if (personalServerDate && this.value > personalServerDate) {
+                        this.value = personalServerDate;
+                    }
+                    if (startInput && this.value < startInput.value) {
+                        startInput.value = this.value;
+                    }
+                });
+            }
+        }
+
+        function applyPersonalDateRange() {
+            loadPersonalDailyStats();
+        }
+
+        async function loadPersonalDailyStats() {
+            const startDate = document.getElementById('personal-start-date').value;
+            const endDate = document.getElementById('personal-end-date').value;
+
+            try {
+                const response = await fetch(`/api/personal/daily-stats?start_date=${startDate}&end_date=${endDate}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    personalChartData = data.data.stats || [];
+
+                    // Update summary
+                    document.getElementById('personal-summary-total').textContent = data.data.total.toLocaleString();
+                    document.getElementById('personal-summary-avg').textContent = data.data.average.toFixed(1);
+                    document.getElementById('personal-summary-peak').textContent = data.data.peak.toLocaleString();
+
+                    // Draw chart
+                    drawPersonalChart();
+                } else {
+                    console.error('Failed to load personal daily stats:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading personal daily stats:', error);
+            }
+        }
+
+        function drawPersonalChart() {
+            const canvas = document.getElementById('personal-analytics-chart');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const wrapper = canvas.parentElement;
+
+            // Set canvas size
+            canvas.width = wrapper.offsetWidth;
+            canvas.height = wrapper.offsetHeight;
+
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = { top: 20, right: 20, bottom: 30, left: 40 };
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            if (personalChartData.length === 0) {
+                ctx.fillStyle = '#81828A';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data for selected period', width / 2, height / 2);
+                return;
+            }
+
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+
+            // Find max value for scaling
+            const maxCount = Math.max(...personalChartData.map(d => d.count), 1);
+
+            // Calculate points
+            const points = personalChartData.map((d, i) => ({
+                x: padding.left + (i / (personalChartData.length - 1 || 1)) * chartWidth,
+                y: padding.top + chartHeight - (d.count / maxCount) * chartHeight,
+                date: d.date,
+                count: d.count
+            }));
+
+            // Draw gradient fill
+            if (points.length > 1) {
+                const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+                gradient.addColorStop(0, 'rgba(21, 216, 188, 0.3)');
+                gradient.addColorStop(1, 'rgba(21, 216, 188, 0)');
+
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, height - padding.bottom);
+                points.forEach(p => ctx.lineTo(p.x, p.y));
+                ctx.lineTo(points[points.length - 1].x, height - padding.bottom);
+                ctx.closePath();
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+
+            // Draw line
+            ctx.beginPath();
+            ctx.strokeStyle = '#15d8bc';
+            ctx.lineWidth = 2;
+            points.forEach((p, i) => {
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            });
+            ctx.stroke();
+
+            // Draw points
+            points.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#15d8bc';
+                ctx.fill();
+                ctx.strokeStyle = '#121215';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Draw Y-axis labels
+            ctx.fillStyle = '#81828A';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(maxCount.toString(), padding.left - 5, padding.top + 5);
+            ctx.fillText('0', padding.left - 5, height - padding.bottom + 5);
+
+            // Draw X-axis labels (first and last dates)
+            if (personalChartData.length > 0) {
+                ctx.textAlign = 'left';
+                ctx.fillText(formatDateShort(personalChartData[0].date), padding.left, height - 5);
+                ctx.textAlign = 'right';
+                ctx.fillText(formatDateShort(personalChartData[personalChartData.length - 1].date), width - padding.right, height - 5);
+            }
+
+            // Store points for tooltip
+            canvas.chartPoints = points;
+        }
+
+        // Personal chart tooltip
+        document.addEventListener('DOMContentLoaded', function() {
+            const personalChartCanvas = document.getElementById('personal-analytics-chart');
+            const personalChartTooltip = document.getElementById('personal-chart-tooltip');
+
+            if (personalChartCanvas && personalChartTooltip) {
+                personalChartCanvas.addEventListener('mousemove', function(e) {
+                    if (!this.chartPoints || this.chartPoints.length === 0) return;
+
+                    const rect = this.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+
+                    // Find closest point
+                    let closest = null;
+                    let minDist = Infinity;
+
+                    this.chartPoints.forEach(p => {
+                        const dist = Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2));
+                        if (dist < minDist && dist < 20) {
+                            minDist = dist;
+                            closest = p;
+                        }
+                    });
+
+                    if (closest) {
+                        personalChartTooltip.style.display = 'block';
+                        personalChartTooltip.innerHTML = `<strong>${closest.count} ads</strong><br>${formatDateShort(closest.date)}`;
+
+                        const tooltipHeight = personalChartTooltip.offsetHeight;
+                        const tooltipWidth = personalChartTooltip.offsetWidth;
+
+                        let left = closest.x - (tooltipWidth / 2);
+                        if (left < 0) left = 0;
+                        if (left + tooltipWidth > rect.width) left = rect.width - tooltipWidth;
+
+                        let top = closest.y + 15;
+                        if (top + tooltipHeight > rect.height) {
+                            top = closest.y - tooltipHeight - 10;
+                        }
+
+                        personalChartTooltip.style.left = left + 'px';
+                        personalChartTooltip.style.top = top + 'px';
+                    } else {
+                        personalChartTooltip.style.display = 'none';
+                    }
+                });
+
+                personalChartCanvas.addEventListener('mouseleave', function() {
+                    personalChartTooltip.style.display = 'none';
+                });
             }
         });
     </script>

@@ -29,5 +29,7 @@ from .models import (
     get_purchase_history,
     # Team member analytics functions
     get_member_analytics, get_member_daily_stats, get_member_join_date,
-    record_daily_stat
+    record_daily_stat,
+    # Personal analytics functions
+    get_personal_daily_stats
 )

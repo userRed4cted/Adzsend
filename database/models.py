@@ -994,6 +994,9 @@ def increment_usage(user_id):
     conn.commit()
     conn.close()
 
+    # Also record daily stats for personal analytics (team_id=0 for personal)
+    record_daily_stat(user_id, 0)
+
 def increment_business_usage(user_id, team_id=None):
     """Increment the business usage counters for a team member."""
     conn = get_db()
@@ -2687,6 +2690,58 @@ def get_member_join_date(member_user_id, team_id):
     conn.close()
 
     return row[0] if row else None
+
+
+def get_personal_daily_stats(user_id, start_date=None, end_date=None):
+    """Get daily message stats for a user's personal usage (non-team messages)."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Default to last 30 days if no dates specified
+    if not end_date:
+        end_date = datetime.now().strftime('%Y-%m-%d')
+    if not start_date:
+        start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+
+    # Get personal stats (where team_id is NULL or 0)
+    cursor.execute('''
+        SELECT date, messages_sent
+        FROM daily_message_stats
+        WHERE user_id = ? AND (team_id IS NULL OR team_id = 0) AND date >= ? AND date <= ?
+        ORDER BY date ASC
+    ''', (user_id, start_date, end_date))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    # Create a dict of existing data
+    data_by_date = {row[0]: row[1] for row in rows}
+
+    # Fill in all dates in range with 0 for missing days
+    stats = []
+    current = datetime.strptime(start_date, '%Y-%m-%d')
+    end = datetime.strptime(end_date, '%Y-%m-%d')
+    while current <= end:
+        date_str = current.strftime('%Y-%m-%d')
+        stats.append({'date': date_str, 'count': data_by_date.get(date_str, 0)})
+        current += timedelta(days=1)
+
+    # Calculate summary stats
+    total = sum(s['count'] for s in stats)
+    days = len(stats) if stats else 1
+    avg = total / days if days > 0 else 0
+    peak = max((s['count'] for s in stats), default=0)
+    peak_date = next((s['date'] for s in stats if s['count'] == peak), None) if peak > 0 else None
+
+    return {
+        'stats': stats,
+        'total': total,
+        'average': round(avg, 1),
+        'peak': peak,
+        'peak_date': peak_date,
+        'start_date': start_date,
+        'end_date': end_date
+    }
 
 
 # Initialize database on import

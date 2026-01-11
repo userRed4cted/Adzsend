@@ -336,7 +336,7 @@
                                     </div>
                                 </div>
                                 <div class="usage-stat">
-                                    <div class="usage-label">Advertisements sent (with current plan)</div>
+                                    <div class="usage-label">Advertisements sent (current cycle)</div>
                                     <div class="usage-value">
                                         {% if plan_status.has_plan %}
                                             {{ plan_status.messages_sent }}
@@ -344,10 +344,6 @@
                                             0
                                         {% endif %}
                                     </div>
-                                </div>
-                                <div class="usage-stat">
-                                    <div class="usage-label">All time ads sent</div>
-                                    <div class="usage-value">{{ plan_status.all_time_sent }}</div>
                                 </div>
                                 <div class="usage-stat">
                                     <div class="usage-label">Usage percentage</div>
@@ -395,12 +391,8 @@
                                     </div>
                                 </div>
                                 <div class="usage-stat">
-                                    <div class="usage-label">Advertisements sent (with current plan)</div>
+                                    <div class="usage-label">Advertisements sent (current cycle)</div>
                                     <div class="usage-value">{{ business_plan_status.messages_sent }}</div>
-                                </div>
-                                <div class="usage-stat">
-                                    <div class="usage-label">All time ads sent (across all team members)</div>
-                                    <div class="usage-value">{{ business_plan_status.all_time_sent }}</div>
                                 </div>
                                 <div class="usage-stat">
                                     <div class="usage-label">Usage percentage</div>

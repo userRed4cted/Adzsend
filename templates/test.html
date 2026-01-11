@@ -1152,7 +1152,7 @@
                                 <div class="unified-header">
                                     <div class="header-section">
                                         <div class="channels-search">
-                                            <input type="text" id="analytics-team-search" class="search-input" placeholder="Search Adzsend ID">
+                                            <input type="text" id="analytics-team-search" class="search-input" placeholder="Search Adzsend ID" oninput="filterAnalyticsMembersList()">
                                         </div>
                                     </div>
                                 </div>
@@ -4216,47 +4216,33 @@
                 });
             }
 
-            // Analytics team search functionality - search by Adzsend ID only (updates on each keystroke)
-            const analyticsTeamSearch = document.getElementById('analytics-team-search');
-            const analyticsTeamListForSearch = document.getElementById('analytics-team-list');
-            if (analyticsTeamSearch && analyticsTeamListForSearch) {
-                analyticsTeamSearch.addEventListener('input', function(e) {
-                    const searchValue = e.target.value.toLowerCase().trim();
-                    const memberItems = analyticsTeamListForSearch.querySelectorAll('.analytics-member-item');
-
-                    memberItems.forEach(item => {
-                        const adzsendId = item.dataset.adzsendId || '';
-
-                        // Show if search is empty, or if adzsend ID contains search value
-                        if (searchValue === '') {
-                            item.style.display = '';
-                        } else if (adzsendId.toLowerCase().includes(searchValue)) {
-                            item.style.display = '';
-                        } else {
-                            item.style.display = 'none';
-                        }
-                    });
-                });
-
-                // Also handle keyup for immediate feedback
-                analyticsTeamSearch.addEventListener('keyup', function(e) {
-                    const searchValue = e.target.value.toLowerCase().trim();
-                    const memberItems = analyticsTeamListForSearch.querySelectorAll('.analytics-member-item');
-
-                    memberItems.forEach(item => {
-                        const adzsendId = item.dataset.adzsendId || '';
-
-                        if (searchValue === '') {
-                            item.style.display = '';
-                        } else if (adzsendId.toLowerCase().includes(searchValue)) {
-                            item.style.display = '';
-                        } else {
-                            item.style.display = 'none';
-                        }
-                    });
-                });
-            }
         });
+    </script>
+
+    <script>
+        // Global function for analytics team member search (called via oninput)
+        function filterAnalyticsMembersList() {
+            const searchInput = document.getElementById('analytics-team-search');
+            const teamList = document.getElementById('analytics-team-list');
+
+            if (!searchInput || !teamList) return;
+
+            const searchValue = searchInput.value.toLowerCase().trim();
+            const memberItems = teamList.querySelectorAll('.analytics-member-item');
+
+            memberItems.forEach(item => {
+                const adzsendId = (item.getAttribute('data-adzsend-id') || '').toLowerCase();
+
+                // Show all if search is empty, otherwise filter by adzsend ID match
+                if (searchValue === '') {
+                    item.style.cssText = 'cursor: pointer;';
+                } else if (adzsendId.includes(searchValue)) {
+                    item.style.cssText = 'cursor: pointer;';
+                } else {
+                    item.style.cssText = 'display: none !important;';
+                }
+            });
+        }
     </script>
 
     <!-- Analytics Dialog Script -->

@@ -237,6 +237,7 @@ def home():
     has_business = False
     is_admin_user = False
     is_owner = False
+    user = None
     if 'user' in session:
         user = get_user_by_id(session.get('user_id'))
         if user:
@@ -252,8 +253,8 @@ def home():
                          slideshow_messages=HOMEPAGE['hero']['slideshow_messages'],
                          slideshow_interval=HOMEPAGE['hero']['slideshow_interval'],
                          slideshow_fade_duration=HOMEPAGE['hero']['slideshow_fade_duration'],
-                         gallery_images=HOMEPAGE['gallery']['images'],
-                         gallery_title=HOMEPAGE['gallery']['title'],
+                         hero_image=HOMEPAGE['hero']['hero_image'],
+                         hero_panel_images=HOMEPAGE['hero']['panel_images'],
                          about_title=HOMEPAGE['about']['title'],
                          about_description=HOMEPAGE['about']['description'],
                          hero_cta_button_text=HOMEPAGE['hero']['cta_button_text'],
@@ -264,7 +265,8 @@ def home():
                          plan_status=plan_status,
                          has_business=has_business,
                          is_owner=is_owner,
-                         is_admin_user=is_admin_user)
+                         is_admin_user=is_admin_user,
+                         user=user)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():

@@ -62,7 +62,13 @@
                     </div>
                 </div>
                 <div class="nav-right">
-                    {% if not session.get('user') %}
+                    {% if user %}
+                    <div style="display: flex; flex-direction: row; align-items: center; gap: 12px; background: #1A1A1E; padding: 8px 12px; border-radius: 8px; box-shadow: none;">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                        <span style="color: #dcddde; font-size: 0.9rem;">Welcome!</span>
+                        <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" style="width: 20px; height: 20px; cursor: pointer; filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(202deg) brightness(92%) contrast(87%);" onclick="window.location.href='{{ url_for('settings') }}'">
+                    </div>
+                    {% elif not session.get('user') %}
                         <div class="auth-buttons">
                             <a href="{{ url_for('login_page') }}" class="auth-btn login-btn">{{ auth_labels.login }}</a>
                             <a href="{{ url_for('signup_page') }}" class="auth-btn signup-btn">{{ auth_labels.signup }}</a>
@@ -101,8 +107,26 @@
         <div class="panel-container">
             <div class="home-content">
                 <div class="hero-section">
+                    <!-- Hero title -->
                     <h2 class="hero-title" id="hero-title">{{ slideshow_messages[0] }}</h2>
+
+                    <!-- CTA Button -->
                     <a href="{{ url_for('purchase') }}" class="view-pricing-btn">{{ hero_cta_button_text }}</a>
+
+                    <!-- Panel Images - 3 images with rotation -->
+                    <div class="hero-panel-images">
+                        <div class="hero-panel-image hero-panel-left" onclick="openLightbox(0)">
+                            <img src="{{ url_for('static', filename=hero_panel_images[0]) }}" alt="Panel Preview">
+                        </div>
+                        <div class="hero-panel-image hero-panel-center" onclick="openLightbox(1)">
+                            <img src="{{ url_for('static', filename=hero_panel_images[1]) }}" alt="Panel Preview">
+                        </div>
+                        <div class="hero-panel-image hero-panel-right" onclick="openLightbox(2)">
+                            <img src="{{ url_for('static', filename=hero_panel_images[2]) }}" alt="Panel Preview">
+                        </div>
+                    </div>
+
+                    <!-- Scroll Indicator -->
                     <div class="scroll-indicator" id="scroll-indicator">
                         <span class="scroll-text">{{ scroll_indicator_text }}</span>
                         <div class="scroll-arrow">&#8595;</div>
@@ -110,18 +134,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Gallery Section -->
-        <section class="gallery-section">
-            <h2 class="gallery-title">{{ gallery_title }}</h2>
-            <div class="gallery-grid">
-                {% for image in gallery_images %}
-                <div class="gallery-item" onclick="openLightbox({{ loop.index0 }})">
-                    <img src="{{ url_for('static', filename=image) }}" alt="Panel Screenshot {{ loop.index }}">
-                </div>
-                {% endfor %}
-            </div>
-        </section>
 
         <!-- About Section -->
         <section class="about-section">
@@ -189,7 +201,7 @@
 
         <!-- Counter - fixed position at bottom center -->
         <div class="lightbox-counter">
-            <span id="current-index">1</span> / <span id="total-images">{{ gallery_images|length }}</span>
+            <span id="current-index">1</span> / <span id="total-images">3</span>
         </div>
     </div>
 
@@ -264,11 +276,36 @@
             });
         }
 
-        // Gallery Lightbox
+        // Scroll indicator visibility
+        const scrollIndicator = document.getElementById('scroll-indicator');
+        window.addEventListener('scroll', function() {
+            if (window.scrollY > 50) {
+                scrollIndicator.classList.add('hidden');
+            } else {
+                scrollIndicator.classList.remove('hidden');
+            }
+        });
+
+        // About section fade-in on scroll
+        const aboutSection = document.querySelector('.about-section');
+        if (aboutSection) {
+            const aboutObserver = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        aboutObserver.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.2 });
+
+            aboutObserver.observe(aboutSection);
+        }
+
+        // Lightbox for hero panel images
         const images = [
-            {% for image in gallery_images %}
-            '{{ url_for('static', filename=image) }}'{% if not loop.last %},{% endif %}
-            {% endfor %}
+            '{{ url_for('static', filename=hero_panel_images[0]) }}',
+            '{{ url_for('static', filename=hero_panel_images[1]) }}',
+            '{{ url_for('static', filename=hero_panel_images[2]) }}'
         ];
         let currentImageIndex = 0;
 
@@ -316,16 +353,6 @@
             if (event.key === 'Escape') closeLightbox();
             if (event.key === 'ArrowLeft') prevImage(event);
             if (event.key === 'ArrowRight') nextImage(event);
-        });
-
-        // Scroll indicator visibility
-        const scrollIndicator = document.getElementById('scroll-indicator');
-        window.addEventListener('scroll', function() {
-            if (window.scrollY > 50) {
-                scrollIndicator.classList.add('hidden');
-            } else {
-                scrollIndicator.classList.remove('hidden');
-            }
         });
 
         // Count-up animation for Discord stats (multiple items)

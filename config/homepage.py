@@ -16,6 +16,12 @@ HOMEPAGE = {
 
     'hero': {
 
+        # HERO IMAGE
+        # Element: Image displayed at the top (e.g., favicon or logo)
+        # Image must be placed in: static/ folder
+        # Format: Just the filename (e.g., "favicon.png")
+        'hero_image': "favicon.png",
+
         # SLIDESHOW MESSAGES
         # Element: Large rotating text in center of hero section
         # These messages cycle automatically based on interval setting
@@ -44,6 +50,17 @@ HOMEPAGE = {
         # Element: The main call-to-action button below the slideshow
         # Links to: Purchase page (/purchase)
         'cta_button_text': "View Pricing",
+
+        # PANEL IMAGES
+        # Element: 3 images displayed below the CTA button with rotation effect
+        # Images must be placed in: static/ folder
+        # Format: Just the filename (e.g., "PanelImage1.png")
+        # Order: [left_image, center_image, right_image]
+        'panel_images': [
+            "PanelImage1.png",
+            "PanelImage2.png",
+            "PanelImage1.png"
+        ],
 
         # SCROLL INDICATOR TEXT
         # Element: Text with animated chevron at bottom of hero

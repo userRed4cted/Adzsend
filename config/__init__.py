@@ -15,6 +15,10 @@ from .plans import SUBSCRIPTION_PLANS, ONE_TIME_PLANS, BUSINESS_PLANS
 from .admin import ADMIN_EMAILS, is_admin
 from .database_version import DATABASE_VERSION, DATABASE_WIPE_MESSAGE
 from .email import BLACKLISTED_EMAIL_DOMAINS, ALLOWED_EMAIL_TLDS
+from .discord_accounts import (
+    DEFAULT_ACCOUNT_LIMIT, ACCOUNT_LIMIT_OVERRIDES,
+    get_account_limit, can_link_more_accounts
+)
 
 # Import site-wide settings
 from .site import (

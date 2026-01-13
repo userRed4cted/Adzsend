@@ -1,4 +1,8 @@
 <!-- Settings Popup -->
+<script>
+console.log('[SETTINGS POPUP] CSRF Token:', '{{ csrf_token }}');
+console.log('[SETTINGS POPUP] CSRF Token length:', '{{ csrf_token }}'.length);
+</script>
 <div class="settings-popup-overlay" id="settings-popup-overlay">
     <div class="settings-popup">
         <!-- Settings Side Menu -->
@@ -212,6 +216,39 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Discord Accounts Page -->
+                <div class="settings-page" id="settings-page-discord-accounts" style="display: none;">
+                    <div class="settings-subheader">Linked Discord accounts</div>
+                    <div class="settings-text">Manage linked Discord accounts to send messages via them in the panel</div>
+
+                    <!-- View Toggle (Radio Buttons) -->
+                    <div class="time-format-options" style="margin-top: 1rem; flex-direction: row; justify-content: center;">
+                        <label class="time-format-option">
+                            <input type="radio" name="discord-accounts-view" value="list" checked>
+                            <span>List view</span>
+                        </label>
+                        <label class="time-format-option">
+                            <input type="radio" name="discord-accounts-view" value="gallery">
+                            <span>Gallery view</span>
+                        </label>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div style="margin-top: 1rem; margin-bottom: 1rem;">
+                        <input type="text" class="search-input" placeholder="Search" id="discord-accounts-search-input" style="width: 100%;">
+                    </div>
+
+                    <!-- List View Container -->
+                    <div class="team-current-box" id="discord-accounts-list-view" style="display: block;">
+                        <!-- Accounts will be dynamically loaded here -->
+                    </div>
+
+                    <!-- Gallery View Container -->
+                    <div class="discord-accounts-gallery-view" id="discord-accounts-gallery-view" style="display: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem;">
+                        <!-- Accounts will be dynamically loaded here -->
                     </div>
                 </div>
 
@@ -834,8 +871,55 @@
     .team-owner-crown img {
         width: 18px;
         height: 18px;
-        opacity: 0.7;
-        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    /* Discord Accounts Gallery View Styles */
+    .discord-gallery-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #1A1A1E;
+        border: 1px solid #222225;
+        border-radius: 8px;
+        padding: 1.25rem 0.875rem;
+        gap: 0.625rem;
+        min-height: 200px;
+        justify-content: space-between;
+    }
+
+    .discord-gallery-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: #1A1A1E;
+        overflow: hidden;
+        flex-shrink: 0;
+        position: relative;
+        margin-top: 0.5rem;
+    }
+
+    .discord-gallery-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .discord-gallery-username {
+        color: #dcddde;
+        font-size: 0.875rem;
+        font-family: 'gg sans Medium', sans-serif;
+        text-align: center;
+        word-break: break-word;
+        line-height: 1.3;
+        margin-top: 0.25rem;
+    }
+
+    .discord-gallery-id {
+        color: #81828A;
+        font-size: 0.8rem;
+        font-family: 'gg sans', sans-serif;
+        text-align: center;
+        margin-bottom: 0.5rem;
     }
 
     .team-owner-crown:hover img {
@@ -1337,24 +1421,33 @@
             window.dispatchEvent(new CustomEvent('dateFormatChanged', { detail: { format: format } }));
 
             // Save to database
+            console.log('[DATE FORMAT] Saving:', format);
             fetch('/api/save-user-data', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': '{{ csrf_token }}'
+                    'X-CSRF-Token': '{{ csrf_token }}',
+                    'Cache-Control': 'no-cache'
                 },
                 body: JSON.stringify({
                     date_format: format
-                })
+                }),
+                cache: 'no-store'
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('[DATE FORMAT] Response status:', response.status);
+                return response.json();
+            })
             .then(data => {
-                if (!data.success) {
-                    console.error('Failed to save date format setting:', data.error);
+                console.log('[DATE FORMAT] Response data:', data);
+                if (data.success) {
+                    console.log('[DATE FORMAT] Saved successfully');
+                } else {
+                    console.error('[DATE FORMAT] Failed to save:', data.error);
                 }
             })
             .catch(error => {
-                console.error('Error saving date format setting:', error);
+                console.error('[DATE FORMAT] Error saving:', error);
             });
         }
 
@@ -1799,21 +1892,28 @@
         // Select and save profile photo
         async function selectProfilePhoto(photo) {
             console.log('Selecting profile photo:', photo);
+            console.log('CSRF Token being sent:', '{{ csrf_token }}');
             try {
                 const response = await fetch('/api/save-user-data', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{ csrf_token }}'
+                        'X-CSRF-Token': '{{ csrf_token }}',
+                        'Cache-Control': 'no-cache'
                     },
                     body: JSON.stringify({
                         profile_photo: photo
-                    })
+                    }),
+                    cache: 'no-store'
                 });
 
                 console.log('Response status:', response.status);
-                const data = await response.json();
-                console.log('Response data:', data);
+                console.log('Response headers:', [...response.headers.entries()]);
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+
+                const data = JSON.parse(responseText);
+                console.log('Parsed response data:', data);
 
                 if (data.success) {
                     currentProfilePhoto = photo;
@@ -1864,4 +1964,22 @@
             }
         }
     });
+
+    // =============================================================================
+    // DISCORD ACCOUNTS PAGE INITIALIZATION
+    // =============================================================================
+
+    // Initialize Discord accounts page when it's shown
+    const discordAccountsBtn = document.querySelector('[data-settings-page="discord-accounts"]');
+    if (discordAccountsBtn) {
+        discordAccountsBtn.addEventListener('click', () => {
+            // Initialize if not already done
+            if (typeof initDiscordAccountsPage === 'function') {
+                initDiscordAccountsPage();
+            }
+        });
+    }
 </script>
+
+<!-- Discord Accounts Management Script -->
+<script src="{{ url_for('static', filename='discord_accounts.js') }}"></script>

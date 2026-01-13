@@ -32,5 +32,10 @@ from .models import (
     record_daily_stat,
     # Personal analytics functions
     get_personal_daily_stats,
-    get_personal_analytics_summary
+    get_personal_analytics_summary,
+    # Linked Discord accounts functions
+    add_linked_discord_account, get_linked_discord_accounts, get_linked_discord_account_count,
+    get_linked_discord_account_by_id, unlink_discord_account,
+    update_linked_discord_account_profile, mark_linked_account_invalid, mark_linked_account_valid,
+    search_linked_discord_accounts
 )

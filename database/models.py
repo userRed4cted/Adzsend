@@ -512,6 +512,31 @@ def init_db():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_stats_date ON daily_message_stats(date)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_stats_user_team_date ON daily_message_stats(user_id, team_id, date)')
 
+    # Linked Discord accounts table (for sending messages from multiple accounts)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS linked_discord_accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            discord_id TEXT NOT NULL,
+            username TEXT NOT NULL,
+            avatar TEXT,
+            avatar_decoration TEXT,
+            discord_token TEXT NOT NULL,
+            oauth_access_token TEXT,
+            oauth_refresh_token TEXT,
+            oauth_expires_at TEXT,
+            linked_at TEXT NOT NULL,
+            last_verified TEXT,
+            is_valid INTEGER DEFAULT 1,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, discord_id)
+        )
+    ''')
+
+    # Linked Discord accounts indexes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_linked_discord_user_id ON linked_discord_accounts(user_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_linked_discord_discord_id ON linked_discord_accounts(discord_id)')
+
     conn.commit()
     conn.close()
 
@@ -2842,6 +2867,177 @@ def get_personal_analytics_summary(user_id):
         'personal_peak_date': personal_peak_date,
         'all_peak_date': all_peak_date
     }
+
+
+# =============================================================================
+# LINKED DISCORD ACCOUNTS FUNCTIONS (for sending messages)
+# =============================================================================
+
+def add_linked_discord_account(user_id, discord_id, username, avatar, avatar_decoration, discord_token,
+                                oauth_access_token=None, oauth_refresh_token=None, oauth_expires_at=None):
+    """Add a new linked Discord account for the user."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Encrypt tokens
+    encrypted_token = encrypt_token(discord_token)
+    encrypted_oauth_access = encrypt_token(oauth_access_token) if oauth_access_token else None
+    encrypted_oauth_refresh = encrypt_token(oauth_refresh_token) if oauth_refresh_token else None
+
+    try:
+        cursor.execute('''
+            INSERT INTO linked_discord_accounts
+            (user_id, discord_id, username, avatar, avatar_decoration, discord_token,
+             oauth_access_token, oauth_refresh_token, oauth_expires_at, linked_at, last_verified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, discord_id, username, avatar, avatar_decoration, encrypted_token,
+              encrypted_oauth_access, encrypted_oauth_refresh, oauth_expires_at,
+              datetime.now().isoformat(), datetime.now().isoformat()))
+
+        conn.commit()
+        account_id = cursor.lastrowid
+        conn.close()
+        return True, account_id
+    except sqlite3.IntegrityError:
+        conn.close()
+        return False, "Account already linked"
+
+
+def get_linked_discord_accounts(user_id):
+    """Get all linked Discord accounts for a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT id, discord_id, username, avatar, avatar_decoration, linked_at, last_verified, is_valid
+        FROM linked_discord_accounts
+        WHERE user_id = ?
+        ORDER BY linked_at DESC
+    ''', (user_id,))
+
+    accounts = cursor.fetchall()
+    conn.close()
+
+    return [dict(account) for account in accounts]
+
+
+def get_linked_discord_account_count(user_id):
+    """Get the number of linked Discord accounts for a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT COUNT(*) FROM linked_discord_accounts WHERE user_id = ?', (user_id,))
+    count = cursor.fetchone()[0]
+    conn.close()
+
+    return count
+
+
+def get_linked_discord_account_by_id(account_id):
+    """Get a specific linked Discord account by its ID."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT id, user_id, discord_id, username, avatar, avatar_decoration,
+               discord_token, linked_at, last_verified, is_valid
+        FROM linked_discord_accounts
+        WHERE id = ?
+    ''', (account_id,))
+
+    account = cursor.fetchone()
+    conn.close()
+
+    if not account:
+        return None
+
+    account_dict = dict(account)
+    # Decrypt token if needed
+    if account_dict.get('discord_token'):
+        account_dict['discord_token'] = decrypt_token(account_dict['discord_token'])
+
+    return account_dict
+
+
+def unlink_discord_account(user_id, account_id):
+    """Unlink a Discord account."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        DELETE FROM linked_discord_accounts
+        WHERE id = ? AND user_id = ?
+    ''', (account_id, user_id))
+
+    deleted = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+
+    return deleted
+
+
+def update_linked_discord_account_profile(account_id, username, avatar, avatar_decoration):
+    """Update the profile info of a linked Discord account."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        UPDATE linked_discord_accounts
+        SET username = ?, avatar = ?, avatar_decoration = ?, last_verified = ?
+        WHERE id = ?
+    ''', (username, avatar, avatar_decoration, datetime.now().isoformat(), account_id))
+
+    conn.commit()
+    conn.close()
+
+
+def mark_linked_account_invalid(account_id):
+    """Mark a linked Discord account as invalid (bad token)."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        UPDATE linked_discord_accounts
+        SET is_valid = 0, last_verified = ?
+        WHERE id = ?
+    ''', (datetime.now().isoformat(), account_id))
+
+    conn.commit()
+    conn.close()
+
+
+def mark_linked_account_valid(account_id):
+    """Mark a linked Discord account as valid (good token)."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        UPDATE linked_discord_accounts
+        SET is_valid = 1, last_verified = ?
+        WHERE id = ?
+    ''', (datetime.now().isoformat(), account_id))
+
+    conn.commit()
+    conn.close()
+
+
+def search_linked_discord_accounts(user_id, query):
+    """Search linked Discord accounts by username or Discord ID."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    search_query = f'%{query}%'
+    cursor.execute('''
+        SELECT id, discord_id, username, avatar, avatar_decoration, linked_at, last_verified, is_valid
+        FROM linked_discord_accounts
+        WHERE user_id = ? AND (username LIKE ? OR discord_id LIKE ?)
+        ORDER BY linked_at DESC
+    ''', (user_id, search_query, search_query))
+
+    accounts = cursor.fetchall()
+    conn.close()
+
+    return [dict(account) for account in accounts]
 
 
 # Initialize database on import

@@ -928,63 +928,8 @@ def update_token():
 
 @app.route('/panel')
 def panel():
-    if 'authenticated' not in session:
-        return redirect(url_for('login_page'))
-
-    # Check if IP has changed
-    client_ip = get_client_ip()
-    if 'login_ip' in session and session['login_ip'] != client_ip:
-        session.clear()
-        return redirect(url_for('login_page'))
-
-    # Check if user has an active plan
-    user = get_user_by_id(session.get('user_id'))
-    if not user:
-        session.clear()
-        return redirect(url_for('login_page'))
-
-    # Check if Discord account is linked
-    discord_linked = is_discord_linked(user['id'])
-
-    # Check if user is banned - pass to template instead of redirecting
-    is_banned = user.get('banned', 0) == 1
-
-    plan_status = get_plan_status(user['id'])
-
-    # Block business plan holders from accessing personal panel
-    if plan_status.get('plan_id', '').startswith('team_plan_'):
-        # Redirect business plan holders to purchase page
-        return redirect(url_for('purchase'))
-
-    # If Discord not linked, show panel but with modal
-    guilds = []
-    if discord_linked:
-        # Decrypt token only when needed for API call
-        user_token = get_decrypted_token(user['discord_id'])
-        if user_token:
-            headers = {'Authorization': user_token}
-
-            # Fetch user's guilds
-            resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
-
-            if resp.status_code == 200:
-                guilds = resp.json()
-
-    # Get user data (includes message_delay)
-    user_data = get_user_data(user['id'])
-
-    # Check if user has business access
-    has_business = has_business_access(user['id'], user['discord_id'])
-
-    # Check if user is admin (use email from database)
-    is_admin_user = is_admin(user.get('email'))
-
-    response = app.make_response(render_template('dashboard.html', user=session['user'], guilds=guilds, plan_status=plan_status, user_data=user_data, has_business=has_business, is_owner=is_business_owner(user['id']), is_admin_user=is_admin_user, BLACKLISTED_WORDS=BLACKLISTED_WORDS, PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS, is_banned=is_banned, discord_linked=discord_linked))
-    # Prevent caching of personal panel page
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+    # Redirect old personal panel to new test page
+    return redirect(url_for('test_page'))
 
 @app.route('/test')
 def test_page():
@@ -1080,7 +1025,8 @@ def test_page():
     from database import get_purchase_history
     purchase_history = get_purchase_history(user['id'])
 
-    return render_template('test.html',
+    csrf_token = generate_csrf_token()
+    response = app.make_response(render_template('test.html',
         discord_info=discord_info,
         discord_linked=discord_linked,
         guilds=guilds,
@@ -1096,8 +1042,14 @@ def test_page():
         active_member_count=active_member_count,
         purchase_history=purchase_history,
         BLACKLISTED_WORDS=BLACKLISTED_WORDS,
-        PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS
-    )
+        PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS,
+        csrf_token=csrf_token
+    ))
+    # Prevent caching
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @app.route('/api/guild/<guild_id>/channels')
 @rate_limit('api')
@@ -1373,9 +1325,8 @@ def send_message():
 
 @app.route('/team-management')
 def team_management():
-    """Team plan management page for team owners."""
-    if 'authenticated' not in session:
-        return redirect(url_for('login_page'))
+    """Team plan management page for team owners - ARCHIVED, redirects to test page."""
+    return redirect(url_for('test_page'))
 
     client_ip = get_client_ip()
     if 'login_ip' in session and session['login_ip'] != client_ip:
@@ -1876,17 +1827,27 @@ def api_save_user_data():
     """Save user's selected channels, draft message, and/or message delay."""
     from flask import jsonify
 
+    print(f"[API] save-user-data called")
+    print(f"[API] Headers: {dict(request.headers)}")
+    print(f"[API] Session keys: {list(session.keys())}")
+    print(f"[API] Has 'user' in session: {'user' in session}")
+
     # CSRF protection
     csrf_error = check_csrf()
     if csrf_error:
+        print(f"[API] CSRF check failed: {csrf_error}")
         return csrf_error
 
+    print(f"[API] CSRF check passed")
+
     if 'user' not in session:
+        print(f"[API] Not logged in")
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
     try:
         user = get_user_by_id(session.get('user_id'))
         if not user:
+            print(f"[API] User not found in database")
             return jsonify({'success': False, 'error': 'User not found'}), 404
 
         data = request.get_json()
@@ -1896,7 +1857,7 @@ def api_save_user_data():
         date_format = data.get('date_format')
         profile_photo = data.get('profile_photo')
 
-        print(f"[DEBUG] Saving profile_photo: {profile_photo} for user {user['id']}")
+        print(f"[API] Saving profile_photo: {profile_photo}, date_format: {date_format} for user {user['id']}")
 
         # Check content filter for draft message and flag user if needed
         if draft_message and draft_message.strip():
@@ -3273,6 +3234,303 @@ def discord_unlink():
         session['user']['avatar'] = None
 
     return {'success': True, 'message': 'Discord account unlinked successfully.'}
+
+
+# =============================================================================
+# LINKED DISCORD ACCOUNTS API (Multiple accounts for sending messages)
+# =============================================================================
+
+@app.route('/api/linked-accounts')
+def get_linked_accounts():
+    """Get all linked Discord accounts for the current user."""
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    from database import get_linked_discord_accounts, get_linked_discord_account_count
+    from config import get_account_limit, can_link_more_accounts
+
+    user = get_user_by_internal_id(user_id)
+    if not user:
+        return {'error': 'User not found'}, 404
+
+    accounts = get_linked_discord_accounts(user_id)
+    count = get_linked_discord_account_count(user_id)
+    can_link, limit, remaining = can_link_more_accounts(user.get('email'), count)
+
+    return {
+        'success': True,
+        'accounts': accounts,
+        'count': count,
+        'limit': limit,
+        'remaining': remaining,
+        'can_link': can_link
+    }
+
+
+@app.route('/api/linked-accounts/search')
+def search_linked_accounts_api():
+    """Search linked Discord accounts."""
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    query = request.args.get('q', '')
+    if not query:
+        return {'error': 'No search query provided'}, 400
+
+    from database import search_linked_discord_accounts
+    accounts = search_linked_discord_accounts(user_id, query)
+
+    return {
+        'success': True,
+        'accounts': accounts
+    }
+
+
+@app.route('/api/linked-accounts/pending')
+def get_pending_link_account():
+    """Get pending link account data from session."""
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    pending_data = session.get('pending_link_account')
+    if not pending_data:
+        return {'success': True, 'pending': None}
+
+    return {
+        'success': True,
+        'pending': {
+            'discord_id': pending_data.get('discord_id'),
+            'username': pending_data.get('username'),
+            'avatar': pending_data.get('avatar'),
+            'avatar_decoration': pending_data.get('avatar_decoration')
+        }
+    }
+
+
+@app.route('/discord/link-account')
+def discord_link_account():
+    """Initiate Discord OAuth2 for linking a new account."""
+    user_id = get_session_user_id()
+    if not user_id:
+        return redirect(url_for('login_page'))
+
+    # Check if user can link more accounts
+    from database import get_linked_discord_account_count
+    from config import can_link_more_accounts
+
+    user = get_user_by_internal_id(user_id)
+    if not user:
+        return redirect(url_for('settings') + '?error=User%20not%20found')
+
+    count = get_linked_discord_account_count(user_id)
+    can_link, limit, remaining = can_link_more_accounts(user.get('email'), count)
+
+    if not can_link:
+        return redirect(url_for('settings') + '?error=Account%20limit%20reached')
+
+    # Generate OAuth2 state
+    state = secrets.token_urlsafe(32)
+    session['discord_link_account_state'] = state
+
+    # Build OAuth2 authorization URL
+    # Use the base callback URL - we'll distinguish by state in session
+    params = urlencode({
+        'client_id': DISCORD_CLIENT_ID,
+        'redirect_uri': DISCORD_OAUTH_REDIRECT_URI.replace('/callback', '/callback/link-account'),
+        'response_type': 'code',
+        'scope': 'identify',
+        'state': state
+    })
+
+    auth_url = f'{DISCORD_API_BASE}/oauth2/authorize?{params}'
+    return redirect(auth_url)
+
+
+@app.route('/discord/callback/link-account')
+def discord_link_account_callback():
+    """Handle Discord OAuth2 callback for linking a new account."""
+    user_id = get_session_user_id()
+    if not user_id:
+        return redirect(url_for('login_page'))
+
+    # Verify state parameter
+    state = request.args.get('state')
+    stored_state = session.pop('discord_link_account_state', None)
+
+    if not state or state != stored_state:
+        return redirect(url_for('settings') + '?error=Invalid%20OAuth%20state')
+
+    # Check for error response
+    error = request.args.get('error')
+    if error:
+        return redirect(url_for('settings') + '?error=Authorization%20cancelled')
+
+    # Get authorization code
+    code = request.args.get('code')
+    if not code:
+        return redirect(url_for('settings') + '?error=No%20authorization%20code')
+
+    # Exchange code for access token
+    token_url = f'{DISCORD_API_BASE}/oauth2/token'
+    token_data = {
+        'client_id': DISCORD_CLIENT_ID,
+        'client_secret': DISCORD_CLIENT_SECRET,
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': DISCORD_OAUTH_REDIRECT_URI.replace('/callback', '/callback/link-account')
+    }
+
+    try:
+        token_response = requests.post(token_url, data=token_data, timeout=10)
+
+        if token_response.status_code != 200:
+            print(f"[LINK ACCOUNT] Token exchange failed: {token_response.text}")
+            return redirect(url_for('settings') + '?error=Failed%20to%20get%20access%20token')
+
+        token_json = token_response.json()
+        access_token = token_json.get('access_token')
+        refresh_token = token_json.get('refresh_token')
+        expires_in = token_json.get('expires_in', 604800)  # Default 7 days
+        expires_at = (datetime.now() + timedelta(seconds=expires_in)).isoformat()
+
+        # Get user info from Discord
+        user_response = requests.get(
+            f'{DISCORD_API_BASE}/users/@me',
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10
+        )
+
+        if user_response.status_code != 200:
+            print(f"[LINK ACCOUNT] Failed to get user info: {user_response.text}")
+            return redirect(url_for('settings') + '?error=Failed%20to%20get%20user%20info')
+
+        discord_user = user_response.json()
+        discord_id = discord_user.get('id')
+        username = discord_user.get('username')
+        avatar = discord_user.get('avatar')
+
+        # Get avatar decoration asset if present
+        avatar_decoration = None
+        avatar_decoration_data = discord_user.get('avatar_decoration_data')
+        if avatar_decoration_data and avatar_decoration_data.get('asset'):
+            avatar_decoration = avatar_decoration_data.get('asset')
+
+        # Store OAuth info in session for token verification step
+        session['pending_link_account'] = {
+            'discord_id': discord_id,
+            'username': username,
+            'avatar': avatar,
+            'avatar_decoration': avatar_decoration,
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'expires_at': expires_at
+        }
+
+        # Redirect back to settings for token input
+        return redirect(url_for('settings') + '?link_success=1')
+
+    except requests.exceptions.Timeout:
+        return redirect(url_for('settings') + '?error=Connection%20timeout')
+    except Exception as e:
+        print(f"[LINK ACCOUNT] Error: {str(e)}")
+        return redirect(url_for('settings') + '?error=An%20error%20occurred')
+
+
+@app.route('/api/linked-accounts/verify-token', methods=['POST'])
+def verify_link_account_token():
+    """Verify the Discord token and complete account linking."""
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    # Get pending link data from session
+    pending_data = session.get('pending_link_account')
+    if not pending_data:
+        return {'error': 'No pending account link'}, 400
+
+    # Get token from request
+    data = request.get_json()
+    discord_token = data.get('token', '').strip()
+
+    if not discord_token:
+        return {'error': 'Token is required'}, 400
+
+    # Verify token by making a request to Discord API
+    try:
+        user_response = requests.get(
+            f'{DISCORD_API_BASE}/users/@me',
+            headers={'Authorization': discord_token},
+            timeout=10
+        )
+
+        if user_response.status_code != 200:
+            return {'error': 'Incorrect account token', 'valid': False}, 200
+
+        # Verify that the token belongs to the OAuth-authorized account
+        token_user = user_response.json()
+        if token_user.get('id') != pending_data['discord_id']:
+            return {'error': 'Token does not match authorized account', 'valid': False}, 200
+
+        # Token is valid, add the account
+        from database import add_linked_discord_account
+
+        success, result = add_linked_discord_account(
+            user_id=user_id,
+            discord_id=pending_data['discord_id'],
+            username=pending_data['username'],
+            avatar=pending_data['avatar'],
+            avatar_decoration=pending_data.get('avatar_decoration'),
+            discord_token=discord_token,
+            oauth_access_token=pending_data['access_token'],
+            oauth_refresh_token=pending_data['refresh_token'],
+            oauth_expires_at=pending_data['expires_at']
+        )
+
+        if not success:
+            return {'error': result, 'valid': False}, 200
+
+        # Clear pending data
+        session.pop('pending_link_account', None)
+
+        return {
+            'success': True,
+            'valid': True,
+            'message': 'Account linked successfully',
+            'account_id': result
+        }
+
+    except requests.exceptions.Timeout:
+        return {'error': 'Connection timeout', 'valid': False}, 200
+    except Exception as e:
+        print(f"[VERIFY TOKEN] Error: {str(e)}")
+        return {'error': 'Verification failed', 'valid': False}, 200
+
+
+@app.route('/api/linked-accounts/<int:account_id>/unlink', methods=['POST'])
+def unlink_account(account_id):
+    """Unlink a Discord account."""
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    from database import unlink_discord_account
+    success = unlink_discord_account(user_id, account_id)
+
+    if not success:
+        return {'error': 'Account not found or already unlinked'}, 404
+
+    return {'success': True, 'message': 'Account unlinked successfully'}
 
 
 @app.route('/logout')

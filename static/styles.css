@@ -419,13 +419,23 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.5rem 2rem;
-    min-height: 80px;
+    padding: 0.735rem 2rem;
+    min-height: 39.2px;
     box-sizing: border-box;
     background: #121215;
-    border-bottom: 1px solid #ffffff;
+    border-bottom: none;
     z-index: 100;
     position: relative;
+}
+
+.navbar::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 0.5px;
+    background: #222225;
 }
 
 .navbar-content {
@@ -443,7 +453,7 @@ body {
 }
 
 .navbar-title {
-    font-size: 1.5rem;
+    font-size: 2.1rem;
     font-weight: 700;
     color: #ffffff;
     margin: 0;
@@ -716,6 +726,23 @@ body {
     object-fit: contain;
 }
 
+/* Hero Fade-in Animation */
+@keyframes heroFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hero-fade-in {
+    opacity: 0;
+    animation: heroFadeIn 1.2s ease forwards;
+}
+
 /* Hero Heading Section */
 .hero-heading {
     display: flex;
@@ -743,6 +770,7 @@ body {
     display: inline-flex;
     flex-direction: column;
     align-items: stretch;
+    margin-top: 3.25rem;
 }
 
 .hero-tagline {
@@ -773,8 +801,6 @@ body {
     color: #ffffff;
     line-height: 1.4;
     letter-spacing: 0.5px;
-    opacity: 1;
-    transition: opacity 0.3s ease;
     min-height: 3em;
     display: flex;
     align-items: flex-start;
@@ -784,11 +810,11 @@ body {
 }
 
 .hero-title.fade-out {
-    opacity: 0;
+    opacity: 0 !important;
 }
 
 .hero-title.fade-in {
-    opacity: 1;
+    opacity: 1 !important;
 }
 
 .hero-buttons {
@@ -901,7 +927,6 @@ body {
     align-items: center;
     gap: 0.5rem;
     margin-top: 6.1875rem;
-    opacity: 1;
     transition: opacity 0.3s ease;
     will-change: opacity;
 }

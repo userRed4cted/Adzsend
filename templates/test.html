@@ -642,46 +642,7 @@
 </head>
 <body>
     <div class="panel">
-        <nav class="navbar">
-            <div class="navbar-content">
-                <div class="navbar-left">
-                    <div class="menu-icon" id="menu-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="3" y1="12" x2="21" y2="12"></line>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <line x1="3" y1="18" x2="21" y2="18"></line>
-                        </svg>
-                    </div>
-                    <div class="navbar-text">
-                        <h1 class="navbar-title">Ad <span class="gradient-z">Z</span> send</h1>
-                        <p class="navbar-subtitle">Select in which servers and channels you would like to automate your marketing</p>
-                    </div>
-                </div>
-                {% if user %}
-                <div class="nav-right">
-                    <div style="display: flex; flex-direction: row; align-items: center; gap: 12px; background: #1A1A1E; padding: 8px 12px; border-radius: 8px; box-shadow: none;">
-                        <div class="profile-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
-                            <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
-                        </div>
-                        <span style="color: #dcddde; font-size: 0.9rem;">Welcome!</span>
-                        <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" style="width: 14px; height: 14px; cursor: pointer; filter: brightness(0) saturate(100%) invert(56%) sepia(6%) saturate(340%) hue-rotate(194deg) brightness(93%) contrast(87%);" onclick="openSettings()">
-                    </div>
-                </div>
-                {% else %}
-                <div class="nav-right"></div>
-                {% endif %}
-            </div>
-
-            <!-- Dropdown Menu -->
-            <div class="dropdown-menu" id="dropdown-menu">
-                <a href="{{ url_for('home') }}" class="dropdown-item">Home</a>
-                <a href="{{ url_for('panel') }}" class="dropdown-item">Personal Panel</a>
-                <a href="{{ url_for('settings') }}" class="dropdown-item">Settings</a>
-                <div class="dropdown-divider"></div>
-                <a href="https://discord.gg/KWt6rvCukp" target="_blank" class="dropdown-item discord-item">Discord Server</a>
-                <a href="{{ url_for('logout') }}" class="dropdown-item logout-item">Logout</a>
-            </div>
-        </nav>
+        {% include 'navbar.html' %}
 
         <div class="test-panel-container">
             <div class="test-main-frame">

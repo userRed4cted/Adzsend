@@ -671,6 +671,8 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
     cursor.execute('SELECT id FROM user_data WHERE user_id = ?', (user_id,))
     existing = cursor.fetchone()
 
+    print(f"[DEBUG] save_user_data: user_id={user_id}, existing={existing}, profile_photo={profile_photo}")
+
     if existing:
         # Update existing record
         update_parts = []
@@ -703,7 +705,9 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
 
             # Build query safely - update_parts are hardcoded column names, not user input
             query = f'UPDATE user_data SET {", ".join(update_parts)} WHERE user_id = ?'
+            print(f"[DEBUG] Executing query: {query} with params: {params}")
             cursor.execute(query, params)
+            print(f"[DEBUG] Updated {cursor.rowcount} rows")
     else:
         # Insert new record
         cursor.execute('''

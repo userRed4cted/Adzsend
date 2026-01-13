@@ -196,7 +196,6 @@
                                 <span class="account-info-label">Adzsend ID</span>
                                 <div class="account-info-value-container">
                                     <span class="account-info-value" id="account-adzsend-id">{{ user.adzsend_id if user and user.adzsend_id else 'Not set' }}</span>
-                                    <img src="{{ url_for('static', filename='copy.png') }}" class="account-copy-btn" id="account-copy-adzsend" alt="Copy" title="Copy ID">
                                 </div>
                             </div>
                             <div class="account-info-row">
@@ -204,6 +203,12 @@
                                 <div class="account-info-value-container">
                                     <span class="account-info-value" id="account-email">{{ user.email if user and user.email else 'Not set' }}</span>
                                     <button class="account-edit-btn" id="account-edit-email">Edit</button>
+                                </div>
+                            </div>
+                            <div class="account-info-row">
+                                <span class="account-info-label">Signup date (<span id="signup-date-format">{{ user_data.date_format if user_data and user_data.date_format else 'mm/dd/yy' }}</span>)</span>
+                                <div class="account-info-value-container">
+                                    <span class="account-info-value" id="account-signup-date">{{ user.signup_date if user and user.signup_date else 'Not set' }}</span>
                                 </div>
                             </div>
                         </div>
@@ -427,12 +432,25 @@
 
     .settings-close-btn {
         background: transparent;
-        border: none;
+        border: 1px solid transparent;
         color: #81828A;
         font-size: 1.5rem;
         cursor: pointer;
-        padding: 0;
+        padding: 0.25rem;
         line-height: 1;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .settings-close-btn:hover {
+        background: #1A1A1E;
+        border-color: #222225;
+        color: white;
     }
 
 
@@ -928,15 +946,15 @@
         background: #1A1A1E;
         border: 1px solid #222225;
         border-radius: 8px;
-        padding: 1.5rem;
+        padding: 0.75rem;
         display: flex;
         flex-direction: column;
         align-items: center;
-        aspect-ratio: 1 / 0.95;
+        aspect-ratio: 1 / 0.475;
     }
 
     .account-profile-photo-container {
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.75rem;
     }
 
     .account-profile-photo {
@@ -971,7 +989,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0.75rem 0;
+        padding: 0.375rem 0;
         border-bottom: 1px solid #282930;
     }
 
@@ -1322,7 +1340,8 @@
             fetch('/api/save-user-data', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': '{{ csrf_token }}'
                 },
                 body: JSON.stringify({
                     date_format: format
@@ -1680,6 +1699,34 @@
 
         let currentProfilePhoto = '{{ user_data.profile_photo if user_data and user_data.profile_photo else "Light_Blue.jpg" }}';
 
+        // Format signup date according to user preference
+        const signupDateEl = document.getElementById('account-signup-date');
+        if (signupDateEl && signupDateEl.textContent !== 'Not set') {
+            const dateStr = signupDateEl.textContent;
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = String(date.getFullYear()).slice(-2);
+
+                const format = '{{ user_data.date_format if user_data and user_data.date_format else "mm/dd/yy" }}';
+                let formattedDate;
+                switch (format) {
+                    case 'dd/mm/yy':
+                        formattedDate = `${day}/${month}/${year}`;
+                        break;
+                    case 'yy/mm/dd':
+                        formattedDate = `${year}/${month}/${day}`;
+                        break;
+                    case 'mm/dd/yy':
+                    default:
+                        formattedDate = `${month}/${day}/${year}`;
+                        break;
+                }
+                signupDateEl.textContent = formattedDate;
+            }
+        }
+
         // Copy Adzsend ID to clipboard
         const copyBtn = document.getElementById('account-copy-adzsend');
         if (copyBtn) {
@@ -1713,10 +1760,14 @@
 
         // Open profile picker
         if (profilePhotoEl) {
+            console.log('Profile photo element found, attaching click handler');
             profilePhotoEl.addEventListener('click', function() {
+                console.log('Profile photo clicked, opening picker');
                 loadProfilePicker();
                 pickerOverlay.classList.add('show');
             });
+        } else {
+            console.error('Profile photo element NOT found');
         }
 
         // Close profile picker
@@ -1747,6 +1798,7 @@
 
         // Select and save profile photo
         async function selectProfilePhoto(photo) {
+            console.log('Selecting profile photo:', photo);
             try {
                 const response = await fetch('/api/save-user-data', {
                     method: 'POST',
@@ -1759,19 +1811,50 @@
                     })
                 });
 
+                console.log('Response status:', response.status);
                 const data = await response.json();
+                console.log('Response data:', data);
+
                 if (data.success) {
                     currentProfilePhoto = photo;
-                    // Update the profile photo display
+                    const newPhotoUrl = `/static/profile_photos/${photo}`;
+                    console.log('Updating profile photos to:', newPhotoUrl);
+
+                    // Update ALL profile photos across the entire page
+                    // 1. My Account page profile photo
                     const profileImg = document.getElementById('account-profile-img');
+                    console.log('Account profile img element:', profileImg);
                     if (profileImg) {
-                        profileImg.src = `/static/profile_photos/${photo}`;
+                        profileImg.src = newPhotoUrl;
+                        console.log('Updated account profile img');
                     }
-                    // Also update sidebar profile photo
+
+                    // 2. Settings sidebar profile photo
                     const sidebarImg = document.querySelector('.settings-sidebar-profile-img');
+                    console.log('Sidebar profile img element:', sidebarImg);
                     if (sidebarImg) {
-                        sidebarImg.src = `/static/profile_photos/${photo}`;
+                        sidebarImg.src = newPhotoUrl;
+                        console.log('Updated sidebar profile img');
                     }
+
+                    // 3. Update ALL profile photo images on the entire page
+                    // Find all images that have profile_photos in their src (excluding team members)
+                    const allImages = document.querySelectorAll('img');
+                    let updatedCount = 0;
+                    allImages.forEach(img => {
+                        if (img.src && img.src.includes('/static/profile_photos/') &&
+                            (img.closest('.profile-avatar') ||
+                             img.closest('.navbar-profile-circle') ||
+                             img.closest('.settings-sidebar-profile') ||
+                             img.id === 'account-profile-img')) {
+                            const oldSrc = img.src;
+                            img.src = newPhotoUrl;
+                            updatedCount++;
+                            console.log('Updated profile img from', oldSrc, 'to', newPhotoUrl);
+                        }
+                    });
+                    console.log('Total profile images updated:', updatedCount);
+
                     closeProfilePicker();
                 } else {
                     console.error('Failed to save profile photo:', data.error);

@@ -51,6 +51,11 @@ HOMEPAGE = {
         # Links to: Purchase page (/purchase)
         'cta_button_text': "View Pricing",
 
+        # DISCORD SERVER URL
+        # Element: Link for "Our Discord server" button
+        # Opens in a new tab when clicked
+        'discord_server_url': "https://discord.gg/KWt6rvCukp",
+
         # PANEL IMAGES
         # Element: 3 images displayed below the CTA button with rotation effect
         # Images must be placed in: static/ folder

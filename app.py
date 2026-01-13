@@ -555,6 +555,7 @@ def purchase():
     has_business = False
     is_admin_user = False
     is_owner = False
+    user_data = None
     if 'user' in session:
         user = get_user_by_id(session.get('user_id'))
         if user:
@@ -562,6 +563,9 @@ def purchase():
             has_business = has_business_access(user['id'], session['user']['id'])
             is_owner = is_business_owner(user['id'])
             is_admin_user = is_admin(user.get('email'))
+            user_data = user
+
+    from config import NAVBAR
 
     return render_template('purchase.html',
                          subscription_plans=SUBSCRIPTION_PLANS,
@@ -570,7 +574,10 @@ def purchase():
                          plan_status=plan_status,
                          has_business=has_business,
                          is_owner=is_owner,
-                         is_admin_user=is_admin_user)
+                         is_admin_user=is_admin_user,
+                         user=session.get('user'),
+                         user_data=user_data,
+                         auth_labels=NAVBAR['auth_buttons'])
 
 @app.route('/api/resend-code', methods=['POST'])
 @rate_limit('api')
@@ -1889,6 +1896,8 @@ def api_save_user_data():
         date_format = data.get('date_format')
         profile_photo = data.get('profile_photo')
 
+        print(f"[DEBUG] Saving profile_photo: {profile_photo} for user {user['id']}")
+
         # Check content filter for draft message and flag user if needed
         if draft_message and draft_message.strip():
             is_valid, filter_reason = check_message_content(draft_message, user['id'])
@@ -1897,6 +1906,7 @@ def api_save_user_data():
 
         # Save to database
         save_user_data(user['id'], selected_channels, draft_message, message_delay, date_format, profile_photo)
+        print(f"[DEBUG] Profile photo saved successfully")
 
         return jsonify({'success': True}), 200
 

@@ -2744,5 +2744,56 @@ def get_personal_daily_stats(user_id, start_date=None, end_date=None):
     }
 
 
+def get_personal_analytics_summary(user_id):
+    """Get summary analytics for a user: all-time counts and peak dates."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Get all-time personal and team messages from usage table
+    cursor.execute('''
+        SELECT all_time_sent, business_all_time_sent
+        FROM usage WHERE user_id = ?
+    ''', (user_id,))
+    usage_row = cursor.fetchone()
+
+    personal_all_time = usage_row[0] if usage_row and usage_row[0] else 0
+    team_all_time = usage_row[1] if usage_row and usage_row[1] else 0
+    total_all_time = personal_all_time + team_all_time
+
+    # Get peak date for personal panel (team_id = 0 or NULL)
+    cursor.execute('''
+        SELECT date, SUM(messages_sent) as total
+        FROM daily_message_stats
+        WHERE user_id = ? AND (team_id IS NULL OR team_id = 0)
+        GROUP BY date
+        ORDER BY total DESC
+        LIMIT 1
+    ''', (user_id,))
+    personal_peak_row = cursor.fetchone()
+    personal_peak_date = personal_peak_row[0] if personal_peak_row else None
+
+    # Get peak date across all panels (personal + team)
+    cursor.execute('''
+        SELECT date, SUM(messages_sent) as total
+        FROM daily_message_stats
+        WHERE user_id = ?
+        GROUP BY date
+        ORDER BY total DESC
+        LIMIT 1
+    ''', (user_id,))
+    all_peak_row = cursor.fetchone()
+    all_peak_date = all_peak_row[0] if all_peak_row else None
+
+    conn.close()
+
+    return {
+        'personal_all_time': personal_all_time,
+        'team_all_time': team_all_time,
+        'total_all_time': total_all_time,
+        'personal_peak_date': personal_peak_date,
+        'all_peak_date': all_peak_date
+    }
+
+
 # Initialize database on import
 init_db()

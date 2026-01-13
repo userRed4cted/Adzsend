@@ -2286,6 +2286,29 @@ def get_personal_daily_stats():
         return {'success': False, 'error': str(e)}, 500
 
 
+@app.route('/api/personal/analytics-summary', methods=['GET'])
+@rate_limit('api')
+def get_personal_analytics_summary_endpoint():
+    """Get summary analytics for the current user: all-time counts and peak dates."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    try:
+        user = get_user_by_id(session.get('user_id'))
+        if not user:
+            return {'success': False, 'error': 'User not found'}, 404
+
+        from database import get_personal_analytics_summary
+        summary = get_personal_analytics_summary(user['id'])
+        return {'success': True, 'data': summary}, 200
+
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Get personal analytics summary error: {str(e)}")
+        traceback.print_exc()
+        return {'success': False, 'error': str(e)}, 500
+
+
 # Team invitation API endpoints
 
 @app.route('/api/team/invitations', methods=['GET'])

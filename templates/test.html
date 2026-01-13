@@ -155,7 +155,7 @@
         .menu-item {
             display: flex;
             align-items: center;
-            padding: 0.75rem;
+            padding: 0.375rem 0.75rem;
             border-radius: 6px;
             color: #dcddde;
             font-size: 0.9rem;
@@ -662,7 +662,7 @@
                     <div style="display: flex; flex-direction: row; align-items: center; gap: 12px; background: #1A1A1E; padding: 8px 12px; border-radius: 8px; box-shadow: none;">
                         <div class="profile-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
                         <span style="color: #dcddde; font-size: 0.9rem;">Welcome!</span>
-                        <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" style="width: 20px; height: 20px; cursor: pointer; filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(202deg) brightness(92%) contrast(87%);" onclick="openSettings()">
+                        <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" style="width: 14px; height: 14px; cursor: pointer; filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(202deg) brightness(92%) contrast(87%);" onclick="openSettings()">
                     </div>
                 </div>
                 {% else %}
@@ -1096,6 +1096,34 @@
                                 <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Personal analytics</span>
                             </div>
 
+                            <!-- Personal Analytics Stats -->
+                            <div id="personal-analytics-stats" style="display: flex; flex-direction: column; padding: 0 1rem; margin-bottom: 0.5rem;">
+                                <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                                    <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across personal panel</span>
+                                    <span id="stat-personal-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                </div>
+                                <div style="height: 1px; background: #222225;"></div>
+                                <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                                    <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across team panels</span>
+                                    <span id="stat-team-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                </div>
+                                <div style="height: 1px; background: #222225;"></div>
+                                <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                                    <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across all panels</span>
+                                    <span id="stat-total-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                </div>
+                                <div style="height: 1px; background: #222225;"></div>
+                                <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                                    <span style="color: #81828A; font-size: 0.8rem;">Date with most messages sent on personal panel (mm/dd/yy)</span>
+                                    <span id="stat-peak-date-personal" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                </div>
+                                <div style="height: 1px; background: #222225;"></div>
+                                <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                                    <span style="color: #81828A; font-size: 0.8rem;">Date with most messages sent across all panels (mm/dd/yy)</span>
+                                    <span id="stat-peak-date-all" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                </div>
+                            </div>
+
                             <!-- Personal Chart Section -->
                             <div style="flex: 1; display: flex; flex-direction: column; padding: 1rem; min-height: 0;">
                                 <div class="date-range-container" style="margin-bottom: 1rem;">
@@ -1279,6 +1307,8 @@
             </div>
         </div>
     </div>
+
+    {% include 'partials/settings_popup.html' %}
 
     <style>
         /* Analytics Dialog Styles */
@@ -1485,7 +1515,7 @@
         .chart-canvas-wrapper {
             position: relative;
             width: 100%;
-            height: 200px;
+            height: 140px;
             overflow: hidden;
         }
 
@@ -2229,10 +2259,14 @@
                 }
             });
 
-            // Menu item navigation
+            // Menu item navigation (skip if disabled)
             const menuItems = document.querySelectorAll('.menu-item');
             menuItems.forEach(item => {
                 item.addEventListener('click', function() {
+                    // Skip if button is disabled
+                    if (this.disabled || this.classList.contains('disabled')) {
+                        return;
+                    }
                     menuItems.forEach(i => i.classList.remove('active'));
                     this.classList.add('active');
                 });
@@ -4262,12 +4296,6 @@
                 console.error('Failed to copy:', err);
             });
         }
-
-        // Open settings (placeholder for now)
-        function openSettings() {
-            // TODO: Implement settings panel
-            console.log('Settings clicked');
-        }
     </script>
 
     <!-- Analytics Dialog Script -->
@@ -4649,7 +4677,41 @@
         document.addEventListener('DOMContentLoaded', function() {
             initPersonalAnalytics();
             setupPersonalDateHandlers();
+            loadPersonalAnalyticsSummary();
         });
+
+        async function loadPersonalAnalyticsSummary() {
+            try {
+                const response = await fetch('/api/personal/analytics-summary');
+                const data = await response.json();
+
+                if (data.success) {
+                    const summary = data.data;
+
+                    // Update stat values
+                    document.getElementById('stat-personal-all-time').textContent = summary.personal_all_time.toLocaleString();
+                    document.getElementById('stat-team-all-time').textContent = summary.team_all_time.toLocaleString();
+                    document.getElementById('stat-total-all-time').textContent = summary.total_all_time.toLocaleString();
+
+                    // Format dates as mm/dd/yy
+                    const formatDate = (dateStr) => {
+                        if (!dateStr) return '';
+                        const d = new Date(dateStr);
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const year = String(d.getFullYear()).slice(-2);
+                        return `${month}/${day}/${year}`;
+                    };
+
+                    document.getElementById('stat-peak-date-personal').textContent = formatDate(summary.personal_peak_date);
+                    document.getElementById('stat-peak-date-all').textContent = formatDate(summary.all_peak_date);
+                } else {
+                    console.error('Failed to load personal analytics summary:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading personal analytics summary:', error);
+            }
+        }
 
         async function initPersonalAnalytics() {
             const startInput = document.getElementById('personal-start-date');

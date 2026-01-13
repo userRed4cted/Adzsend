@@ -66,7 +66,7 @@
                     <div style="display: flex; flex-direction: row; align-items: center; gap: 12px; background: #1A1A1E; padding: 8px 12px; border-radius: 8px; box-shadow: none;">
                         <div style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
                         <span style="color: #dcddde; font-size: 0.9rem;">Welcome!</span>
-                        <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" style="width: 20px; height: 20px; cursor: pointer; filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(202deg) brightness(92%) contrast(87%);" onclick="window.location.href='{{ url_for('settings') }}'">
+                        <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" style="width: 14px; height: 14px; cursor: pointer; filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(202deg) brightness(92%) contrast(87%);" onclick="openSettings()">
                     </div>
                     {% elif not session.get('user') %}
                         <div class="auth-buttons">
@@ -107,11 +107,21 @@
         <div class="panel-container">
             <div class="home-content">
                 <div class="hero-section">
+                    <!-- Hero Heading Section -->
+                    <div class="hero-heading">
+                        <h1 class="hero-brand">Ad<span class="gradient-z">Z</span>send</h1>
+                        <p class="hero-tagline">The Ultimate <span class="teal-gradient">Discord Marketing System</span></p>
+                        <div class="hero-divider"></div>
+                    </div>
+
                     <!-- Hero title -->
                     <h2 class="hero-title" id="hero-title">{{ slideshow_messages[0] }}</h2>
 
-                    <!-- CTA Button -->
-                    <a href="{{ url_for('purchase') }}" class="view-pricing-btn">{{ hero_cta_button_text }}</a>
+                    <!-- CTA Buttons -->
+                    <div class="hero-buttons">
+                        <a href="https://discord.gg/" class="discord-btn"><img src="{{ url_for('static', filename='discordlogo.png') }}" alt="Discord" class="discord-btn-icon">Our Discord server</a>
+                        <a href="{{ url_for('purchase') }}" class="view-pricing-btn">{{ hero_cta_button_text }}</a>
+                    </div>
 
                     <!-- Panel Images - 3 images with rotation -->
                     <div class="hero-panel-images">
@@ -415,5 +425,7 @@
             });
         })();
     </script>
+
+    {% include 'partials/settings_popup.html' %}
 </body>
 </html>

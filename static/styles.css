@@ -87,7 +87,8 @@ body {
     background: #121215;
     opacity: 0;
     transform: translateY(30px);
-    transition: opacity 0.8s ease, transform 0.8s ease;
+    transition: opacity 1.2s ease, transform 1.2s ease;
+    will-change: opacity, transform;
 }
 
 .about-section.visible {
@@ -696,19 +697,65 @@ body {
     object-fit: contain;
 }
 
+/* Hero Heading Section */
+.hero-heading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.hero-brand {
+    font-size: 3.15rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.hero-brand .gradient-z {
+    background: linear-gradient(to bottom, #15d8bc, #006e59);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(21, 216, 188, 0.6)) drop-shadow(0 0 16px rgba(21, 216, 188, 0.4));
+}
+
+.hero-tagline {
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.hero-tagline .teal-gradient {
+    background: linear-gradient(to bottom, #15d8bc, #006e59);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-divider {
+    width: 100%;
+    max-width: 400px;
+    height: 2px;
+    background: #ffffff;
+    margin-top: 5px;
+}
+
 .hero-title {
-    font-size: 1.75rem;
+    font-size: 1.225rem;
     font-weight: 600;
     color: #ffffff;
     line-height: 1.4;
     letter-spacing: 0.5px;
     opacity: 1;
     transition: opacity 0.3s ease;
-    min-height: 6em;
+    min-height: 3em;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     text-align: center;
+    margin-top: 0;
 }
 
 .hero-title.fade-out {
@@ -717,6 +764,41 @@ body {
 
 .hero-title.fade-in {
     opacity: 1;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.discord-btn {
+    padding: 0.75rem 2rem;
+    background: linear-gradient(to bottom right, #28528C, #0D0D1D);
+    border: none;
+    border-radius: 8px;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+}
+
+.discord-btn-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.discord-btn:hover {
+    opacity: 0.9;
 }
 
 .view-pricing-btn {
@@ -760,7 +842,7 @@ body {
     border-radius: 12px;
     overflow: hidden;
     cursor: pointer;
-    border: 2px solid #222225;
+    border: 1px solid #222225;
 }
 
 .hero-panel-image img {
@@ -779,7 +861,7 @@ body {
     transform: translateY(15px);
     z-index: 1;
     border-color: #15d8bc;
-    box-shadow: 0 0 20px rgba(21, 216, 188, 0.6);
+    box-shadow: 0 0 40px rgba(21, 216, 188, 0.3);
 }
 
 /* Right image - rotated inward (top-right higher) */
@@ -796,6 +878,7 @@ body {
     margin-top: 6.1875rem;
     opacity: 1;
     transition: opacity 0.3s ease;
+    will-change: opacity;
 }
 
 .scroll-indicator.hidden {
@@ -2374,7 +2457,7 @@ input:checked + .toggle-slider:before {
 
 /* Discord/Purple Gradient Buttons */
 .discord-btn {
-    background: linear-gradient(to bottom, #323690, #4F58D8);
+    background: linear-gradient(to bottom right, #28528C, #0D0D1D);
     border: none;
     border-radius: 8px;
     color: #fff;

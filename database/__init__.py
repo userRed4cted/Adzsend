@@ -31,5 +31,6 @@ from .models import (
     get_member_analytics, get_member_daily_stats, get_member_join_date,
     record_daily_stat,
     # Personal analytics functions
-    get_personal_daily_stats
+    get_personal_daily_stats,
+    get_personal_analytics_summary
 )

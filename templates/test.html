@@ -660,7 +660,9 @@
                 {% if user %}
                 <div class="nav-right">
                     <div style="display: flex; flex-direction: row; align-items: center; gap: 12px; background: #1A1A1E; padding: 8px 12px; border-radius: 8px; box-shadow: none;">
-                        <div class="profile-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                        <div class="profile-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                            <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
                         <span style="color: #dcddde; font-size: 0.9rem;">Welcome!</span>
                         <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" style="width: 14px; height: 14px; cursor: pointer; filter: brightness(0) saturate(100%) invert(56%) sepia(6%) saturate(340%) hue-rotate(194deg) brightness(93%) contrast(87%);" onclick="openSettings()">
                     </div>
@@ -718,11 +720,11 @@
                     <div class="menu-section">
                         <div class="menu-category">Main</div>
 
-                        <button class="menu-item{% if not discord_linked or is_team_owner or not guilds %} disabled{% else %} active{% endif %}" data-page="personal-panel"{% if not discord_linked or is_team_owner or not guilds %} disabled style="opacity: 0.4; cursor: not-allowed; color: #81828A;"{% endif %}>
+                        <button class="menu-item{% if not discord_linked or is_team_owner or not guilds %} disabled{% else %} active{% endif %}" data-page="personal-panel"{% if not discord_linked or is_team_owner or not guilds %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
                             Personal panel
                         </button>
 
-                        <button class="menu-item{% if not discord_linked or not has_team or not guilds %} disabled{% elif is_team_owner and guilds %} active{% endif %}" data-page="team-panel"{% if not discord_linked or not has_team or not guilds %} disabled style="opacity: 0.4; cursor: not-allowed; color: #81828A;"{% endif %}>
+                        <button class="menu-item{% if not discord_linked or not has_team or not guilds %} disabled{% elif is_team_owner and guilds %} active{% endif %}" data-page="team-panel"{% if not discord_linked or not has_team or not guilds %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
                             Team panel
                         </button>
 
@@ -730,11 +732,11 @@
 
                         <div class="menu-category">Management</div>
 
-                        <button class="menu-item{% if not discord_linked or not is_team_owner %} disabled{% endif %}" data-page="team-management"{% if not discord_linked or not is_team_owner %} disabled style="opacity: 0.4; cursor: not-allowed; color: #81828A;"{% endif %}>
+                        <button class="menu-item{% if not discord_linked or not is_team_owner %} disabled{% endif %}" data-page="team-management"{% if not discord_linked or not is_team_owner %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
                             Team management
                         </button>
 
-                        <button class="menu-item{% if not discord_linked %} disabled{% endif %}" data-page="analytics"{% if not discord_linked %} disabled style="opacity: 0.4; cursor: not-allowed; color: #81828A;"{% endif %}>
+                        <button class="menu-item{% if not discord_linked %} disabled{% endif %}" data-page="analytics"{% if not discord_linked %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
                             Analytics
                         </button>
 
@@ -837,7 +839,7 @@
                             <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
                                 <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
                                     <!-- Emoji button - top right corner (disabled) -->
-                                    <button id="emoji-btn" type="button" disabled style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: not-allowed; padding: 0; z-index: 2; opacity: 0.4;">
+                                    <button id="emoji-btn" type="button" disabled style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: not-allowed; padding: 0; z-index: 2; opacity: 0.5;">
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
                                     </button>
                                     <!-- Character count - bottom right corner -->
@@ -952,7 +954,7 @@
                             <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
                                 <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
                                     <!-- Emoji button - top right corner (disabled) -->
-                                    <button id="team-emoji-btn" type="button" disabled style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: not-allowed; padding: 0; z-index: 2; opacity: 0.4;">
+                                    <button id="team-emoji-btn" type="button" disabled style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: not-allowed; padding: 0; z-index: 2; opacity: 0.5;">
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
                                     </button>
                                     <!-- Character count - bottom right corner -->
@@ -1020,7 +1022,9 @@
                                     {% if pending_members|length > 0 %}
                                         {% for member in pending_members %}
                                             <div class="channel-item mgmt-member-item" data-adzsend-id="{{ member.member_adzsend_id }}" data-status="pending" style="cursor: default;">
-                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                                                    <img src="{{ url_for('static', filename='profile_photos/' ~ (member.profile_photo if member.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                                                </div>
                                                 <span class="channel-name">{{ member.member_adzsend_id or 'No ID' }}</span>
                                                 <div class="channel-right">
                                                     <span class="channel-status-tag">Pending</span>
@@ -1038,7 +1042,9 @@
                                     {% if accepted_members|length > 0 %}
                                         {% for member in accepted_members %}
                                             <div class="channel-item mgmt-member-item" data-adzsend-id="{{ member.member_adzsend_id }}" data-status="accepted" style="cursor: default;">
-                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                                                    <img src="{{ url_for('static', filename='profile_photos/' ~ (member.profile_photo if member.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                                                </div>
                                                 <span class="channel-name">{{ member.member_adzsend_id or 'No ID' }}</span>
                                                 <div class="channel-right">
                                                     <span class="channel-status-tag">Team member</span>
@@ -1064,7 +1070,7 @@
                             <div class="message-section" style="display: flex; flex-direction: column; flex: 1; min-height: 0; margin: 0 0.75rem;">
                                 <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
                                     <!-- Emoji button - top right corner (disabled) -->
-                                    <button id="mgmt-emoji-btn" type="button" disabled style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: not-allowed; padding: 0; z-index: 2; opacity: 0.4;">
+                                    <button id="mgmt-emoji-btn" type="button" disabled style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: not-allowed; padding: 0; z-index: 2; opacity: 0.5;">
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
                                     </button>
                                     <!-- Character count - bottom right corner -->
@@ -1191,7 +1197,8 @@
                         <!-- Right Half: Team Analytics -->
                         <div style="flex: 1; display: flex; flex-direction: column; height: 100%; position: relative;">
                             <!-- Top Half: Individual team member analytics -->
-                            <div style="flex: 1 1 50%; display: flex; flex-direction: column; min-height: 0; max-height: calc(50% - 0.5px);">
+                            <div style="flex: 1 1 50%; display: flex; flex-direction: column; min-height: 0; max-height: calc(50% - 0.5px); position: relative;">
+                                {% if is_team_owner %}
                                 <!-- Label -->
                                 <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
                                     <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Individual team member analytics</span>
@@ -1212,7 +1219,9 @@
                                         <!-- Team Owner at top -->
                                         {% if is_team_owner and user %}
                                             <div class="channel-item analytics-member-item" data-adzsend-id="{{ user.adzsend_id }}" data-is-owner="true" style="cursor: pointer;">
-                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                                                    <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                                                </div>
                                                 <span class="channel-name" style="display: flex; align-items: center; gap: 6px;">{{ user.adzsend_id }}<img src="{{ url_for('static', filename='OwnerDiscordCrown.png') }}" alt="Owner" title="Team owner" style="width: 16px; height: 16px;"></span>
                                             </div>
                                         {% endif %}
@@ -1220,19 +1229,28 @@
                                         {% set accepted_members = members|default([])|selectattr('invitation_status', 'equalto', 'accepted')|list %}
                                         {% for member in accepted_members %}
                                             <div class="channel-item analytics-member-item" data-adzsend-id="{{ member.member_adzsend_id }}" style="cursor: pointer;">
-                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                                                <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                                                    <img src="{{ url_for('static', filename='profile_photos/' ~ (member.profile_photo if member.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                                                </div>
                                                 <span class="channel-name">{{ member.member_adzsend_id or 'No ID' }}</span>
                                             </div>
                                         {% endfor %}
                                     </div>
                                 </div>
+                                {% else %}
+                                <!-- Non-owner message -->
+                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center;">
+                                    <span class="no-selection">Only available for team owners</span>
+                                </div>
+                                {% endif %}
                             </div>
 
                             <!-- Horizontal Divider -->
                             <div style="height: 1px; background: #222225; margin: 0; flex-shrink: 0;"></div>
 
                             <!-- Bottom Half: Overall team analytics -->
-                            <div style="flex: 1 1 50%; display: flex; flex-direction: column; min-height: 0; max-height: calc(50% - 0.5px);">
+                            <div style="flex: 1 1 50%; display: flex; flex-direction: column; min-height: 0; max-height: calc(50% - 0.5px); position: relative;">
+                                {% if is_team_owner %}
                                 <!-- Label -->
                                 <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
                                     <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Overall team analytics</span>
@@ -1240,6 +1258,12 @@
 
                                 <!-- Empty space for now -->
                                 <div style="flex: 1;"></div>
+                                {% else %}
+                                <!-- Non-owner message -->
+                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center;">
+                                    <span class="no-selection">Only available for team owners</span>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -4292,8 +4316,11 @@
                                 newItem.dataset.adzsendId = adzsendId;
                                 newItem.dataset.status = 'pending';
                                 newItem.style.cursor = 'default';
+                                const memberPhoto = result.profile_photo || 'Light_Blue.jpg';
                                 newItem.innerHTML = `
-                                    <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                                    <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                                        <img src="/static/profile_photos/${memberPhoto}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
                                     <span class="channel-name">${adzsendId}</span>
                                     <div class="channel-right">
                                         <span class="channel-status-tag">Pending</span>

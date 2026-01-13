@@ -1887,6 +1887,7 @@ def api_save_user_data():
         draft_message = data.get('draft_message')
         message_delay = data.get('message_delay')
         date_format = data.get('date_format')
+        profile_photo = data.get('profile_photo')
 
         # Check content filter for draft message and flag user if needed
         if draft_message and draft_message.strip():
@@ -1895,7 +1896,7 @@ def api_save_user_data():
                 return jsonify({'success': False, 'error': filter_reason}), 400
 
         # Save to database
-        save_user_data(user['id'], selected_channels, draft_message, message_delay, date_format)
+        save_user_data(user['id'], selected_channels, draft_message, message_delay, date_format, profile_photo)
 
         return jsonify({'success': True}), 200
 

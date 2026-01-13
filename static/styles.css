@@ -739,11 +739,18 @@ body {
     filter: drop-shadow(0 0 8px rgba(21, 216, 188, 0.6)) drop-shadow(0 0 16px rgba(21, 216, 188, 0.4));
 }
 
+.hero-tagline-wrapper {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
 .hero-tagline {
     font-size: 2.1rem;
     font-weight: 700;
     color: #ffffff;
     margin: 0;
+    white-space: nowrap;
 }
 
 .hero-tagline .teal-gradient {
@@ -755,15 +762,14 @@ body {
 
 .hero-divider {
     width: 100%;
-    max-width: 400px;
-    height: 2px;
-    background: #ffffff;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #ffffff 120px, #ffffff calc(100% - 120px), transparent);
     margin-top: 5px;
 }
 
 .hero-title {
     font-size: 1.225rem;
-    font-weight: 600;
+    font-weight: 400;
     color: #ffffff;
     line-height: 1.4;
     letter-spacing: 0.5px;

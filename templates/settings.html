@@ -72,7 +72,9 @@
                 {% if user %}
                 <div class="nav-right">
                     <div style="display: flex; flex-direction: row; align-items: center; gap: 12px; background: #1A1A1E; padding: 8px 12px; border-radius: 8px; box-shadow: none;">
-                        <div style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                        <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                            <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
                         <span style="color: #dcddde; font-size: 0.9rem;">Welcome!</span>
                         <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" style="width: 20px; height: 20px; cursor: pointer; filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(202deg) brightness(92%) contrast(87%);" onclick="window.location.href='{{ url_for('settings') }}'">
                     </div>

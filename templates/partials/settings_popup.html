@@ -5,7 +5,9 @@
         <div class="settings-side-menu">
             <!-- Profile Section -->
             <div class="settings-profile-section">
-                <div style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
+                <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
+                    <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;" class="settings-sidebar-profile-img">
+                </div>
                 <span style="color: #dcddde; font-size: 0.9rem;">Welcome!</span>
             </div>
             <div class="settings-menu-divider"></div>
@@ -30,7 +32,7 @@
             <div class="settings-menu-section">
                 <div class="settings-menu-category">Website settings</div>
                 <button class="settings-menu-item" data-settings-page="appearance">Appearance</button>
-                <button class="settings-menu-item" data-settings-page="time">Time</button>
+                <button class="settings-menu-item" data-settings-page="date-format">Date format</button>
             </div>
             <div class="settings-menu-divider"></div>
             <button class="settings-logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">Logout</button>
@@ -68,10 +70,10 @@
                     </div>
                 </div>
 
-                <!-- Time Page -->
-                <div class="settings-page" id="settings-page-time" style="display: none;">
-                    <div class="settings-subheader">Time format</div>
-                    <div class="settings-text">Change the websites formatting of time to match your prefference.</div>
+                <!-- Date Format Page -->
+                <div class="settings-page" id="settings-page-date-format" style="display: none;">
+                    <div class="settings-subheader">Date format</div>
+                    <div class="settings-text">Change the websites formatting of dates to match your prefference.</div>
 
                     <div class="time-format-options">
                         <label class="time-format-option">
@@ -178,11 +180,50 @@
                     </div>
                 </div>
 
+                <!-- My Account Page -->
+                <div class="settings-page" id="settings-page-my-account" style="display: flex;">
+                    <div class="settings-subheader">Account</div>
+                    <div class="settings-text">Review and edit account information.</div>
+
+                    <div class="account-box">
+                        <div class="account-profile-photo-container">
+                            <div class="account-profile-photo" id="account-profile-photo" title="Change profile photo">
+                                <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" id="account-profile-img">
+                            </div>
+                        </div>
+                        <div class="account-info-rows">
+                            <div class="account-info-row">
+                                <span class="account-info-label">Adzsend ID</span>
+                                <div class="account-info-value-container">
+                                    <span class="account-info-value" id="account-adzsend-id">{{ user.adzsend_id if user and user.adzsend_id else 'Not set' }}</span>
+                                    <img src="{{ url_for('static', filename='copy.png') }}" class="account-copy-btn" id="account-copy-adzsend" alt="Copy" title="Copy ID">
+                                </div>
+                            </div>
+                            <div class="account-info-row">
+                                <span class="account-info-label">Email</span>
+                                <div class="account-info-value-container">
+                                    <span class="account-info-value" id="account-email">{{ user.email if user and user.email else 'Not set' }}</span>
+                                    <button class="account-edit-btn" id="account-edit-email">Edit</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appearance Page -->
+                <div class="settings-page" id="settings-page-appearance" style="display: none;">
+                    <div class="settings-subheader">Coming soon...</div>
+                    <div class="settings-text">Coming soon...</div>
+                </div>
+
                 <!-- Billing Page -->
                 <div class="settings-page" id="settings-page-billing" style="display: none;">
                     <!-- Plan Information Section -->
                     <div class="settings-subheader">Plan information</div>
-                    <div class="settings-text">View billing information about your plan.</div>
+                    <div class="settings-text-with-action">
+                        <span>View billing information about your plan.</span>
+                        <button class="billing-adjust-plan-btn" id="billing-adjust-plan-btn">Adjust plan</button>
+                    </div>
 
                     <div class="usage-stats-container" id="billing-plan-info">
                         <div class="usage-stat-row">
@@ -219,7 +260,7 @@
                             {% if purchase_history and purchase_history|length > 0 %}
                                 {% for invoice in purchase_history %}
                                 <div class="billing-invoice-item">
-                                    <span class="billing-invoice-col-date">{{ invoice.start_date[5:7] }}/{{ invoice.start_date[8:10] }}/{{ invoice.start_date[2:4] }}</span>
+                                    <span class="billing-invoice-col-date billing-invoice-date" data-date="{{ invoice.start_date }}"></span>
                                     <span class="billing-invoice-col-total">${{ invoice.price }}</span>
                                     <span class="billing-invoice-col-actions">
                                         <button class="billing-invoice-view-btn" data-invoice-id="{{ invoice.id }}">View</button>
@@ -237,7 +278,27 @@
     </div>
 </div>
 
+<!-- Profile Photo Picker Popup -->
+<div class="profile-picker-overlay" id="profile-picker-overlay">
+    <div class="profile-picker-popup">
+        <div class="profile-picker-header">
+            <span class="profile-picker-title">Choose profile photo</span>
+            <button class="profile-picker-close" onclick="closeProfilePicker()">&times;</button>
+        </div>
+        <div class="profile-picker-grid" id="profile-picker-grid">
+            <!-- Profile photos will be loaded here -->
+        </div>
+    </div>
+</div>
+
 <style>
+    /* Font declarations for settings popup */
+    @font-face {
+        font-family: 'gg sans Bold';
+        src: url('/static/fonts/gg sans Bold.ttf') format('truetype');
+        font-style: normal;
+    }
+
     /* Settings Popup Styles */
     .settings-popup-overlay {
         display: none;
@@ -361,7 +422,7 @@
     .settings-content-title {
         color: #dcddde;
         font-size: 0.792rem;
-        font-family: 'gg sans Semibold', sans-serif;
+        font-family: 'gg sans Bold', sans-serif !important;
     }
 
     .settings-close-btn {
@@ -628,8 +689,14 @@
         width: 32px;
         height: 32px;
         border-radius: 50%;
-        background: #ff3333;
+        overflow: hidden;
         flex-shrink: 0;
+    }
+
+    .team-invitation-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 
     .team-invitation-id {
@@ -697,11 +764,14 @@
         height: 32px;
         border-radius: 50%;
         background: #1A1A1E;
+        overflow: hidden;
         flex-shrink: 0;
     }
 
-    .team-current-avatar.active {
-        background: #ff3333;
+    .team-current-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 
     .team-current-info {
@@ -756,6 +826,35 @@
     }
 
     /* Billing Page Styles */
+    .settings-text-with-action {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .settings-text-with-action span {
+        color: #81828A;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Medium', sans-serif;
+    }
+
+    .billing-adjust-plan-btn {
+        background: transparent;
+        border: none;
+        color: #15d8bc;
+        padding: 0;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-family: 'gg sans Medium', sans-serif;
+        transition: color 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .billing-adjust-plan-btn:hover {
+        color: #10b89e;
+    }
+
     .billing-invoices-box {
         background: #1A1A1E;
         border: 1px solid #222225;
@@ -822,6 +921,191 @@
 
     .billing-invoice-view-btn:hover {
         color: #10b89e;
+    }
+
+    /* My Account Page Styles */
+    .account-box {
+        background: #1A1A1E;
+        border: 1px solid #222225;
+        border-radius: 8px;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        aspect-ratio: 1 / 0.95;
+    }
+
+    .account-profile-photo-container {
+        margin-bottom: 1.5rem;
+    }
+
+    .account-profile-photo {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        cursor: pointer;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.2s ease;
+    }
+
+    .account-profile-photo:hover {
+        opacity: 0.7;
+    }
+
+    .account-profile-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .account-info-rows {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .account-info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #282930;
+    }
+
+    .account-info-row:last-child {
+        border-bottom: none;
+    }
+
+    .account-info-label {
+        color: #81828A;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Medium', sans-serif;
+    }
+
+    .account-info-value-container {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .account-info-value {
+        color: #dcddde;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Semibold', sans-serif;
+    }
+
+    .account-copy-btn {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(195deg) brightness(93%) contrast(89%);
+        transition: opacity 0.2s ease;
+    }
+
+    .account-copy-btn:hover {
+        opacity: 0.7;
+    }
+
+    .account-edit-btn {
+        background: transparent;
+        border: none;
+        color: #15d8bc;
+        padding: 0;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-family: 'gg sans Medium', sans-serif;
+        transition: color 0.2s ease;
+    }
+
+    .account-edit-btn:hover {
+        color: #10b89e;
+    }
+
+    /* Profile Photo Picker Popup */
+    .profile-picker-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 3000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .profile-picker-overlay.show {
+        display: flex;
+    }
+
+    .profile-picker-popup {
+        background: #1A1A1E;
+        border: 1px solid #222225;
+        border-radius: 8px;
+        width: 320px;
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .profile-picker-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #222225;
+    }
+
+    .profile-picker-title {
+        color: #dcddde;
+        font-size: 0.9rem;
+        font-family: 'gg sans Semibold', sans-serif;
+    }
+
+    .profile-picker-close {
+        background: transparent;
+        border: none;
+        color: #81828A;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .profile-picker-close:hover {
+        color: #dcddde;
+    }
+
+    .profile-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        padding: 1rem;
+        overflow-y: auto;
+    }
+
+    .profile-picker-item {
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        cursor: pointer;
+        overflow: hidden;
+        transition: opacity 0.2s ease;
+    }
+
+    .profile-picker-item:hover {
+        opacity: 0.7;
+    }
+
+    .profile-picker-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 </style>
 
@@ -1138,8 +1422,11 @@
                                 const item = document.createElement('div');
                                 item.className = 'team-invitation-item';
 
+                                const ownerPhoto = invitation.owner_profile_photo || 'Light_Blue.jpg';
                                 item.innerHTML = `
-                                    <div class="team-invitation-avatar"></div>
+                                    <div class="team-invitation-avatar">
+                                        <img src="/static/profile_photos/${ownerPhoto}" alt="Profile">
+                                    </div>
                                     <span class="team-invitation-id">${invitation.owner_adzsend_id || 'No ID'}</span>
                                     <div class="team-invitation-actions">
                                         <button class="team-invitation-accept" data-id="${invitation.id}">
@@ -1229,7 +1516,8 @@
                     if (data.success && data.is_owner) {
                         // User is a business plan owner - show crown instead of leave button
                         const owner = data.owner_info;
-                        avatarEl.className = 'team-current-avatar active';
+                        const ownerPhoto = owner.profile_photo || 'Light_Blue.jpg';
+                        avatarEl.innerHTML = `<img src="/static/profile_photos/${ownerPhoto}" alt="Profile">`;
                         idEl.textContent = owner.adzsend_id || 'No ID';
                         leaveBtn.style.display = 'none';
                         crownEl.style.display = 'flex';
@@ -1241,8 +1529,9 @@
                     } else if (data.success && data.in_team) {
                         // User is in a team
                         const team = data.team;
+                        const teamOwnerPhoto = team.owner_profile_photo || 'Light_Blue.jpg';
                         acceptedInvitation = true;
-                        avatarEl.className = 'team-current-avatar active';
+                        avatarEl.innerHTML = `<img src="/static/profile_photos/${teamOwnerPhoto}" alt="Profile">`;
                         idEl.textContent = team.owner_adzsend_id || 'No ID';
                         leaveBtn.style.display = 'block';
                         leaveBtn.disabled = false;
@@ -1251,7 +1540,7 @@
                     } else {
                         // Not in any team
                         acceptedInvitation = false;
-                        avatarEl.className = 'team-current-avatar';
+                        avatarEl.innerHTML = '';
                         idEl.textContent = 'None';
                         leaveBtn.style.display = 'block';
                         leaveBtn.disabled = true;
@@ -1310,13 +1599,186 @@
         loadCurrentTeam();
     })();
 
-    // Billing invoice view handlers
+    // Billing functionality
     (function() {
+        // Format date according to user preference
+        function formatInvoiceDate(dateValue) {
+            if (!dateValue) return '';
+
+            let date;
+            // Handle Unix timestamp (Stripe uses seconds)
+            if (typeof dateValue === 'number') {
+                date = new Date(dateValue * 1000);
+            } else {
+                // Handle ISO string or other date formats
+                date = new Date(dateValue);
+            }
+
+            if (isNaN(date.getTime())) return '';
+
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = String(date.getFullYear()).slice(-2);
+
+            const format = window.userDateFormat || 'mm/dd/yy';
+            switch (format) {
+                case 'dd/mm/yy':
+                    return `${day}/${month}/${year}`;
+                case 'yy/mm/dd':
+                    return `${year}/${month}/${day}`;
+                case 'mm/dd/yy':
+                default:
+                    return `${month}/${day}/${year}`;
+            }
+        }
+
+        // Update all invoice dates on the page
+        function updateInvoiceDates() {
+            document.querySelectorAll('.billing-invoice-date').forEach(el => {
+                const dateValue = el.getAttribute('data-date');
+                if (dateValue) {
+                    el.textContent = formatInvoiceDate(dateValue);
+                }
+            });
+        }
+
+        // Initial update
+        updateInvoiceDates();
+
+        // Listen for date format changes
+        window.addEventListener('dateFormatChanged', updateInvoiceDates);
+
+        // Invoice view button handlers (placeholder for Stripe integration)
         document.querySelectorAll('.billing-invoice-view-btn').forEach(btn => {
-            btn.addEventListener('click', async function() {
-                const invoiceId = this.dataset.invoiceId;
-                await showAlert('Coming soon', 'Invoice Details');
+            btn.addEventListener('click', function() {
+                // TODO: Open Stripe invoice after integration
             });
         });
+
+        // Adjust plan button handler (placeholder for Stripe customer portal)
+        const adjustPlanBtn = document.getElementById('billing-adjust-plan-btn');
+        if (adjustPlanBtn) {
+            adjustPlanBtn.addEventListener('click', function() {
+                // TODO: Redirect to Stripe customer portal after integration
+            });
+        }
     })();
+
+    // My Account functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Preset profile photos
+        const profilePhotos = [
+            'Dark_Green.jpg',
+            'Dark_Purple.jpg',
+            'Dark_Rose.jpg',
+            'Light_Blue.jpg',
+            'Light_Green.jpg',
+            'Light_Orange.jpg',
+            'Light_Pink.jpg',
+            'Light_Yellow.jpg'
+        ];
+
+        let currentProfilePhoto = '{{ user_data.profile_photo if user_data and user_data.profile_photo else "Light_Blue.jpg" }}';
+
+        // Copy Adzsend ID to clipboard
+        const copyBtn = document.getElementById('account-copy-adzsend');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', async function() {
+                const adzsendId = document.getElementById('account-adzsend-id').textContent;
+                if (adzsendId && adzsendId !== 'Not set') {
+                    try {
+                        await navigator.clipboard.writeText(adzsendId);
+                        // Brief visual feedback
+                        this.style.opacity = '1';
+                        setTimeout(() => { this.style.opacity = '0.6'; }, 200);
+                    } catch (err) {
+                        console.error('Failed to copy:', err);
+                    }
+                }
+            });
+        }
+
+        // Edit email button - redirect to settings verification flow
+        const editEmailBtn = document.getElementById('account-edit-email');
+        if (editEmailBtn) {
+            editEmailBtn.addEventListener('click', function() {
+                window.location.href = '/settings#change-email';
+            });
+        }
+
+        // Profile photo picker
+        const profilePhotoEl = document.getElementById('account-profile-photo');
+        const pickerOverlay = document.getElementById('profile-picker-overlay');
+        const pickerGrid = document.getElementById('profile-picker-grid');
+
+        // Open profile picker
+        if (profilePhotoEl) {
+            profilePhotoEl.addEventListener('click', function() {
+                loadProfilePicker();
+                pickerOverlay.classList.add('show');
+            });
+        }
+
+        // Close profile picker
+        window.closeProfilePicker = function() {
+            pickerOverlay.classList.remove('show');
+        };
+
+        // Click overlay to close
+        if (pickerOverlay) {
+            pickerOverlay.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeProfilePicker();
+                }
+            });
+        }
+
+        // Load profile photos into grid
+        function loadProfilePicker() {
+            pickerGrid.innerHTML = '';
+            profilePhotos.forEach(photo => {
+                const item = document.createElement('div');
+                item.className = 'profile-picker-item';
+                item.innerHTML = `<img src="/static/profile_photos/${photo}" alt="${photo}">`;
+                item.addEventListener('click', () => selectProfilePhoto(photo));
+                pickerGrid.appendChild(item);
+            });
+        }
+
+        // Select and save profile photo
+        async function selectProfilePhoto(photo) {
+            try {
+                const response = await fetch('/api/save-user-data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({
+                        profile_photo: photo
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    currentProfilePhoto = photo;
+                    // Update the profile photo display
+                    const profileImg = document.getElementById('account-profile-img');
+                    if (profileImg) {
+                        profileImg.src = `/static/profile_photos/${photo}`;
+                    }
+                    // Also update sidebar profile photo
+                    const sidebarImg = document.querySelector('.settings-sidebar-profile-img');
+                    if (sidebarImg) {
+                        sidebarImg.src = `/static/profile_photos/${photo}`;
+                    }
+                    closeProfilePicker();
+                } else {
+                    console.error('Failed to save profile photo:', data.error);
+                }
+            } catch (error) {
+                console.error('Error saving profile photo:', error);
+            }
+        }
+    });
 </script>

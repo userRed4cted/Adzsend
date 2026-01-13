@@ -4,6 +4,7 @@ import os
 import base64
 import hashlib
 import secrets
+import random
 from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
 
@@ -303,6 +304,7 @@ def init_db():
             draft_message TEXT,
             message_delay INTEGER DEFAULT 1000,
             date_format TEXT DEFAULT 'mm/dd/yy',
+            profile_photo TEXT DEFAULT 'Light_Blue.jpg',
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
@@ -444,6 +446,12 @@ def init_db():
     user_data_columns = [column[1] for column in cursor.fetchall()]
     if 'business_selected_channels' not in user_data_columns:
         cursor.execute('ALTER TABLE user_data ADD COLUMN business_selected_channels TEXT')
+
+    # Migration: Add profile_photo to user_data
+    cursor.execute("PRAGMA table_info(user_data)")
+    user_data_columns = [column[1] for column in cursor.fetchall()]
+    if 'profile_photo' not in user_data_columns:
+        cursor.execute("ALTER TABLE user_data ADD COLUMN profile_photo TEXT DEFAULT 'Light_Blue.jpg'")
 
     # Migration: Add invitation_status to business_team_members
     cursor.execute("PRAGMA table_info(business_team_members)")
@@ -633,8 +641,8 @@ def validate_user_session(discord_id, session_id):
     stored_session_id = user[0] if user[0] else None
     return stored_session_id == session_id
 
-def save_user_data(user_id, selected_channels=None, draft_message=None, message_delay=None, date_format=None):
-    """Save or update user's selected channels, draft message, message delay, and date format."""
+def save_user_data(user_id, selected_channels=None, draft_message=None, message_delay=None, date_format=None, profile_photo=None):
+    """Save or update user's selected channels, draft message, message delay, date format, and profile photo."""
     # Input validation
     if not isinstance(user_id, int) or user_id <= 0:
         raise ValueError("user_id must be a positive integer")
@@ -647,6 +655,11 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
         valid_formats = ['mm/dd/yy', 'dd/mm/yy', 'yy/mm/dd']
         if date_format not in valid_formats:
             raise ValueError("date_format must be one of: mm/dd/yy, dd/mm/yy, yy/mm/dd")
+
+    if profile_photo is not None:
+        # Validate profile photo filename (basic security check)
+        if not isinstance(profile_photo, str) or '..' in profile_photo or '/' in profile_photo or '\\' in profile_photo:
+            raise ValueError("Invalid profile photo filename")
 
     conn = get_db()
     cursor = conn.cursor()
@@ -679,6 +692,10 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
             update_parts.append('date_format = ?')
             params.append(date_format)
 
+        if profile_photo is not None:
+            update_parts.append('profile_photo = ?')
+            params.append(profile_photo)
+
         if update_parts:
             update_parts.append('updated_at = ?')
             params.append(datetime.now().isoformat())
@@ -690,35 +707,37 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
     else:
         # Insert new record
         cursor.execute('''
-            INSERT INTO user_data (user_id, selected_channels, draft_message, message_delay, date_format, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (user_id, channels_json, draft_message, message_delay if message_delay is not None else DEFAULT_MESSAGE_DELAY_MS, date_format if date_format is not None else 'mm/dd/yy', datetime.now().isoformat()))
+            INSERT INTO user_data (user_id, selected_channels, draft_message, message_delay, date_format, profile_photo, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, channels_json, draft_message, message_delay if message_delay is not None else DEFAULT_MESSAGE_DELAY_MS, date_format if date_format is not None else 'mm/dd/yy', profile_photo if profile_photo is not None else 'Light_Blue.jpg', datetime.now().isoformat()))
 
     conn.commit()
     conn.close()
 
 def get_user_data(user_id):
-    """Get user's selected channels, draft message, message delay, and date format."""
+    """Get user's selected channels, draft message, message delay, date format, and profile photo."""
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT selected_channels, draft_message, message_delay, date_format FROM user_data WHERE user_id = ?', (user_id,))
+    cursor.execute('SELECT selected_channels, draft_message, message_delay, date_format, profile_photo FROM user_data WHERE user_id = ?', (user_id,))
     data = cursor.fetchone()
     conn.close()
 
     if not data:
-        return {'selected_channels': [], 'draft_message': '', 'message_delay': 1000, 'date_format': 'mm/dd/yy'}
+        return {'selected_channels': [], 'draft_message': '', 'message_delay': 1000, 'date_format': 'mm/dd/yy', 'profile_photo': 'Light_Blue.jpg'}
 
     # Parse JSON channels
     channels = json.loads(data[0]) if data[0] else []
     message = data[1] if data[1] else ''
     delay = data[2] if data[2] is not None else 1000
     date_fmt = data[3] if data[3] else 'mm/dd/yy'
+    profile_photo = data[4] if data[4] else 'Light_Blue.jpg'
 
     return {
         'selected_channels': channels,
         'draft_message': message,
         'message_delay': delay,
-        'date_format': date_fmt
+        'date_format': date_fmt,
+        'profile_photo': profile_photo
     }
 
 def delete_user(discord_id):
@@ -2016,6 +2035,14 @@ def create_user_with_email(email, signup_ip):
             ))
 
             user_id = cursor.lastrowid
+
+            # Initialize user_data with random profile photo
+            profile_photos = ['Dark_Green.jpg', 'Dark_Purple.jpg', 'Dark_Rose.jpg', 'Light_Blue.jpg', 'Light_Green.jpg', 'Light_Orange.jpg', 'Light_Pink.jpg', 'Light_Yellow.jpg']
+            random_photo = random.choice(profile_photos)
+            cursor.execute('''
+                INSERT INTO user_data (user_id, profile_photo, updated_at)
+                VALUES (?, ?, ?)
+            ''', (user_id, random_photo, datetime.now().isoformat()))
 
             # Initialize usage tracking
             cursor.execute('''

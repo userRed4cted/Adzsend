@@ -1050,6 +1050,15 @@ def test_page():
     has_team = team is not None
     is_owner = is_business_owner(user['id']) if has_team else False
 
+    # Get business plan status for usage tracking
+    business_plan_status = None
+    if has_team:
+        from database import get_business_plan_status
+        if is_owner:
+            business_plan_status = get_business_plan_status(team['id'], user['id'])
+        else:
+            business_plan_status = get_business_plan_status(team['id'], team['owner_user_id'])
+
     # Get team management data if user is team owner
     members = []
     member_stats = []
@@ -1060,11 +1069,16 @@ def test_page():
         member_stats = get_team_member_stats(team['id'])
         active_member_count = get_team_member_count(team['id'])
 
+    # Get purchase history for billing invoices
+    from database import get_purchase_history
+    purchase_history = get_purchase_history(user['id'])
+
     return render_template('test.html',
         discord_info=discord_info,
         discord_linked=discord_linked,
         guilds=guilds,
         plan_status=plan_status,
+        business_plan_status=business_plan_status,
         user_data=user_data,
         user=user,
         team=team,
@@ -1073,6 +1087,7 @@ def test_page():
         members=members,
         member_stats=member_stats,
         active_member_count=active_member_count,
+        purchase_history=purchase_history,
         BLACKLISTED_WORDS=BLACKLISTED_WORDS,
         PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS
     )
@@ -1871,6 +1886,7 @@ def api_save_user_data():
         selected_channels = data.get('selected_channels')
         draft_message = data.get('draft_message')
         message_delay = data.get('message_delay')
+        date_format = data.get('date_format')
 
         # Check content filter for draft message and flag user if needed
         if draft_message and draft_message.strip():
@@ -1879,7 +1895,7 @@ def api_save_user_data():
                 return jsonify({'success': False, 'error': filter_reason}), 400
 
         # Save to database
-        save_user_data(user['id'], selected_channels, draft_message, message_delay)
+        save_user_data(user['id'], selected_channels, draft_message, message_delay, date_format)
 
         return jsonify({'success': True}), 200
 

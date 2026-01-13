@@ -662,7 +662,7 @@
                     <div style="display: flex; flex-direction: row; align-items: center; gap: 12px; background: #1A1A1E; padding: 8px 12px; border-radius: 8px; box-shadow: none;">
                         <div class="profile-avatar" style="width: 32px; height: 32px; border-radius: 50%; background: #ff3333; flex-shrink: 0;"></div>
                         <span style="color: #dcddde; font-size: 0.9rem;">Welcome!</span>
-                        <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" style="width: 14px; height: 14px; cursor: pointer; filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(202deg) brightness(92%) contrast(87%);" onclick="openSettings()">
+                        <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" style="width: 14px; height: 14px; cursor: pointer; filter: brightness(0) saturate(100%) invert(56%) sepia(6%) saturate(340%) hue-rotate(194deg) brightness(93%) contrast(87%);" onclick="openSettings()">
                     </div>
                 </div>
                 {% else %}
@@ -1114,12 +1114,12 @@
                                 </div>
                                 <div style="height: 1px; background: #222225;"></div>
                                 <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
-                                    <span style="color: #81828A; font-size: 0.8rem;">Date with most messages sent on personal panel (mm/dd/yy)</span>
+                                    <span class="date-format-label" data-label-template="Date with most messages sent on personal panel (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Date with most messages sent on personal panel ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
                                     <span id="stat-peak-date-personal" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
                                 </div>
                                 <div style="height: 1px; background: #222225;"></div>
                                 <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
-                                    <span style="color: #81828A; font-size: 0.8rem;">Date with most messages sent across all panels (mm/dd/yy)</span>
+                                    <span class="date-format-label" data-label-template="Date with most messages sent across all panels (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Date with most messages sent across all panels ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
                                     <span id="stat-peak-date-all" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
                                 </div>
                             </div>
@@ -1129,11 +1129,17 @@
                                 <div class="date-range-container" style="margin-bottom: 1rem;">
                                     <div class="date-input-group">
                                         <label>From</label>
-                                        <input type="date" id="personal-start-date">
+                                        <div class="custom-date-wrapper">
+                                            <input type="date" id="personal-start-date" class="custom-date-input">
+                                            <span class="custom-date-display" data-for="personal-start-date"></span>
+                                        </div>
                                     </div>
                                     <div class="date-input-group">
                                         <label>To</label>
-                                        <input type="date" id="personal-end-date">
+                                        <div class="custom-date-wrapper">
+                                            <input type="date" id="personal-end-date" class="custom-date-input">
+                                            <span class="custom-date-display" data-for="personal-end-date"></span>
+                                        </div>
                                     </div>
                                     <button class="apply-dates-btn" onclick="applyPersonalDateRange()">Apply</button>
                                 </div>
@@ -1149,6 +1155,11 @@
                                         const endInput = document.getElementById('personal-end-date');
                                         if (startInput) startInput.value = startDate;
                                         if (endInput) endInput.value = today;
+
+                                        // Update custom date displays after setting values
+                                        if (typeof updateCustomDateDisplays === 'function') {
+                                            updateCustomDateDisplays();
+                                        }
                                     })();
                                 </script>
                                 <div class="chart-container" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
@@ -1261,11 +1272,17 @@
                     <div class="date-range-container">
                         <div class="date-input-group">
                             <label>From</label>
-                            <input type="date" id="analytics-start-date">
+                            <div class="custom-date-wrapper">
+                                <input type="date" id="analytics-start-date" class="custom-date-input">
+                                <span class="custom-date-display" data-for="analytics-start-date"></span>
+                            </div>
                         </div>
                         <div class="date-input-group">
                             <label>To</label>
-                            <input type="date" id="analytics-end-date">
+                            <div class="custom-date-wrapper">
+                                <input type="date" id="analytics-end-date" class="custom-date-input">
+                                <span class="custom-date-display" data-for="analytics-end-date"></span>
+                            </div>
                         </div>
                         <button class="apply-dates-btn" onclick="applyDateRange()">Apply</button>
                     </div>
@@ -1281,6 +1298,11 @@
                             const endInput = document.getElementById('analytics-end-date');
                             if (startInput) startInput.value = startDate;
                             if (endInput) endInput.value = today;
+
+                            // Update custom date displays after setting values
+                            if (typeof updateCustomDateDisplays === 'function') {
+                                updateCustomDateDisplays();
+                            }
                         })();
                     </script>
                     <div class="chart-container">
@@ -1488,6 +1510,33 @@
             cursor: pointer;
         }
 
+        /* Custom date wrapper for format display */
+        .custom-date-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .custom-date-input {
+            color: transparent !important;
+            caret-color: transparent;
+        }
+
+        .custom-date-input::-webkit-datetime-edit {
+            color: transparent;
+        }
+
+        .custom-date-display {
+            position: absolute;
+            left: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #dcddde;
+            font-size: 0.85rem;
+            pointer-events: none;
+            z-index: 1;
+        }
+
         .apply-dates-btn {
             background: transparent;
             border: none;
@@ -1685,6 +1734,111 @@
     </div>
 
     <script>
+        // Global message delay variable - can be updated by settings popup
+        window.userMessageDelay = parseInt('{{ user_data.message_delay }}') || 1000;
+
+        // Global date format variable - can be updated by settings popup
+        window.userDateFormat = '{{ user_data.date_format if user_data.date_format else "mm/dd/yy" }}';
+
+        // Global date formatting function
+        function formatDateWithUserFormat(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const year = String(d.getFullYear()).slice(-2);
+
+            switch (window.userDateFormat) {
+                case 'dd/mm/yy':
+                    return `${day}/${month}/${year}`;
+                case 'yy/mm/dd':
+                    return `${year}/${month}/${day}`;
+                case 'mm/dd/yy':
+                default:
+                    return `${month}/${day}/${year}`;
+            }
+        }
+
+        // Get the date format label text based on current format
+        function getDateFormatLabel() {
+            return window.userDateFormat || 'mm/dd/yy';
+        }
+
+        // Update all date format labels on the page
+        function updateDateFormatLabels() {
+            const formatLabel = getDateFormatLabel();
+            document.querySelectorAll('.date-format-label').forEach(el => {
+                const template = el.getAttribute('data-label-template');
+                if (template) {
+                    el.textContent = template.replace('%FORMAT%', formatLabel);
+                }
+            });
+        }
+
+        // Update custom date input displays with user's format preference
+        function updateCustomDateDisplays() {
+            document.querySelectorAll('.custom-date-display').forEach(displayEl => {
+                const inputId = displayEl.getAttribute('data-for');
+                const inputEl = document.getElementById(inputId);
+                if (inputEl && inputEl.value) {
+                    // Parse the date value (YYYY-MM-DD format from input)
+                    const dateValue = inputEl.value;
+                    const [year, month, day] = dateValue.split('-');
+                    const shortYear = year.slice(-2);
+
+                    // Format according to user preference
+                    switch (window.userDateFormat) {
+                        case 'dd/mm/yy':
+                            displayEl.textContent = `${day}/${month}/${shortYear}`;
+                            break;
+                        case 'yy/mm/dd':
+                            displayEl.textContent = `${shortYear}/${month}/${day}`;
+                            break;
+                        case 'mm/dd/yy':
+                        default:
+                            displayEl.textContent = `${month}/${day}/${shortYear}`;
+                            break;
+                    }
+                } else {
+                    displayEl.textContent = '';
+                }
+            });
+        }
+
+        // Set up event listeners for date inputs to update display on change
+        function initCustomDateInputs() {
+            document.querySelectorAll('.custom-date-input').forEach(input => {
+                input.addEventListener('change', updateCustomDateDisplays);
+            });
+            // Initial update
+            updateCustomDateDisplays();
+        }
+
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', initCustomDateInputs);
+        // Also try immediately in case DOMContentLoaded already fired
+        if (document.readyState !== 'loading') {
+            initCustomDateInputs();
+        }
+
+        // Listen for date format changes from settings popup
+        window.addEventListener('dateFormatChanged', function(e) {
+            updateDateFormatLabels();
+            // Update calendar date inputs to show new format
+            updateCustomDateDisplays();
+            // Refresh analytics data to update displayed dates
+            if (typeof loadPersonalAnalyticsSummary === 'function') {
+                loadPersonalAnalyticsSummary();
+            }
+            // Refresh team analytics if the dialog is open
+            if (typeof loadAnalyticsInfo === 'function') {
+                const analyticsDialog = document.getElementById('analytics-dialog');
+                if (analyticsDialog && analyticsDialog.style.display !== 'none') {
+                    loadAnalyticsInfo();
+                }
+            }
+        });
+
         // Tag Limit Modal functions
         function showTagLimitModal() {
             document.getElementById('tag-limit-modal').style.display = 'flex';
@@ -2952,8 +3106,8 @@
                         // Helper function to wait/delay
                         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-                        // Get custom delay setting from database (default to 1000ms)
-                        const customDelay = parseInt('{{ user_data.message_delay }}') || 1000;
+                        // Get custom delay setting from global variable (updated by settings popup)
+                        const getCustomDelay = () => window.userMessageDelay || 1000;
 
                         // Get progress element for smooth updates
                         const progressEl = document.getElementById('send-progress');
@@ -3014,8 +3168,9 @@
 
                                 // Add delay between messages based on user setting
                                 // Only delay if there are more messages to send
-                                if (i < selectedChannels.length - 1 && customDelay > 0) {
-                                    await delay(customDelay);
+                                const currentDelay = getCustomDelay();
+                                if (i < selectedChannels.length - 1 && currentDelay > 0) {
+                                    await delay(currentDelay);
                                 }
                             }
 
@@ -3850,7 +4005,7 @@
                         let failedChannelsList = [];
 
                         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-                        const customDelay = parseInt('{{ user_data.message_delay }}') || 1000;
+                        const getCustomDelay = () => window.userMessageDelay || 1000;
                         const progressEl = document.getElementById('team-send-progress');
 
                         try {
@@ -3899,8 +4054,9 @@
                                     teamUpdateFailedChannelStatus(channel);
                                 }
 
-                                if (i < teamSelectedChannels.length - 1 && customDelay > 0) {
-                                    await delay(customDelay);
+                                const currentDelay = getCustomDelay();
+                                if (i < teamSelectedChannels.length - 1 && currentDelay > 0) {
+                                    await delay(currentDelay);
                                 }
                             }
 
@@ -4376,14 +4532,8 @@
 
                 if (data.success) {
                     const analytics = data.analytics;
-                    // Format date as mm/dd/yy
-                    const joinedDate = analytics.joined_at ? (() => {
-                        const d = new Date(analytics.joined_at);
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        const year = String(d.getFullYear()).slice(-2);
-                        return `${month}/${day}/${year}`;
-                    })() : 'Unknown';
+                    // Format date using user's preferred format
+                    const joinedDate = analytics.joined_at ? formatDateWithUserFormat(analytics.joined_at) : 'Unknown';
 
                     // Store dates for calendar restrictions
                     memberJoinDate = analytics.joined_at ? analytics.joined_at.split('T')[0] : null;
@@ -4418,7 +4568,7 @@
                             <span class="analytics-stat-value">${analytics.current_cycle.toLocaleString()}</span>
                         </div>
                         <div class="analytics-stat-row">
-                            <span class="analytics-stat-label">Joined team (mm/dd/yy)</span>
+                            <span class="analytics-stat-label">Joined team (${window.userDateFormat || 'mm/dd/yy'})</span>
                             <span class="analytics-stat-value">${joinedDate}</span>
                         </div>
                         <div class="analytics-stat-row" style="flex-direction: column; align-items: stretch;">
@@ -4693,18 +4843,9 @@
                     document.getElementById('stat-team-all-time').textContent = summary.team_all_time.toLocaleString();
                     document.getElementById('stat-total-all-time').textContent = summary.total_all_time.toLocaleString();
 
-                    // Format dates as mm/dd/yy
-                    const formatDate = (dateStr) => {
-                        if (!dateStr) return '';
-                        const d = new Date(dateStr);
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        const year = String(d.getFullYear()).slice(-2);
-                        return `${month}/${day}/${year}`;
-                    };
-
-                    document.getElementById('stat-peak-date-personal').textContent = formatDate(summary.personal_peak_date);
-                    document.getElementById('stat-peak-date-all').textContent = formatDate(summary.all_peak_date);
+                    // Format dates using user's preferred format
+                    document.getElementById('stat-peak-date-personal').textContent = formatDateWithUserFormat(summary.personal_peak_date);
+                    document.getElementById('stat-peak-date-all').textContent = formatDateWithUserFormat(summary.all_peak_date);
                 } else {
                     console.error('Failed to load personal analytics summary:', data.error);
                 }

@@ -37,6 +37,25 @@ Existing glow effects (colored box-shadows on active/selected states) are fine.
     font-style: normal;
 }
 
+/* Direct font-family names for explicit font file usage */
+@font-face {
+    font-family: 'gg sans Medium';
+    src: url('fonts/gg sans Medium.ttf') format('truetype');
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'gg sans Semibold';
+    src: url('fonts/gg sans Semibold.ttf') format('truetype');
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'gg sans Bold';
+    src: url('fonts/gg sans Bold.ttf') format('truetype');
+    font-style: normal;
+}
+
 * {
     margin: 0;
     padding: 0;

@@ -302,6 +302,7 @@ def init_db():
             selected_channels TEXT,
             draft_message TEXT,
             message_delay INTEGER DEFAULT 1000,
+            date_format TEXT DEFAULT 'mm/dd/yy',
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
@@ -415,6 +416,12 @@ def init_db():
     columns = [column[1] for column in cursor.fetchall()]
     if 'message_delay' not in columns:
         cursor.execute('ALTER TABLE user_data ADD COLUMN message_delay INTEGER DEFAULT 1000')
+
+    # Migration: Add date_format column if it doesn't exist
+    cursor.execute("PRAGMA table_info(user_data)")
+    columns = [column[1] for column in cursor.fetchall()]
+    if 'date_format' not in columns:
+        cursor.execute("ALTER TABLE user_data ADD COLUMN date_format TEXT DEFAULT 'mm/dd/yy'")
 
     # Migration: Add all_time_sent column if it doesn't exist
     cursor.execute("PRAGMA table_info(usage)")
@@ -626,8 +633,8 @@ def validate_user_session(discord_id, session_id):
     stored_session_id = user[0] if user[0] else None
     return stored_session_id == session_id
 
-def save_user_data(user_id, selected_channels=None, draft_message=None, message_delay=None):
-    """Save or update user's selected channels, draft message, and message delay."""
+def save_user_data(user_id, selected_channels=None, draft_message=None, message_delay=None, date_format=None):
+    """Save or update user's selected channels, draft message, message delay, and date format."""
     # Input validation
     if not isinstance(user_id, int) or user_id <= 0:
         raise ValueError("user_id must be a positive integer")
@@ -635,6 +642,11 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
     if message_delay is not None:
         if not isinstance(message_delay, (int, float)) or message_delay < 0 or message_delay > 60000:
             raise ValueError("message_delay must be between 0 and 60000 milliseconds")
+
+    if date_format is not None:
+        valid_formats = ['mm/dd/yy', 'dd/mm/yy', 'yy/mm/dd']
+        if date_format not in valid_formats:
+            raise ValueError("date_format must be one of: mm/dd/yy, dd/mm/yy, yy/mm/dd")
 
     conn = get_db()
     cursor = conn.cursor()
@@ -663,6 +675,10 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
             update_parts.append('message_delay = ?')
             params.append(message_delay)
 
+        if date_format is not None:
+            update_parts.append('date_format = ?')
+            params.append(date_format)
+
         if update_parts:
             update_parts.append('updated_at = ?')
             params.append(datetime.now().isoformat())
@@ -674,33 +690,35 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
     else:
         # Insert new record
         cursor.execute('''
-            INSERT INTO user_data (user_id, selected_channels, draft_message, message_delay, updated_at)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (user_id, channels_json, draft_message, message_delay if message_delay is not None else DEFAULT_MESSAGE_DELAY_MS, datetime.now().isoformat()))
+            INSERT INTO user_data (user_id, selected_channels, draft_message, message_delay, date_format, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (user_id, channels_json, draft_message, message_delay if message_delay is not None else DEFAULT_MESSAGE_DELAY_MS, date_format if date_format is not None else 'mm/dd/yy', datetime.now().isoformat()))
 
     conn.commit()
     conn.close()
 
 def get_user_data(user_id):
-    """Get user's selected channels, draft message, and message delay."""
+    """Get user's selected channels, draft message, message delay, and date format."""
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT selected_channels, draft_message, message_delay FROM user_data WHERE user_id = ?', (user_id,))
+    cursor.execute('SELECT selected_channels, draft_message, message_delay, date_format FROM user_data WHERE user_id = ?', (user_id,))
     data = cursor.fetchone()
     conn.close()
 
     if not data:
-        return {'selected_channels': [], 'draft_message': '', 'message_delay': 1000}
+        return {'selected_channels': [], 'draft_message': '', 'message_delay': 1000, 'date_format': 'mm/dd/yy'}
 
     # Parse JSON channels
     channels = json.loads(data[0]) if data[0] else []
     message = data[1] if data[1] else ''
     delay = data[2] if data[2] is not None else 1000
+    date_fmt = data[3] if data[3] else 'mm/dd/yy'
 
     return {
         'selected_channels': channels,
         'draft_message': message,
-        'message_delay': delay
+        'message_delay': delay,
+        'date_format': date_fmt
     }
 
 def delete_user(discord_id):

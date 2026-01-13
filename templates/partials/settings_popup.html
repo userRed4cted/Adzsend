@@ -43,6 +43,195 @@
             </div>
             <div class="settings-content-divider"></div>
             <div class="settings-content-body" id="settings-content-body">
+                <!-- Interval Page -->
+                <div class="settings-page" id="settings-page-interval" style="display: none;">
+                    <div class="settings-subheader">Interval</div>
+                    <div class="settings-text">Change the rate at which messages send across all panels, can help with performance and conectivity issues. Recommended to be kept at 1 second.</div>
+
+                    <div class="interval-slider-container">
+                        <div class="interval-slider-track">
+                            <div class="interval-slider-fill" id="interval-slider-fill"></div>
+                            <div class="interval-slider-tick" style="left: 0%;"></div>
+                            <div class="interval-slider-tick" style="left: 25%;"></div>
+                            <div class="interval-slider-tick" style="left: 50%;"></div>
+                            <div class="interval-slider-tick" style="left: 75%;"></div>
+                            <div class="interval-slider-tick" style="left: 100%;"></div>
+                            <div class="interval-slider-thumb" id="interval-slider-thumb"></div>
+                        </div>
+                        <div class="interval-slider-labels">
+                            <span data-value="0">No delay</span>
+                            <span data-value="1000">1 second</span>
+                            <span data-value="2000">2 seconds</span>
+                            <span data-value="5000">5 seconds</span>
+                            <span data-value="10000">10 seconds</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Page -->
+                <div class="settings-page" id="settings-page-time" style="display: none;">
+                    <div class="settings-subheader">Time format</div>
+                    <div class="settings-text">Change the websites formatting of time to match your prefference.</div>
+
+                    <div class="time-format-options">
+                        <label class="time-format-option">
+                            <input type="radio" name="date-format" value="mm/dd/yy" checked>
+                            <span>mm/dd/yy</span>
+                        </label>
+                        <label class="time-format-option">
+                            <input type="radio" name="date-format" value="dd/mm/yy">
+                            <span>dd/mm/yy</span>
+                        </label>
+                        <label class="time-format-option">
+                            <input type="radio" name="date-format" value="yy/mm/dd">
+                            <span>yy/mm/dd</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Usage Page -->
+                <div class="settings-page" id="settings-page-usage" style="display: none;">
+                    <!-- Personal Usage Section -->
+                    <div class="settings-subheader">Personal usage</div>
+                    <div class="settings-text">Track your plans usage use, across all panels.</div>
+
+                    <div class="usage-stats-container" id="personal-usage-stats">
+                        <div class="usage-stat-row">
+                            <span class="usage-stat-label">Allowance{% if plan_status and plan_status.has_plan and plan_status.usage_type == 'allowance' %} (per {% if plan_status.allowance_period == 'weekly' %}week{% elif plan_status.allowance_period == 'monthly' %}month{% elif plan_status.allowance_period == 'daily' %}day{% endif %}){% elif plan_status and plan_status.has_plan and plan_status.usage_type == 'amount' %} (total){% endif %}</span>
+                            <span class="usage-stat-value">{% if plan_status and plan_status.is_unlimited %}inf{% elif plan_status and plan_status.has_plan %}{{ plan_status.message_limit }}{% endif %}</span>
+                        </div>
+                        <div class="usage-stat-row">
+                            <span class="usage-stat-label">Advertisements sent (current cycle)</span>
+                            <span class="usage-stat-value">{% if plan_status and plan_status.has_plan %}{{ plan_status.messages_sent }}{% endif %}</span>
+                        </div>
+                        <div class="usage-stat-row" style="flex-direction: column; align-items: stretch;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span class="usage-stat-label">Usage percentage</span>
+                                <span class="usage-stat-value">{% if plan_status and plan_status.is_unlimited %}0%{% elif plan_status and plan_status.has_plan and plan_status.message_limit > 0 %}{{ ((plan_status.messages_sent / plan_status.message_limit) * 100)|round(0)|int }}%{% endif %}</span>
+                            </div>
+                            <div class="usage-progress-bar">
+                                <div class="usage-progress-fill" style="width: {% if plan_status and plan_status.is_unlimited %}0{% elif plan_status and plan_status.has_plan and plan_status.message_limit > 0 %}{{ ((plan_status.messages_sent / plan_status.message_limit) * 100)|round(0)|int }}{% else %}0{% endif %}%;"></div>
+                            </div>
+                        </div>
+                        <div class="usage-stat-row">
+                            <span class="usage-stat-label">Limit resets in</span>
+                            <span class="usage-stat-value" id="personal-reset-countdown" data-reset-time="{% if plan_status and plan_status.has_plan and plan_status.usage_type == 'allowance' and plan_status.next_reset %}{{ plan_status.next_reset }}{% endif %}">{% if plan_status and plan_status.has_plan and plan_status.usage_type == 'allowance' and plan_status.next_reset %}Calculating...{% endif %}</span>
+                        </div>
+                    </div>
+
+                    <!-- Team Usage Section -->
+                    <div class="settings-subheader" style="margin-top: 2rem;">Team usage</div>
+                    <div class="settings-text">Track your team plans usage use, across all members on the team panel.</div>
+
+                    <div class="usage-stats-container" id="team-usage-stats">
+                        <div class="usage-stat-row">
+                            <span class="usage-stat-label">Allowance{% if business_plan_status and business_plan_status.usage_type == 'allowance' %} (per {% if business_plan_status.allowance_period == 'weekly' %}week{% elif business_plan_status.allowance_period == 'monthly' %}month{% elif business_plan_status.allowance_period == 'daily' %}day{% endif %}){% elif business_plan_status and business_plan_status.usage_type == 'amount' %} (total){% endif %}</span>
+                            <span class="usage-stat-value">{% if business_plan_status and business_plan_status.is_unlimited %}inf{% elif business_plan_status %}{{ business_plan_status.message_limit }}{% endif %}</span>
+                        </div>
+                        <div class="usage-stat-row">
+                            <span class="usage-stat-label">Advertisements sent (current cycle)</span>
+                            <span class="usage-stat-value">{% if business_plan_status %}{{ business_plan_status.messages_sent }}{% endif %}</span>
+                        </div>
+                        <div class="usage-stat-row" style="flex-direction: column; align-items: stretch;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span class="usage-stat-label">Usage percentage</span>
+                                <span class="usage-stat-value">{% if business_plan_status and business_plan_status.is_unlimited %}0%{% elif business_plan_status and business_plan_status.message_limit > 0 %}{{ ((business_plan_status.messages_sent / business_plan_status.message_limit) * 100)|round(0)|int }}%{% endif %}</span>
+                            </div>
+                            <div class="usage-progress-bar">
+                                <div class="usage-progress-fill" style="width: {% if business_plan_status and business_plan_status.is_unlimited %}0{% elif business_plan_status and business_plan_status.message_limit > 0 %}{{ ((business_plan_status.messages_sent / business_plan_status.message_limit) * 100)|round(0)|int }}{% else %}0{% endif %}%;"></div>
+                            </div>
+                        </div>
+                        <div class="usage-stat-row">
+                            <span class="usage-stat-label">Limit resets in</span>
+                            <span class="usage-stat-value" id="team-reset-countdown" data-reset-time="{% if business_plan_status and business_plan_status.usage_type == 'allowance' and business_plan_status.next_reset %}{{ business_plan_status.next_reset }}{% endif %}">{% if business_plan_status and business_plan_status.usage_type == 'allowance' and business_plan_status.next_reset %}Calculating...{% endif %}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teams Page -->
+                <div class="settings-page" id="settings-page-teams" style="display: none;">
+                    <!-- Team Invites Section -->
+                    <div class="settings-subheader">Team invites</div>
+                    <div class="settings-text">Accept or deny team join requests.</div>
+
+                    <div class="team-invitations-box" id="team-invitations-box">
+                        <div id="team-invitations-list">
+                            <div class="team-no-invitations">No invitations</div>
+                        </div>
+                    </div>
+
+                    <!-- Manage Teams Section -->
+                    <div class="settings-subheader" style="margin-top: 2rem;">Manage teams</div>
+                    <div class="settings-text">Manage what teams your appart of.</div>
+
+                    <div class="team-current-box" id="team-current-box">
+                        <div class="team-current-profile">
+                            <div class="team-current-avatar" id="team-current-avatar"></div>
+                            <div class="team-current-info">
+                                <span class="team-current-id" id="team-current-id">None</span>
+                            </div>
+                            <button class="team-leave-btn" id="team-leave-btn" disabled>Leave</button>
+                            <div class="team-owner-crown" id="team-owner-crown" style="display: none;">
+                                <img src="{{ url_for('static', filename='OwnerDiscordCrown.png') }}" alt="Owner">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Billing Page -->
+                <div class="settings-page" id="settings-page-billing" style="display: none;">
+                    <!-- Plan Information Section -->
+                    <div class="settings-subheader">Plan information</div>
+                    <div class="settings-text">View billing information about your plan.</div>
+
+                    <div class="usage-stats-container" id="billing-plan-info">
+                        <div class="usage-stat-row">
+                            <span class="usage-stat-label">Current plan</span>
+                            <span class="usage-stat-value">{% if plan_status and plan_status.has_plan %}{{ plan_status.plan_name }}{% elif plan_status %}Free{% endif %}</span>
+                        </div>
+                        <div class="usage-stat-row">
+                            <span class="usage-stat-label">Billing period</span>
+                            <span class="usage-stat-value">{% if plan_status and plan_status.has_plan and plan_status.plan_type == 'subscription' and plan_status.plan_id != 'plan_free' %}{{ plan_status.billing_period|capitalize }}{% endif %}</span>
+                        </div>
+                        <div class="usage-stat-row">
+                            <span class="usage-stat-label">Plan started <span class="date-format-label" data-label-template="(%FORMAT%)">{% if plan_status %}({{ plan_status.date_format or 'mm/dd/yy' }}){% endif %}</span></span>
+                            <span class="usage-stat-value">{% if plan_status and plan_status.has_plan and plan_status.plan_id != 'plan_free' %}{{ plan_status.started_at|format_date }}{% endif %}</span>
+                        </div>
+                        <div class="usage-stat-row">
+                            <span class="usage-stat-label">Next billing date <span class="date-format-label" data-label-template="(%FORMAT%)">{% if plan_status %}({{ plan_status.date_format or 'mm/dd/yy' }}){% endif %}</span></span>
+                            <span class="usage-stat-value">{% if plan_status and plan_status.has_plan and plan_status.expires_at and plan_status.plan_id != 'plan_free' %}{{ plan_status.expires_at|format_date }}{% endif %}</span>
+                        </div>
+                    </div>
+
+                    <!-- Invoices Section -->
+                    <div class="settings-subheader" style="margin-top: 2rem;">Invoices</div>
+                    <div class="settings-text">View your accounts billing/payment history.</div>
+
+                    <div class="billing-invoices-box" id="billing-invoices-box">
+                        <!-- Column Headers -->
+                        <div class="billing-invoices-header">
+                            <span class="billing-invoice-col-date">Date <span class="date-format-label" data-label-template="(%FORMAT%)">(mm/dd/yy)</span></span>
+                            <span class="billing-invoice-col-total">Total</span>
+                            <span class="billing-invoice-col-actions">Actions</span>
+                        </div>
+                        <!-- Invoices List -->
+                        <div id="billing-invoices-list">
+                            {% if purchase_history and purchase_history|length > 0 %}
+                                {% for invoice in purchase_history %}
+                                <div class="billing-invoice-item">
+                                    <span class="billing-invoice-col-date">{{ invoice.start_date[5:7] }}/{{ invoice.start_date[8:10] }}/{{ invoice.start_date[2:4] }}</span>
+                                    <span class="billing-invoice-col-total">${{ invoice.price }}</span>
+                                    <span class="billing-invoice-col-actions">
+                                        <button class="billing-invoice-view-btn" data-invoice-id="{{ invoice.id }}">View</button>
+                                    </span>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="billing-no-invoices">No invoices</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -69,7 +258,7 @@
 
     .settings-popup {
         height: 90vh;
-        width: 90vh;
+        width: calc(90vh + 200px);
         max-width: 95vw;
         max-height: 95vh;
         background: #121215;
@@ -106,7 +295,7 @@
     .settings-menu-category {
         color: #81828A;
         font-size: 0.7rem;
-        font-weight: 600;
+        font-family: 'gg sans Semibold', sans-serif;
         letter-spacing: 0.5px;
         padding: 0.25rem 0.75rem;
         margin-top: 0.25rem;
@@ -119,7 +308,7 @@
         border-radius: 6px;
         color: #dcddde;
         font-size: 0.9rem;
-        font-weight: 500;
+        font-family: 'gg sans Medium', sans-serif;
         cursor: pointer;
         background: transparent;
         border: none;
@@ -146,7 +335,7 @@
         border-radius: 6px;
         color: #991a35;
         font-size: 0.9rem;
-        font-weight: 500;
+        font-family: 'gg sans Medium', sans-serif;
         cursor: pointer;
         background: transparent;
         border: none;
@@ -172,7 +361,7 @@
     .settings-content-title {
         color: #dcddde;
         font-size: 0.792rem;
-        font-weight: 600;
+        font-family: 'gg sans Semibold', sans-serif;
     }
 
     .settings-close-btn {
@@ -194,9 +383,445 @@
 
     .settings-content-body {
         flex: 1;
-        padding: 1.5rem;
+        padding: 80px 140px 40px 140px;
         overflow-y: auto;
         background: #121215;
+    }
+
+    /* Settings Page Content Styles */
+    .settings-page {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .settings-subheader {
+        color: #dcddde;
+        font-size: 0.85rem;
+        font-family: 'gg sans Semibold', sans-serif;
+        margin-bottom: 0.5rem;
+    }
+
+    .settings-text {
+        color: #81828A;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Medium', sans-serif;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Interval Slider Styles */
+    .interval-slider-container {
+        width: 100%;
+        padding: 0 0.5rem;
+    }
+
+    .interval-slider-track {
+        position: relative;
+        width: 100%;
+        height: 4px;
+        background: #222225;
+        border-radius: 2px;
+        cursor: pointer;
+    }
+
+    .interval-slider-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        background: linear-gradient(to right, #15d8bc, #006e59);
+        border-radius: 2px;
+        pointer-events: none;
+    }
+
+    .interval-slider-thumb {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 14px;
+        height: 14px;
+        background: #dcddde;
+        border-radius: 50%;
+        cursor: grab;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .interval-slider-thumb:active {
+        cursor: grabbing;
+    }
+
+    .interval-slider-tick {
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 2px;
+        height: 12px;
+        background: #dcddde;
+        pointer-events: none;
+    }
+
+    .interval-slider-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 1rem;
+        user-select: none;
+        position: relative;
+        height: 1.5rem;
+    }
+
+    .interval-slider-labels span {
+        color: #dcddde;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Medium', sans-serif;
+        cursor: pointer;
+        text-align: center;
+        position: absolute;
+        transform: translateX(-50%);
+        white-space: nowrap;
+    }
+
+    .interval-slider-labels span:nth-child(1) {
+        left: 0%;
+    }
+
+    .interval-slider-labels span:nth-child(2) {
+        left: 25%;
+    }
+
+    .interval-slider-labels span:nth-child(3) {
+        left: 50%;
+    }
+
+    .interval-slider-labels span:nth-child(4) {
+        left: 75%;
+    }
+
+    .interval-slider-labels span:nth-child(5) {
+        left: 100%;
+    }
+
+    /* Time Format Radio Button Styles */
+    .time-format-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .time-format-option {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+    }
+
+    .time-format-option input[type="radio"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border: 2px solid #15d8bc;
+        border-radius: 50%;
+        background: transparent;
+        cursor: pointer;
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .time-format-option input[type="radio"]:checked {
+        background: #15d8bc;
+        border-color: #15d8bc;
+    }
+
+    .time-format-option input[type="radio"]:checked::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 6px;
+        height: 6px;
+        background: #fff;
+        border-radius: 50%;
+    }
+
+    .time-format-option span {
+        color: #dcddde;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Medium', sans-serif;
+    }
+
+    /* Usage Stats Styles */
+    .usage-stats-container {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .usage-stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #282930;
+    }
+
+    .usage-stat-row:last-child {
+        border-bottom: none;
+    }
+
+    .usage-stat-label {
+        color: #81828A;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Medium', sans-serif;
+    }
+
+    .usage-stat-value {
+        color: #dcddde;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Semibold', sans-serif;
+    }
+
+    .usage-progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #282930;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .usage-progress-fill {
+        height: 100%;
+        background: linear-gradient(to right, #15d8bc, #006e59);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+
+    /* Teams Page Styles */
+    .team-invitations-box {
+        background: #1A1A1E;
+        border: 1px solid #222225;
+        border-radius: 8px;
+        padding: 0.75rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .team-no-invitations {
+        color: #81828A;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Medium', sans-serif;
+        text-align: center;
+        padding: 1rem;
+    }
+
+    .team-invitation-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem;
+        border-radius: 6px;
+    }
+
+    .team-invitation-item:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .team-invitation-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #ff3333;
+        flex-shrink: 0;
+    }
+
+    .team-invitation-id {
+        flex: 1;
+        color: #dcddde;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Medium', sans-serif;
+    }
+
+    .team-invitation-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .team-invitation-accept,
+    .team-invitation-deny {
+        width: 24px;
+        height: 24px;
+        background: transparent;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+
+    .team-invitation-accept img {
+        width: 14px;
+        height: 14px;
+        filter: invert(76%) sepia(52%) saturate(513%) hue-rotate(118deg) brightness(92%) contrast(91%);
+    }
+
+    .team-invitation-deny img {
+        width: 12px;
+        height: 12px;
+        filter: invert(52%) sepia(5%) saturate(368%) hue-rotate(202deg) brightness(92%) contrast(87%);
+    }
+
+    .team-invitation-accept:hover {
+        background: rgba(21, 216, 188, 0.2);
+        transform: scale(1.1);
+    }
+
+    .team-invitation-deny:hover {
+        background: rgba(129, 130, 138, 0.2);
+        transform: scale(1.1);
+    }
+
+    .team-current-box {
+        border: 1px solid #222225;
+        border-radius: 8px;
+        padding: 0.75rem;
+    }
+
+    .team-current-profile {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .team-current-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #1A1A1E;
+        flex-shrink: 0;
+    }
+
+    .team-current-avatar.active {
+        background: #ff3333;
+    }
+
+    .team-current-info {
+        flex: 1;
+    }
+
+    .team-current-id {
+        color: #dcddde;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Medium', sans-serif;
+    }
+
+    .team-leave-btn {
+        background: transparent;
+        border: none;
+        color: #991a35;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: color 0.2s ease;
+    }
+
+    .team-leave-btn:hover:not(:disabled) {
+        color: #7a1529;
+    }
+
+    .team-leave-btn:disabled {
+        color: #991a35;
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .team-owner-crown {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 1rem;
+    }
+
+    .team-owner-crown img {
+        width: 18px;
+        height: 18px;
+        opacity: 0.7;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .team-owner-crown:hover img {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    /* Billing Page Styles */
+    .billing-invoices-box {
+        background: #1A1A1E;
+        border: 1px solid #222225;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .billing-invoices-header {
+        display: flex;
+        padding: 0.75rem;
+        border-bottom: 1px solid #282930;
+        color: #81828A;
+        font-size: 0.8rem;
+        font-family: 'gg sans Medium', sans-serif;
+    }
+
+    .billing-invoice-col-date {
+        flex: 1.5;
+    }
+
+    .billing-invoice-col-total {
+        flex: 1;
+    }
+
+    .billing-invoice-col-actions {
+        flex: 0.8;
+        text-align: right;
+    }
+
+    .billing-invoice-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border-bottom: 1px solid #282930;
+        color: #dcddde;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Medium', sans-serif;
+    }
+
+    .billing-invoice-item:last-child {
+        border-bottom: none;
+    }
+
+    .billing-no-invoices {
+        color: #81828A;
+        font-size: 0.8925rem;
+        font-family: 'gg sans Medium', sans-serif;
+        text-align: center;
+        padding: 1rem;
+    }
+
+    .billing-invoice-view-btn {
+        background: transparent;
+        border: none;
+        color: #15d8bc;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: color 0.2s ease;
+    }
+
+    .billing-invoice-view-btn:hover {
+        color: #10b89e;
     }
 </style>
 
@@ -227,6 +852,471 @@
 
             // Update header title to match button text
             document.getElementById('settings-content-title').textContent = this.textContent;
+
+            // Show the corresponding page
+            const pageName = this.getAttribute('data-settings-page');
+            document.querySelectorAll('.settings-page').forEach(page => {
+                page.style.display = 'none';
+            });
+            const targetPage = document.getElementById('settings-page-' + pageName);
+            if (targetPage) {
+                targetPage.style.display = 'flex';
+            }
         });
     });
+
+    // Interval Slider functionality
+    (function() {
+        const sliderTrack = document.querySelector('.interval-slider-track');
+        const sliderThumb = document.getElementById('interval-slider-thumb');
+        const sliderFill = document.getElementById('interval-slider-fill');
+        const labels = document.querySelectorAll('.interval-slider-labels span[data-value]');
+
+        if (!sliderTrack || !sliderThumb || !sliderFill) return;
+
+        // Delay values and their positions (0%, 25%, 50%, 75%, 100%)
+        const delayStops = [
+            { value: 0, percent: 0 },
+            { value: 1000, percent: 25 },
+            { value: 2000, percent: 50 },
+            { value: 5000, percent: 75 },
+            { value: 10000, percent: 100 }
+        ];
+
+        let currentDelay = 1000; // Default
+
+        // Load saved delay from server
+        function loadSavedDelay() {
+            // Try to get from window.userMessageDelay if available (set by the page)
+            const savedDelay = typeof window.userMessageDelay !== 'undefined' ? window.userMessageDelay : 1000;
+            setSliderToValue(savedDelay);
+        }
+
+        function getPercentForValue(value) {
+            const stop = delayStops.find(s => s.value === value);
+            return stop ? stop.percent : 25; // Default to 1 second position
+        }
+
+        function getValueForPercent(percent) {
+            // Find nearest stop
+            let nearest = delayStops[0];
+            let minDist = Math.abs(percent - nearest.percent);
+
+            for (const stop of delayStops) {
+                const dist = Math.abs(percent - stop.percent);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = stop;
+                }
+            }
+            return nearest;
+        }
+
+        function setSliderToValue(value) {
+            currentDelay = value;
+            const percent = getPercentForValue(value);
+            sliderThumb.style.left = percent + '%';
+            sliderFill.style.width = percent + '%';
+        }
+
+        function setSliderToPercent(percent) {
+            percent = Math.max(0, Math.min(100, percent));
+            const nearest = getValueForPercent(percent);
+            setSliderToValue(nearest.value);
+            return nearest.value;
+        }
+
+        function saveDelay(value) {
+            currentDelay = value;
+            // Update global variable for immediate effect
+            if (typeof window !== 'undefined') {
+                window.userMessageDelay = value;
+            }
+
+            // Save to database
+            fetch('/api/save-user-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message_delay: value
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error('Failed to save delay setting:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error saving delay setting:', error);
+            });
+        }
+
+        // Mouse/touch drag handling
+        let isDragging = false;
+
+        function startDrag(e) {
+            isDragging = true;
+            e.preventDefault();
+        }
+
+        function doDrag(e) {
+            if (!isDragging) return;
+
+            const rect = sliderTrack.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const percent = ((clientX - rect.left) / rect.width) * 100;
+            setSliderToPercent(percent);
+        }
+
+        function endDrag(e) {
+            if (!isDragging) return;
+            isDragging = false;
+
+            const rect = sliderTrack.getBoundingClientRect();
+            const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            const percent = ((clientX - rect.left) / rect.width) * 100;
+            const value = setSliderToPercent(percent);
+            saveDelay(value);
+        }
+
+        sliderThumb.addEventListener('mousedown', startDrag);
+        sliderThumb.addEventListener('touchstart', startDrag);
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('touchmove', doDrag);
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+
+        // Click on track to jump to position
+        sliderTrack.addEventListener('click', function(e) {
+            if (e.target === sliderThumb) return;
+            const rect = sliderTrack.getBoundingClientRect();
+            const percent = ((e.clientX - rect.left) / rect.width) * 100;
+            const value = setSliderToPercent(percent);
+            saveDelay(value);
+        });
+
+        // Click on labels to set value
+        labels.forEach(label => {
+            label.addEventListener('click', function() {
+                const value = parseInt(this.getAttribute('data-value'));
+                setSliderToValue(value);
+                saveDelay(value);
+            });
+        });
+
+        // Initialize slider position
+        loadSavedDelay();
+    })();
+
+    // Time Format functionality
+    (function() {
+        const dateFormatRadios = document.querySelectorAll('input[name="date-format"]');
+        if (!dateFormatRadios.length) return;
+
+        // Load saved date format
+        function loadSavedDateFormat() {
+            const savedFormat = typeof window.userDateFormat !== 'undefined' ? window.userDateFormat : 'mm/dd/yy';
+            dateFormatRadios.forEach(radio => {
+                radio.checked = radio.value === savedFormat;
+            });
+        }
+
+        // Save date format to database and update global variable
+        function saveDateFormat(format) {
+            // Update global variable for immediate effect
+            if (typeof window !== 'undefined') {
+                window.userDateFormat = format;
+            }
+
+            // Dispatch event to notify other parts of the page
+            window.dispatchEvent(new CustomEvent('dateFormatChanged', { detail: { format: format } }));
+
+            // Save to database
+            fetch('/api/save-user-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    date_format: format
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error('Failed to save date format setting:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error saving date format setting:', error);
+            });
+        }
+
+        // Add event listeners to radio buttons
+        dateFormatRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                saveDateFormat(this.value);
+            });
+        });
+
+        // Initialize radio button selection
+        loadSavedDateFormat();
+    })();
+
+    // Usage countdown functionality
+    (function() {
+        function updateCountdown(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            const resetTime = element.getAttribute('data-reset-time');
+            if (!resetTime) return;
+
+            const resetDate = new Date(resetTime);
+            const now = new Date();
+            const diff = resetDate - now;
+
+            if (diff <= 0) {
+                element.textContent = 'Resetting...';
+                return;
+            }
+
+            const weeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
+            const days = Math.floor((diff % (1000 * 60 * 60 * 24 * 7)) / (1000 * 60 * 60 * 24));
+            const totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            let timeStr = '';
+
+            if (totalDays >= 7) {
+                // Above 7 days: show weeks and days only
+                timeStr = weeks + 'w ' + days + 'd';
+            } else if (totalDays >= 1) {
+                // Above 1 day: show days and hours only
+                timeStr = totalDays + 'd ' + hours + 'h';
+            } else {
+                // Under 1 day: show hours, minutes, seconds
+                if (hours > 0) timeStr += hours + 'h ';
+                if (minutes > 0 || hours > 0) timeStr += minutes + 'm ';
+                timeStr += seconds + 's';
+            }
+
+            element.textContent = timeStr;
+        }
+
+        // Update countdowns every second
+        function updateAllCountdowns() {
+            updateCountdown('personal-reset-countdown');
+            updateCountdown('team-reset-countdown');
+        }
+
+        // Initial update and set interval
+        updateAllCountdowns();
+        setInterval(updateAllCountdowns, 1000);
+    })();
+
+    // Teams functionality
+    (function() {
+        let acceptedInvitation = false;
+
+        function loadTeamInvitations() {
+            fetch('/api/team/invitations')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const invitationsList = document.getElementById('team-invitations-list');
+
+                        if (data.invitations && data.invitations.length > 0) {
+                            invitationsList.innerHTML = '';
+
+                            data.invitations.forEach(invitation => {
+                                const item = document.createElement('div');
+                                item.className = 'team-invitation-item';
+
+                                item.innerHTML = `
+                                    <div class="team-invitation-avatar"></div>
+                                    <span class="team-invitation-id">${invitation.owner_adzsend_id || 'No ID'}</span>
+                                    <div class="team-invitation-actions">
+                                        <button class="team-invitation-accept" data-id="${invitation.id}">
+                                            <img src="{{ url_for('static', filename='tick.png') }}" alt="Accept">
+                                        </button>
+                                        <button class="team-invitation-deny" data-id="${invitation.id}">
+                                            <img src="{{ url_for('static', filename='x.png') }}" alt="Deny">
+                                        </button>
+                                    </div>
+                                `;
+
+                                // Accept button click handler
+                                const acceptBtn = item.querySelector('.team-invitation-accept');
+                                acceptBtn.addEventListener('click', async () => {
+                                    const confirmed = await showConfirm('Accept this team invitation?', 'Accept Invitation');
+                                    if (confirmed) {
+                                        acceptInvitation(invitation.id);
+                                    }
+                                });
+
+                                // Deny button click handler
+                                const denyBtn = item.querySelector('.team-invitation-deny');
+                                denyBtn.addEventListener('click', async () => {
+                                    const confirmed = await showConfirm('Deny this team invitation?', 'Deny Invitation');
+                                    if (confirmed) {
+                                        denyInvitation(invitation.id);
+                                    }
+                                });
+
+                                invitationsList.appendChild(item);
+                            });
+                        } else {
+                            invitationsList.innerHTML = '<div class="team-no-invitations">No invitations</div>';
+                        }
+                    }
+                })
+                .catch(error => console.error('Error loading invitations:', error));
+        }
+
+        async function acceptInvitation(memberId) {
+            try {
+                const response = await fetch(`/api/team/invitation/accept/${memberId}`, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    acceptedInvitation = true;
+                    await showAlert('Team invitation accepted!', 'Success');
+                    loadTeamInvitations();
+                    loadCurrentTeam();
+                } else {
+                    await showAlert('Error: ' + data.error, 'Error');
+                }
+            } catch (error) {
+                await showAlert('Error accepting invitation: ' + error, 'Error');
+            }
+        }
+
+        async function denyInvitation(memberId) {
+            try {
+                const response = await fetch(`/api/team/invitation/deny/${memberId}`, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    loadTeamInvitations();
+                } else {
+                    await showAlert('Error: ' + data.error, 'Error');
+                }
+            } catch (error) {
+                await showAlert('Error denying invitation: ' + error, 'Error');
+            }
+        }
+
+        function loadCurrentTeam() {
+            fetch('/api/team/current')
+                .then(response => response.json())
+                .then(data => {
+                    const avatarEl = document.getElementById('team-current-avatar');
+                    const idEl = document.getElementById('team-current-id');
+                    const leaveBtn = document.getElementById('team-leave-btn');
+                    const crownEl = document.getElementById('team-owner-crown');
+                    const invitationsList = document.getElementById('team-invitations-list');
+
+                    if (data.success && data.is_owner) {
+                        // User is a business plan owner - show crown instead of leave button
+                        const owner = data.owner_info;
+                        avatarEl.className = 'team-current-avatar active';
+                        idEl.textContent = owner.adzsend_id || 'No ID';
+                        leaveBtn.style.display = 'none';
+                        crownEl.style.display = 'flex';
+
+                        // Owner can't join other teams
+                        if (invitationsList) {
+                            invitationsList.innerHTML = '<div class="team-no-invitations">Team owner, can\'t join other teams</div>';
+                        }
+                    } else if (data.success && data.in_team) {
+                        // User is in a team
+                        const team = data.team;
+                        acceptedInvitation = true;
+                        avatarEl.className = 'team-current-avatar active';
+                        idEl.textContent = team.owner_adzsend_id || 'No ID';
+                        leaveBtn.style.display = 'block';
+                        leaveBtn.disabled = false;
+                        leaveBtn.textContent = 'Leave';
+                        crownEl.style.display = 'none';
+                    } else {
+                        // Not in any team
+                        acceptedInvitation = false;
+                        avatarEl.className = 'team-current-avatar';
+                        idEl.textContent = 'None';
+                        leaveBtn.style.display = 'block';
+                        leaveBtn.disabled = true;
+                        leaveBtn.textContent = 'Leave';
+                        crownEl.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading current team:', error);
+                    document.getElementById('team-current-id').textContent = 'None';
+                    document.getElementById('team-leave-btn').disabled = true;
+                    document.getElementById('team-owner-crown').style.display = 'none';
+                });
+        }
+
+        async function handleLeaveTeam() {
+            const leaveBtn = document.getElementById('team-leave-btn');
+
+            const confirmed = await showConfirm('Leave your current team? You will need to accept a new invitation to join another team.', 'Leave Team', { danger: true, confirmText: 'Leave Team' });
+            if (!confirmed) return;
+
+            leaveBtn.textContent = 'Leaving...';
+            leaveBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/team/leave', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    await showAlert('Left team successfully', 'Success');
+                    acceptedInvitation = false;
+                    loadCurrentTeam();
+                    loadTeamInvitations();
+                } else {
+                    await showAlert('Error: ' + data.error, 'Error');
+                    leaveBtn.textContent = 'Leave';
+                    leaveBtn.disabled = false;
+                }
+            } catch (error) {
+                await showAlert('Error leaving team: ' + error, 'Error');
+                leaveBtn.textContent = 'Leave';
+                leaveBtn.disabled = false;
+            }
+        }
+
+        // Attach leave button handler
+        const leaveBtn = document.getElementById('team-leave-btn');
+        if (leaveBtn) {
+            leaveBtn.addEventListener('click', handleLeaveTeam);
+        }
+
+        // Load teams data on page load
+        loadTeamInvitations();
+        loadCurrentTeam();
+    })();
+
+    // Billing invoice view handlers
+    (function() {
+        document.querySelectorAll('.billing-invoice-view-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const invoiceId = this.dataset.invoiceId;
+                await showAlert('Coming soon', 'Invoice Details');
+            });
+        });
+    })();
 </script>

@@ -62,6 +62,15 @@ app.config['SESSION_PERMANENT'] = True
 def inject_csrf_token():
     return {'csrf_token': generate_csrf_token()}
 
+# Make user_data available to all templates (for navbar profile photo, settings popup, etc)
+@app.context_processor
+def inject_user_data():
+    if 'user' in session:
+        user = get_user_by_id(session.get('user_id'))
+        if user:
+            return {'user_data': get_user_data(user['id'])}
+    return {'user_data': None}
+
 # Make site config available in all templates
 @app.context_processor
 def inject_site_config():
@@ -555,7 +564,6 @@ def purchase():
     has_business = False
     is_admin_user = False
     is_owner = False
-    user_data = None
     if 'user' in session:
         user = get_user_by_id(session.get('user_id'))
         if user:
@@ -563,7 +571,6 @@ def purchase():
             has_business = has_business_access(user['id'], session['user']['id'])
             is_owner = is_business_owner(user['id'])
             is_admin_user = is_admin(user.get('email'))
-            user_data = user
 
     from config import NAVBAR
 
@@ -576,7 +583,6 @@ def purchase():
                          is_owner=is_owner,
                          is_admin_user=is_admin_user,
                          user=session.get('user'),
-                         user_data=user_data,
                          auth_labels=NAVBAR['auth_buttons'])
 
 @app.route('/api/resend-code', methods=['POST'])
@@ -1827,27 +1833,17 @@ def api_save_user_data():
     """Save user's selected channels, draft message, and/or message delay."""
     from flask import jsonify
 
-    print(f"[API] save-user-data called")
-    print(f"[API] Headers: {dict(request.headers)}")
-    print(f"[API] Session keys: {list(session.keys())}")
-    print(f"[API] Has 'user' in session: {'user' in session}")
-
     # CSRF protection
     csrf_error = check_csrf()
     if csrf_error:
-        print(f"[API] CSRF check failed: {csrf_error}")
         return csrf_error
 
-    print(f"[API] CSRF check passed")
-
     if 'user' not in session:
-        print(f"[API] Not logged in")
         return jsonify({'success': False, 'error': 'Not logged in'}), 401
 
     try:
         user = get_user_by_id(session.get('user_id'))
         if not user:
-            print(f"[API] User not found in database")
             return jsonify({'success': False, 'error': 'User not found'}), 404
 
         data = request.get_json()
@@ -1856,8 +1852,6 @@ def api_save_user_data():
         message_delay = data.get('message_delay')
         date_format = data.get('date_format')
         profile_photo = data.get('profile_photo')
-
-        print(f"[API] Saving profile_photo: {profile_photo}, date_format: {date_format} for user {user['id']}")
 
         # Check content filter for draft message and flag user if needed
         if draft_message and draft_message.strip():
@@ -2975,6 +2969,87 @@ def discord_auth_url():
     return {'success': True, 'auth_url': auth_url}
 
 
+def handle_link_account_callback(user_id, state):
+    """Handle Discord OAuth2 callback for linking a new account."""
+    # Clear the state from session
+    session.pop('discord_link_account_state', None)
+
+    # Check for error response
+    error = request.args.get('error')
+    if error:
+        return redirect(url_for('settings') + '?error=Authorization%20cancelled')
+
+    # Get authorization code
+    code = request.args.get('code')
+    if not code:
+        return redirect(url_for('settings') + '?error=No%20authorization%20code')
+
+    # Exchange code for access token
+    token_url = f'{DISCORD_API_BASE}/oauth2/token'
+    token_data = {
+        'client_id': DISCORD_CLIENT_ID,
+        'client_secret': DISCORD_CLIENT_SECRET,
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': DISCORD_OAUTH_REDIRECT_URI
+    }
+
+    try:
+        token_response = requests.post(token_url, data=token_data, timeout=10)
+
+        if token_response.status_code != 200:
+            print(f"[LINK ACCOUNT] Token exchange failed: {token_response.text}")
+            return redirect(url_for('settings') + '?error=Failed%20to%20get%20access%20token')
+
+        token_json = token_response.json()
+        access_token = token_json.get('access_token')
+        refresh_token = token_json.get('refresh_token')
+        expires_in = token_json.get('expires_in', 604800)  # Default 7 days
+        expires_at = (datetime.now() + timedelta(seconds=expires_in)).isoformat()
+
+        # Get user info from Discord
+        user_response = requests.get(
+            f'{DISCORD_API_BASE}/users/@me',
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10
+        )
+
+        if user_response.status_code != 200:
+            print(f"[LINK ACCOUNT] Failed to get user info: {user_response.text}")
+            return redirect(url_for('settings') + '?error=Failed%20to%20get%20user%20info')
+
+        discord_user = user_response.json()
+        discord_id = discord_user.get('id')
+        username = discord_user.get('username')
+        avatar = discord_user.get('avatar')
+
+        # Get avatar decoration asset if present
+        avatar_decoration = None
+        avatar_decoration_data = discord_user.get('avatar_decoration_data')
+        if avatar_decoration_data and avatar_decoration_data.get('asset'):
+            avatar_decoration = avatar_decoration_data.get('asset')
+
+        # Store OAuth info in session for token verification step
+        session['pending_link_account'] = {
+            'discord_id': discord_id,
+            'username': username,
+            'avatar': avatar,
+            'avatar_decoration': avatar_decoration,
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'expires_at': expires_at
+        }
+
+        # Redirect back to settings for token input
+        return redirect(url_for('settings') + '?link_success=1')
+
+    except requests.exceptions.Timeout:
+        return redirect(url_for('settings') + '?error=Connection%20timeout')
+    except Exception as e:
+        print(f"[LINK ACCOUNT] Error: {str(e)}")
+        return redirect(url_for('settings') + '?error=An%20error%20occurred')
+
+
 @app.route('/discord/callback')
 def discord_oauth_callback():
     """Handle Discord OAuth2 callback."""
@@ -2982,8 +3057,15 @@ def discord_oauth_callback():
     if not user_id:
         return redirect(url_for('login_page'))
 
-    # Verify state parameter
+    # Check if this is a link-account callback
     state = request.args.get('state')
+    link_account_state = session.get('discord_link_account_state')
+
+    if link_account_state and state == link_account_state:
+        # This is a link-account callback, handle it separately
+        return handle_link_account_callback(user_id, state)
+
+    # Regular OAuth callback - verify state parameter
     stored_state = session.pop('discord_oauth_state', None)
 
     if not state or state != stored_state:
@@ -3336,10 +3418,10 @@ def discord_link_account():
     session['discord_link_account_state'] = state
 
     # Build OAuth2 authorization URL
-    # Use the base callback URL - we'll distinguish by state in session
+    # Use the base callback URL with link_account flag
     params = urlencode({
         'client_id': DISCORD_CLIENT_ID,
-        'redirect_uri': DISCORD_OAUTH_REDIRECT_URI.replace('/callback', '/callback/link-account'),
+        'redirect_uri': DISCORD_OAUTH_REDIRECT_URI,
         'response_type': 'code',
         'scope': 'identify',
         'state': state
@@ -3347,96 +3429,6 @@ def discord_link_account():
 
     auth_url = f'{DISCORD_API_BASE}/oauth2/authorize?{params}'
     return redirect(auth_url)
-
-
-@app.route('/discord/callback/link-account')
-def discord_link_account_callback():
-    """Handle Discord OAuth2 callback for linking a new account."""
-    user_id = get_session_user_id()
-    if not user_id:
-        return redirect(url_for('login_page'))
-
-    # Verify state parameter
-    state = request.args.get('state')
-    stored_state = session.pop('discord_link_account_state', None)
-
-    if not state or state != stored_state:
-        return redirect(url_for('settings') + '?error=Invalid%20OAuth%20state')
-
-    # Check for error response
-    error = request.args.get('error')
-    if error:
-        return redirect(url_for('settings') + '?error=Authorization%20cancelled')
-
-    # Get authorization code
-    code = request.args.get('code')
-    if not code:
-        return redirect(url_for('settings') + '?error=No%20authorization%20code')
-
-    # Exchange code for access token
-    token_url = f'{DISCORD_API_BASE}/oauth2/token'
-    token_data = {
-        'client_id': DISCORD_CLIENT_ID,
-        'client_secret': DISCORD_CLIENT_SECRET,
-        'grant_type': 'authorization_code',
-        'code': code,
-        'redirect_uri': DISCORD_OAUTH_REDIRECT_URI.replace('/callback', '/callback/link-account')
-    }
-
-    try:
-        token_response = requests.post(token_url, data=token_data, timeout=10)
-
-        if token_response.status_code != 200:
-            print(f"[LINK ACCOUNT] Token exchange failed: {token_response.text}")
-            return redirect(url_for('settings') + '?error=Failed%20to%20get%20access%20token')
-
-        token_json = token_response.json()
-        access_token = token_json.get('access_token')
-        refresh_token = token_json.get('refresh_token')
-        expires_in = token_json.get('expires_in', 604800)  # Default 7 days
-        expires_at = (datetime.now() + timedelta(seconds=expires_in)).isoformat()
-
-        # Get user info from Discord
-        user_response = requests.get(
-            f'{DISCORD_API_BASE}/users/@me',
-            headers={'Authorization': f'Bearer {access_token}'},
-            timeout=10
-        )
-
-        if user_response.status_code != 200:
-            print(f"[LINK ACCOUNT] Failed to get user info: {user_response.text}")
-            return redirect(url_for('settings') + '?error=Failed%20to%20get%20user%20info')
-
-        discord_user = user_response.json()
-        discord_id = discord_user.get('id')
-        username = discord_user.get('username')
-        avatar = discord_user.get('avatar')
-
-        # Get avatar decoration asset if present
-        avatar_decoration = None
-        avatar_decoration_data = discord_user.get('avatar_decoration_data')
-        if avatar_decoration_data and avatar_decoration_data.get('asset'):
-            avatar_decoration = avatar_decoration_data.get('asset')
-
-        # Store OAuth info in session for token verification step
-        session['pending_link_account'] = {
-            'discord_id': discord_id,
-            'username': username,
-            'avatar': avatar,
-            'avatar_decoration': avatar_decoration,
-            'access_token': access_token,
-            'refresh_token': refresh_token,
-            'expires_at': expires_at
-        }
-
-        # Redirect back to settings for token input
-        return redirect(url_for('settings') + '?link_success=1')
-
-    except requests.exceptions.Timeout:
-        return redirect(url_for('settings') + '?error=Connection%20timeout')
-    except Exception as e:
-        print(f"[LINK ACCOUNT] Error: {str(e)}")
-        return redirect(url_for('settings') + '?error=An%20error%20occurred')
 
 
 @app.route('/api/linked-accounts/verify-token', methods=['POST'])

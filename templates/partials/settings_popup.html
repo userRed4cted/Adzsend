@@ -1,8 +1,4 @@
 <!-- Settings Popup -->
-<script>
-console.log('[SETTINGS POPUP] CSRF Token:', '{{ csrf_token }}');
-console.log('[SETTINGS POPUP] CSRF Token length:', '{{ csrf_token }}'.length);
-</script>
 <div class="settings-popup-overlay" id="settings-popup-overlay">
     <div class="settings-popup">
         <!-- Settings Side Menu -->
@@ -222,7 +218,7 @@ console.log('[SETTINGS POPUP] CSRF Token length:', '{{ csrf_token }}'.length);
                 <!-- Discord Accounts Page -->
                 <div class="settings-page" id="settings-page-discord-accounts" style="display: none;">
                     <div class="settings-subheader">Linked Discord accounts</div>
-                    <div class="settings-text">Manage linked Discord accounts to send messages via them in the panel</div>
+                    <div class="settings-text">Manage linked Discord accounts to send messages via them in the panel.</div>
 
                     <!-- View Toggle (Radio Buttons) -->
                     <div class="time-format-options" style="margin-top: 1rem; flex-direction: row; justify-content: center;">
@@ -237,9 +233,10 @@ console.log('[SETTINGS POPUP] CSRF Token length:', '{{ csrf_token }}'.length);
                     </div>
 
                     <!-- Search Bar -->
-                    <div style="margin-top: 1rem; margin-bottom: 1rem;">
+                    <div style="margin-top: 1rem; margin-bottom: 0.5rem;">
                         <input type="text" class="search-input" placeholder="Search" id="discord-accounts-search-input" style="width: 100%;">
                     </div>
+                    <div class="settings-text" style="margin-bottom: 1rem;">We recommend using alternate Discord accounts, build an account history before using.</div>
 
                     <!-- List View Container -->
                     <div class="team-current-box" id="discord-accounts-list-view" style="display: block;">
@@ -247,7 +244,7 @@ console.log('[SETTINGS POPUP] CSRF Token length:', '{{ csrf_token }}'.length);
                     </div>
 
                     <!-- Gallery View Container -->
-                    <div class="discord-accounts-gallery-view" id="discord-accounts-gallery-view" style="display: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem;">
+                    <div class="discord-accounts-gallery-view" id="discord-accounts-gallery-view" style="display: none;">
                         <!-- Accounts will be dynamically loaded here -->
                     </div>
                 </div>
@@ -874,6 +871,12 @@ console.log('[SETTINGS POPUP] CSRF Token length:', '{{ csrf_token }}'.length);
     }
 
     /* Discord Accounts Gallery View Styles */
+    .discord-accounts-gallery-view {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem;
+    }
+
     .discord-gallery-card {
         display: flex;
         flex-direction: column;
@@ -891,8 +894,8 @@ console.log('[SETTINGS POPUP] CSRF Token length:', '{{ csrf_token }}'.length);
         width: 64px;
         height: 64px;
         border-radius: 50%;
-        background: #1A1A1E;
-        overflow: hidden;
+        background-color: #1A1A1E !important;
+        overflow: visible;
         flex-shrink: 0;
         position: relative;
         margin-top: 0.5rem;
@@ -902,6 +905,8 @@ console.log('[SETTINGS POPUP] CSRF Token length:', '{{ csrf_token }}'.length);
         width: 100%;
         height: 100%;
         object-fit: cover;
+        border-radius: 50%;
+        background-color: #1A1A1E;
     }
 
     .discord-gallery-username {
@@ -1421,33 +1426,29 @@ console.log('[SETTINGS POPUP] CSRF Token length:', '{{ csrf_token }}'.length);
             window.dispatchEvent(new CustomEvent('dateFormatChanged', { detail: { format: format } }));
 
             // Save to database
-            console.log('[DATE FORMAT] Saving:', format);
             fetch('/api/save-user-data', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': '{{ csrf_token }}',
-                    'Cache-Control': 'no-cache'
+                    'X-CSRF-Token': '{{ csrf_token }}'
                 },
                 body: JSON.stringify({
                     date_format: format
-                }),
-                cache: 'no-store'
+                })
             })
             .then(response => {
-                console.log('[DATE FORMAT] Response status:', response.status);
+                if (!response.ok) {
+                    alert('Save failed: HTTP ' + response.status);
+                }
                 return response.json();
             })
             .then(data => {
-                console.log('[DATE FORMAT] Response data:', data);
-                if (data.success) {
-                    console.log('[DATE FORMAT] Saved successfully');
-                } else {
-                    console.error('[DATE FORMAT] Failed to save:', data.error);
+                if (!data.success) {
+                    alert('Save failed: ' + data.error);
                 }
             })
             .catch(error => {
-                console.error('[DATE FORMAT] Error saving:', error);
+                alert('Error: ' + error.message);
             });
         }
 
@@ -1853,14 +1854,10 @@ console.log('[SETTINGS POPUP] CSRF Token length:', '{{ csrf_token }}'.length);
 
         // Open profile picker
         if (profilePhotoEl) {
-            console.log('Profile photo element found, attaching click handler');
             profilePhotoEl.addEventListener('click', function() {
-                console.log('Profile photo clicked, opening picker');
                 loadProfilePicker();
                 pickerOverlay.classList.add('show');
             });
-        } else {
-            console.error('Profile photo element NOT found');
         }
 
         // Close profile picker
@@ -1891,69 +1888,41 @@ console.log('[SETTINGS POPUP] CSRF Token length:', '{{ csrf_token }}'.length);
 
         // Select and save profile photo
         async function selectProfilePhoto(photo) {
-            console.log('Selecting profile photo:', photo);
-            console.log('CSRF Token being sent:', '{{ csrf_token }}');
             try {
                 const response = await fetch('/api/save-user-data', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': '{{ csrf_token }}',
-                        'Cache-Control': 'no-cache'
+                        'X-CSRF-Token': '{{ csrf_token }}'
                     },
                     body: JSON.stringify({
                         profile_photo: photo
-                    }),
-                    cache: 'no-store'
+                    })
                 });
 
-                console.log('Response status:', response.status);
-                console.log('Response headers:', [...response.headers.entries()]);
-                const responseText = await response.text();
-                console.log('Raw response:', responseText);
-
-                const data = JSON.parse(responseText);
-                console.log('Parsed response data:', data);
+                const data = await response.json();
 
                 if (data.success) {
                     currentProfilePhoto = photo;
                     const newPhotoUrl = `/static/profile_photos/${photo}`;
-                    console.log('Updating profile photos to:', newPhotoUrl);
 
                     // Update ALL profile photos across the entire page
-                    // 1. My Account page profile photo
                     const profileImg = document.getElementById('account-profile-img');
-                    console.log('Account profile img element:', profileImg);
-                    if (profileImg) {
-                        profileImg.src = newPhotoUrl;
-                        console.log('Updated account profile img');
-                    }
+                    if (profileImg) profileImg.src = newPhotoUrl;
 
-                    // 2. Settings sidebar profile photo
                     const sidebarImg = document.querySelector('.settings-sidebar-profile-img');
-                    console.log('Sidebar profile img element:', sidebarImg);
-                    if (sidebarImg) {
-                        sidebarImg.src = newPhotoUrl;
-                        console.log('Updated sidebar profile img');
-                    }
+                    if (sidebarImg) sidebarImg.src = newPhotoUrl;
 
-                    // 3. Update ALL profile photo images on the entire page
-                    // Find all images that have profile_photos in their src (excluding team members)
-                    const allImages = document.querySelectorAll('img');
-                    let updatedCount = 0;
-                    allImages.forEach(img => {
+                    // Update all profile photo images (navbar, profile avatar, etc)
+                    document.querySelectorAll('img').forEach(img => {
                         if (img.src && img.src.includes('/static/profile_photos/') &&
                             (img.closest('.profile-avatar') ||
                              img.closest('.navbar-profile-circle') ||
                              img.closest('.settings-sidebar-profile') ||
                              img.id === 'account-profile-img')) {
-                            const oldSrc = img.src;
                             img.src = newPhotoUrl;
-                            updatedCount++;
-                            console.log('Updated profile img from', oldSrc, 'to', newPhotoUrl);
                         }
                     });
-                    console.log('Total profile images updated:', updatedCount);
 
                     closeProfilePicker();
                 } else {

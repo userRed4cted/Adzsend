@@ -34,12 +34,15 @@ function toggleView() {
     const listView = document.getElementById('discord-accounts-list-view');
     const galleryView = document.getElementById('discord-accounts-gallery-view');
 
+    // Check if we're in the side menu popup or settings page
+    const isPopup = listView && listView.closest('.discord-accounts-popup');
+
     if (discordAccountsView === 'list') {
-        listView.style.display = 'block';
-        galleryView.style.display = 'none';
+        if (listView) listView.style.display = 'block';
+        if (galleryView) galleryView.style.display = 'none';
     } else {
-        listView.style.display = 'none';
-        galleryView.style.display = 'grid';
+        if (listView) listView.style.display = 'none';
+        if (galleryView) galleryView.style.display = 'grid';
     }
 }
 

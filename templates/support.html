@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ site_config.page_titles.support if site_config and site_config.page_titles else 'Support - Adzsend' }}</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="{{ get_page_description('support') if get_page_description else 'Get support for Adzsend' }}">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
+    {% include 'partials/config_styles.html' %}
+</head>
+<body>
+    <div class="panel">
+        {% include 'navbar.html' %}
+
+        <div class="panel-container">
+            <!-- Content will be added here in the future -->
+        </div>
+    </div>
+</body>
+</html>

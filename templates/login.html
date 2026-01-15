@@ -59,36 +59,7 @@
 </head>
 <body>
     <div class="panel">
-        <nav class="navbar">
-            <div class="navbar-content">
-                <div class="navbar-left">
-                    <div class="menu-icon" id="menu-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="3" y1="12" x2="21" y2="12"></line>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <line x1="3" y1="18" x2="21" y2="18"></line>
-                        </svg>
-                    </div>
-                    <div class="navbar-text">
-                        <h1 class="navbar-title">Ad <span class="gradient-z">Z</span> send</h1>
-                        <p class="navbar-subtitle">Login to your account</p>
-                    </div>
-                </div>
-                <div class="nav-right">
-                    <div class="auth-buttons">
-                        <a href="{{ url_for('signup_page') }}" class="auth-btn signup-btn">Sign Up</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Dropdown Menu -->
-            <div class="dropdown-menu" id="dropdown-menu">
-                <a href="{{ url_for('home') }}" class="dropdown-item">Home</a>
-                <a href="{{ url_for('purchase') }}" class="dropdown-item">Purchase</a>
-                <div class="dropdown-divider"></div>
-                <a href="https://discord.gg/KWt6rvCukp" target="_blank" class="dropdown-item discord-item">Discord Server</a>
-            </div>
-        </nav>
+        {% include 'navbar.html' %}
 
         <div class="panel-container">
             <div class="login-container">
@@ -115,24 +86,6 @@
     </div>
 
     <script>
-        // Dropdown menu toggle
-        const menuIcon = document.getElementById('menu-icon');
-        const dropdownMenu = document.getElementById('dropdown-menu');
-
-        if (menuIcon) {
-            menuIcon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                dropdownMenu.classList.toggle('show');
-            });
-        }
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (dropdownMenu && !dropdownMenu.contains(e.target) && menuIcon && !menuIcon.contains(e.target)) {
-                dropdownMenu.classList.remove('show');
-            }
-        });
-
         // Login form loading state
         const loginForm = document.getElementById('login-form');
         const loginBtn = document.getElementById('login-btn');

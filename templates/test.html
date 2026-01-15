@@ -670,7 +670,7 @@
                         {% else %}
                         <div class="profile-card">
                             <div class="profile-avatar" style="background: #121215; display: flex; align-items: center; justify-content: center;">
-                                <img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord Logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 0;">
+                                <img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord Logo" style="width: 24px !important; height: 24px !important; object-fit: contain !important; border-radius: 0 !important;">
                             </div>
                             <div class="profile-info">
                                 <div class="profile-name">No Discord Account</div>
@@ -1803,10 +1803,17 @@
         }
 
         // Initialize on DOM ready
-        document.addEventListener('DOMContentLoaded', initCustomDateInputs);
+        document.addEventListener('DOMContentLoaded', function() {
+            initCustomDateInputs();
+            // Update date format labels and displays on initial page load
+            updateDateFormatLabels();
+            updateCustomDateDisplays();
+        });
         // Also try immediately in case DOMContentLoaded already fired
         if (document.readyState !== 'loading') {
             initCustomDateInputs();
+            updateDateFormatLabels();
+            updateCustomDateDisplays();
         }
 
         // Listen for date format changes from settings popup
@@ -2380,24 +2387,6 @@
                     e.preventDefault();
                     e.returnValue = '';
                     return '';
-                }
-            });
-
-            // Dropdown menu toggle
-            const menuIcon = document.getElementById('menu-icon');
-            const dropdownMenu = document.getElementById('dropdown-menu');
-
-            if (menuIcon) {
-                menuIcon.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    dropdownMenu.classList.toggle('show');
-                });
-            }
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', (e) => {
-                if (dropdownMenu && !dropdownMenu.contains(e.target) && menuIcon && !menuIcon.contains(e.target)) {
-                    dropdownMenu.classList.remove('show');
                 }
             });
 

@@ -2,7 +2,6 @@
 // DISCORD ACCOUNTS MANAGEMENT
 // =============================================================================
 
-let discordAccountsView = 'list'; // 'list' or 'gallery'
 let allDiscordAccounts = [];
 let accountLimit = 3;
 let currentAccountCount = 0;
@@ -11,15 +10,6 @@ let pendingLinkAccount = null; // Store pending account data after OAuth
 
 // Initialize Discord accounts page
 async function initDiscordAccountsPage() {
-    // Set up view toggle listeners
-    document.querySelectorAll('input[name="discord-accounts-view"]').forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            discordAccountsView = e.target.value;
-            toggleView();
-            renderDiscordAccounts(allDiscordAccounts);
-        });
-    });
-
     // Set up search listener
     const searchInput = document.getElementById('discord-accounts-search-input');
     if (searchInput) {
@@ -28,23 +18,6 @@ async function initDiscordAccountsPage() {
 
     // Load accounts
     await loadDiscordAccounts();
-}
-
-// Toggle between list and gallery view
-function toggleView() {
-    const listView = document.getElementById('discord-accounts-list-view');
-    const galleryView = document.getElementById('discord-accounts-gallery-view');
-
-    // Check if we're in the side menu popup or settings page
-    const isPopup = listView && listView.closest('.discord-accounts-popup');
-
-    if (discordAccountsView === 'list') {
-        if (listView) listView.style.display = 'block';
-        if (galleryView) galleryView.style.display = 'none';
-    } else {
-        if (listView) listView.style.display = 'none';
-        if (galleryView) galleryView.style.display = 'grid';
-    }
 }
 
 // Load all Discord accounts
@@ -69,15 +42,6 @@ async function loadDiscordAccounts() {
 
 // Render Discord accounts
 function renderDiscordAccounts(accounts) {
-    if (discordAccountsView === 'list') {
-        renderListView(accounts);
-    } else {
-        renderGalleryView(accounts);
-    }
-}
-
-// Render list view (like team owner profile)
-function renderListView(accounts) {
     const container = document.getElementById('discord-accounts-list-view');
     if (!container) return;
 
@@ -90,24 +54,6 @@ function renderListView(accounts) {
     // Add account cards
     accounts.forEach(account => {
         const card = createAccountCardList(account);
-        container.appendChild(card);
-    });
-}
-
-// Render gallery view
-function renderGalleryView(accounts) {
-    const container = document.getElementById('discord-accounts-gallery-view');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    // Always add "Link Account" card (disabled if at limit)
-    const linkCard = createLinkAccountCardGallery();
-    container.appendChild(linkCard);
-
-    // Add account cards
-    accounts.forEach(account => {
-        const card = createAccountCardGallery(account);
         container.appendChild(card);
     });
 }
@@ -164,53 +110,6 @@ function createLinkAccountCardList() {
     return card;
 }
 
-// Create "Link Account" card for gallery view
-function createLinkAccountCardGallery() {
-    const card = document.createElement('div');
-    card.className = 'discord-gallery-card';
-
-    const avatarUrl = '/static/discordlogo.png';
-    const isDisabled = !canLinkMoreAccounts;
-
-    // Apply disabled styling
-    if (isDisabled) {
-        card.style.opacity = '0.5';
-        card.style.cursor = 'not-allowed';
-        card.style.pointerEvents = 'none';
-    } else {
-        card.style.cursor = 'pointer';
-    }
-
-    // Check if there's pending link data
-    if (pendingLinkAccount) {
-        card.style.opacity = '1';
-        card.style.cursor = 'default';
-        card.style.pointerEvents = 'auto';
-        card.innerHTML = `
-            <div class="discord-gallery-avatar">
-                <img src="${getDiscordAvatarUrl(pendingLinkAccount.discord_id, pendingLinkAccount.avatar)}" alt="${pendingLinkAccount.username}">
-            </div>
-            <span class="discord-gallery-username">${escapeHtml(pendingLinkAccount.username)}</span>
-            <input type="text" class="search-input" placeholder="Account token" id="discord-token-input-gallery" style="width: 100%;">
-            <span class="discord-gallery-id" id="discord-token-status-gallery"></span>
-            <button class="team-leave-btn" onclick="verifyAndLinkToken(event)">Link</button>
-        `;
-    } else {
-        card.innerHTML = `
-            <div class="discord-gallery-avatar">
-                <img src="${avatarUrl}" alt="Discord" style="width: 100%; height: 100%; object-fit: contain; padding: 6px;">
-            </div>
-            <span class="discord-gallery-username">Link a Discord account</span>
-            <span class="discord-gallery-id">(${currentAccountCount}/${accountLimit} Linked)</span>
-        `;
-        if (!isDisabled) {
-            card.addEventListener('click', initiateAccountLink);
-        }
-    }
-
-    return card;
-}
-
 // Create account card for list view
 function createAccountCardList(account) {
     const card = document.createElement('div');
@@ -236,29 +135,6 @@ function createAccountCardList(account) {
     return card;
 }
 
-// Create account card for gallery view
-function createAccountCardGallery(account) {
-    const card = document.createElement('div');
-    card.className = 'discord-gallery-card';
-
-    const avatarUrl = getDiscordAvatarUrl(account.discord_id, account.avatar);
-    const decorationHtml = account.avatar_decoration
-        ? `<img src="https://cdn.discordapp.com/avatar-decoration-presets/${account.avatar_decoration}.png" alt="Decoration" style="position: absolute; top: -4px; left: -4px; width: calc(100% + 8px); height: calc(100% + 8px); pointer-events: none;">`
-        : '';
-
-    card.innerHTML = `
-        <div class="discord-gallery-avatar">
-            <img src="${avatarUrl}" alt="${escapeHtml(account.username)}">
-            ${decorationHtml}
-        </div>
-        <span class="discord-gallery-username">${escapeHtml(account.username)}</span>
-        <span class="discord-gallery-id">${account.discord_id}</span>
-        <button class="team-leave-btn" onclick="unlinkDiscordAccount(${account.id}, event)">Unlink</button>
-    `;
-
-    return card;
-}
-
 // Get Discord avatar URL
 function getDiscordAvatarUrl(discordId, avatarHash) {
     if (!avatarHash) {
@@ -268,17 +144,57 @@ function getDiscordAvatarUrl(discordId, avatarHash) {
     return `https://cdn.discordapp.com/avatars/${discordId}/${avatarHash}.png?size=128`;
 }
 
+// Fetch pending account data from API
+async function fetchPendingAccount() {
+    try {
+        const response = await fetch('/api/linked-accounts/pending');
+        const data = await response.json();
+
+        if (data.success && data.pending) {
+            pendingLinkAccount = data.pending;
+        } else {
+            pendingLinkAccount = null;
+        }
+    } catch (error) {
+        console.error('Error fetching pending account:', error);
+        pendingLinkAccount = null;
+    }
+}
+
 // Initiate account linking
 async function initiateAccountLink() {
-    window.location.href = '/discord/link-account';
+    // Open OAuth in popup
+    const popup = window.open('/discord/link-account', 'discord_oauth', 'width=500,height=700');
+
+    // Listen for messages from the popup
+    window.addEventListener('message', async function handleOAuthMessage(event) {
+        // Verify origin
+        if (event.origin !== window.location.origin) return;
+
+        if (event.data.type === 'oauth_success') {
+            // Remove listener
+            window.removeEventListener('message', handleOAuthMessage);
+
+            // Fetch pending account data
+            await fetchPendingAccount();
+
+            // Reload accounts list to show token input
+            await loadDiscordAccounts();
+        } else if (event.data.type === 'oauth_error') {
+            // Remove listener
+            window.removeEventListener('message', handleOAuthMessage);
+
+            alert('OAuth failed: ' + (event.data.error || 'Unknown error'));
+        }
+    });
 }
 
 // Verify and link token
 async function verifyAndLinkToken(event) {
     event.stopPropagation();
 
-    const tokenInput = document.getElementById(discordAccountsView === 'list' ? 'discord-token-input' : 'discord-token-input-gallery');
-    const statusDiv = document.getElementById(discordAccountsView === 'list' ? 'discord-token-status' : 'discord-token-status-gallery');
+    const tokenInput = document.getElementById('discord-token-input');
+    const statusDiv = document.getElementById('discord-token-status');
     const token = tokenInput ? tokenInput.value.trim() : '';
 
     if (!token) {
@@ -390,33 +306,13 @@ async function handleDiscordAccountsSearch(event) {
 }
 
 // Check for pending link and set up token input
-function checkPendingLink() {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('link_success') === '1') {
-        // OAuth completed, fetch pending data from session
-        // We'll set a flag to show token input in the UI
-        pendingLinkAccount = {
-            discord_id: 'pending',
-            username: 'Pending...',
-            avatar: null
-        };
+async function checkPendingLink() {
+    // Check if there's pending account data on page load
+    await fetchPendingAccount();
 
-        // Fetch actual pending data
-        fetch('/api/linked-accounts/pending')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.pending) {
-                    pendingLinkAccount = data.pending;
-                    // Re-render if on Discord accounts page
-                    if (document.getElementById('settings-page-discord-accounts').style.display !== 'none') {
-                        renderDiscordAccounts(allDiscordAccounts);
-                    }
-                }
-            })
-            .catch(err => console.error('Error fetching pending data:', err));
-
-        // Remove query param
-        window.history.replaceState({}, '', window.location.pathname);
+    if (pendingLinkAccount) {
+        // Re-render accounts to show token input
+        await loadDiscordAccounts();
     }
 }
 

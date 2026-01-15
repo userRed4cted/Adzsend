@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OAuth Callback</title>
+</head>
+<body>
+    <script>
+        // Close this popup and notify parent window
+        if (window.opener) {
+            {% if success %}
+            window.opener.postMessage({ type: 'oauth_success' }, window.location.origin);
+            {% else %}
+            window.opener.postMessage({ type: 'oauth_error', error: '{{ error }}' }, window.location.origin);
+            {% endif %}
+            window.close();
+        } else {
+            // If not opened as popup, redirect to test page
+            window.location.href = '/test';
+        }
+    </script>
+    <p>Completing OAuth... This window should close automatically.</p>
+</body>
+</html>

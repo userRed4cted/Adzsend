@@ -88,60 +88,7 @@
 </head>
 <body>
     <div class="panel">
-        <nav class="navbar">
-            <div class="navbar-content">
-                <div class="navbar-left">
-                    <div class="menu-icon" id="menu-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="3" y1="12" x2="21" y2="12"></line>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <line x1="3" y1="18" x2="21" y2="18"></line>
-                        </svg>
-                    </div>
-                    <div class="navbar-text">
-                        <h1 class="navbar-title">Ad <span class="gradient-z">Z</span> send</h1>
-                        <p class="navbar-subtitle">Verify your email</p>
-                    </div>
-                </div>
-                <div class="nav-right">
-                    {% if purpose != 'email_change' %}
-                    <div class="auth-buttons">
-                        {% if purpose == 'login' %}
-                        <a href="{{ url_for('signup_page') }}" class="auth-btn signup-btn">Sign Up</a>
-                        {% else %}
-                        <a href="{{ url_for('login_page') }}" class="auth-btn login-btn">Login</a>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Dropdown Menu -->
-            <div class="dropdown-menu" id="dropdown-menu">
-                <a href="{{ url_for('home') }}" class="dropdown-item">Home</a>
-                <a href="{{ url_for('purchase') }}" class="dropdown-item">Purchase</a>
-                {% if purpose == 'email_change' %}
-                {% if not (plan_status and plan_status.plan_id and plan_status.plan_id.startswith('team_plan_')) %}
-                <a href="{{ url_for('panel') }}" class="dropdown-item">Personal Panel</a>
-                {% endif %}
-                {% if has_business %}
-                {% if is_owner %}
-                <a href="{{ url_for('team_management') }}" class="dropdown-item">Team Management</a>
-                {% endif %}
-                <a href="{{ url_for('team_panel') }}" class="dropdown-item">Team Panel</a>
-                {% endif %}
-                <a href="{{ url_for('settings') }}" class="dropdown-item">Settings</a>
-                {% if is_admin_user %}
-                <a href="{{ url_for('admin_panel') }}" class="dropdown-item">Admin</a>
-                {% endif %}
-                {% endif %}
-                <div class="dropdown-divider"></div>
-                <a href="https://discord.gg/KWt6rvCukp" target="_blank" class="dropdown-item discord-item">Discord Server</a>
-                {% if purpose == 'email_change' %}
-                <a href="{{ url_for('logout') }}" class="dropdown-item logout-item">Logout</a>
-                {% endif %}
-            </div>
-        </nav>
+        {% include 'navbar.html' %}
 
         <div class="panel-container">
             <div class="login-container">
@@ -190,24 +137,6 @@
     </div>
 
     <script>
-        // Dropdown menu toggle
-        const menuIcon = document.getElementById('menu-icon');
-        const dropdownMenu = document.getElementById('dropdown-menu');
-
-        if (menuIcon) {
-            menuIcon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                dropdownMenu.classList.toggle('show');
-            });
-        }
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (dropdownMenu && !dropdownMenu.contains(e.target) && menuIcon && !menuIcon.contains(e.target)) {
-                dropdownMenu.classList.remove('show');
-            }
-        });
-
         // Code input handling
         const codeInputs = document.querySelectorAll('.code-input');
         const verifyError = document.getElementById('verify-error');
@@ -280,8 +209,14 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // Redirect on success
-                    window.location.href = result.redirect || '/panel';
+                    // Handle redirect or reload
+                    if (result.redirect) {
+                        window.location.href = result.redirect;
+                    } else if (result.reload) {
+                        window.location.reload();
+                    } else {
+                        window.location.href = '/panel';
+                    }
                 } else if (result.code_rate_limited) {
                     // Code verification rate limited
                     showRateLimitError();

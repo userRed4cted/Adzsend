@@ -34,7 +34,7 @@ SUBSCRIPTION_PLANS = {
         # Element: Bullet points with checkmarks on plan card
         # Each string is one feature line
         'features': [
-            '30 messages per day',
+            '30 messages posts per day',
             '2 channels per server',
             'Personal panel',
         ],
@@ -86,7 +86,7 @@ SUBSCRIPTION_PLANS = {
         # price_monthly: Shown when "Monthly" toggle is selected
         # price_yearly: Shown when "Yearly" toggle is selected (total per year)
         'price_monthly': 7,
-        'price_yearly': 75,
+        'price_yearly': 72,
 
         # FEATURES LIST
         # Element: Bullet points with checkmarks on plan card
@@ -124,7 +124,7 @@ SUBSCRIPTION_PLANS = {
         # Element: Text below price showing savings info
         # If empty/not set: auto-calculates "SAVING $XX (17% OFF) YEARLY"
         # If set: shows your custom text instead
-        'savings_text': '$6.25 per month',
+        'savings_text': '$6 per month',
 
         # SAVINGS TEXT COLOR
         # Element: Color of the savings text
@@ -173,107 +173,6 @@ SUBSCRIPTION_PLANS = {
 
 
 # =============================================================================
-# ONE-TIME PURCHASE PLANS (Single payment, limited duration)
-# =============================================================================
-# Displayed below subscription plans in the "Personal" section.
-# Users pay once and get access for a set number of days.
-
-ONE_TIME_PLANS = {
-
-    # -------------------------------------------------------------------------
-    # 1 DAY PASS
-    # -------------------------------------------------------------------------
-    'plan_1day': {
-        # PLAN NAME
-        # Element: Title text at top of plan card
-        'name': '1 Day',
-
-        # PRICE (one-time payment)
-        # Element: Large price number on plan card
-        'price': 2.50,
-
-        # FEATURES LIST
-        # Element: Bullet points with checkmarks on plan card
-        'features': [
-            '50 message posts limit',
-            'Personal use'
-        ],
-
-        # MESSAGE LIMIT
-        # How many messages user can send total
-        'message_limit': 50,
-
-        # USAGE TYPE
-        # 'allowance' = limit resets after period
-        # 'amount' = fixed total, never resets
-        'usage_type': 'amount',
-
-        # ALLOWANCE PERIOD
-        # Set to None for 'amount' type
-        # Or 'daily'/'weekly'/'monthly' for 'allowance' type
-        'allowance_period': None,
-
-        # DURATION DAYS
-        # How many days the plan lasts after purchase
-        'duration_days': 1,
-
-        # GLOW COLOR
-        # Element: Glowing border effect around plan card on hover
-        'glow_color': 'rgba(255, 255, 255, 0.6)',
-
-        # BUTTON TEXT
-        # Element: Text on the purchase button
-        'button_text': 'Purchase',
-
-        # MAX CHANNELS PER SERVER
-        # How many channels user can select from each server
-        # -1 = unlimited, any positive number = that limit
-        'max_channels_per_server': 2,
-    },
-
-    # -------------------------------------------------------------------------
-    # 3 DAY PASS
-    # -------------------------------------------------------------------------
-    'plan_3day': {
-        'name': '3 Days',
-        'price': 5,
-        'features': [
-            '50 message posts limit per day',
-            'Daily Limit',
-            'Personal use'
-        ],
-        'message_limit': 50,
-        'usage_type': 'allowance',
-        'allowance_period': 'daily',  # Resets every day
-        'duration_days': 3,
-        'glow_color': 'rgba(255, 255, 255, 0.6)',
-        'button_text': 'Purchase',
-        'max_channels_per_server': 2,  # -1 = unlimited
-    },
-
-    # -------------------------------------------------------------------------
-    # 7 DAY PASS
-    # -------------------------------------------------------------------------
-    'plan_7day': {
-        'name': '7 Days',
-        'price': 7.50,
-        'features': [
-            '70 message posts limit per day',
-            'Daily Limit',
-            'Personal use'
-        ],
-        'message_limit': 70,
-        'usage_type': 'allowance',
-        'allowance_period': 'daily',
-        'duration_days': 7,
-        'glow_color': 'rgba(21, 216, 188, 0.6)',
-        'button_text': 'Purchase',
-        'max_channels_per_server': 2,  # -1 = unlimited
-    },
-}
-
-
-# =============================================================================
 # BUSINESS PLANS (Team subscriptions)
 # =============================================================================
 # Displayed in the "Business" section of the Purchase page.
@@ -292,7 +191,7 @@ BUSINESS_PLANS = {
         # PRICING
         # Element: Large price number on plan card
         'price_monthly': 20,
-        'price_yearly': 195,
+        'price_yearly': 192,
 
         # FEATURES LIST
         # Element: Bullet points with checkmarks on plan card
@@ -322,7 +221,7 @@ BUSINESS_PLANS = {
         'glow_color': 'rgba(255, 255, 255, 0.6)',
 
         # SAVINGS TEXT & COLOR (shown when Yearly selected)
-        'savings_text': '$16.25 per month',
+        'savings_text': '$16 per month',
         'savings_color': '#15d8bc',
 
         # BUTTON TEXT

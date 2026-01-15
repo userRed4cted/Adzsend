@@ -55,12 +55,9 @@
 
         <div class="panel-container">
             <div class="purchase-container">
-                <!-- Mode Toggle -->
-                <div class="purchase-mode-toggle">
-                    <button class="mode-btn active" data-mode="subscriptions">Subscriptions</button>
-                    <!-- One-time purchase temporarily disabled -->
-                    <!-- <button class="mode-btn" data-mode="one-time">One Time Purchase</button> -->
-                    <button class="mode-btn" data-mode="business">Teams</button>
+                <!-- View Switch Button -->
+                <div class="purchase-view-switch">
+                    <button class="view-switch-btn" id="viewSwitchBtn" onclick="togglePurchaseView()">View team plans</button>
                 </div>
 
                 <!-- Subscriptions Section -->
@@ -129,51 +126,6 @@
                         {% endfor %}
                     </div>
                 </div>
-
-{#
-                <!-- One-Time Purchase Section - TEMPORARILY DISABLED -->
-                <div class="purchase-section" id="one-time-section" style="display: none;">
-                    <div class="plans-grid">
-                        {% for plan_id, plan in one_time_plans.items() %}
-                        <div class="plan-card" data-plan-id="{{ plan_id }}" data-glow="{{ plan.glow_color }}">
-                            <div class="plan-header">
-                                <h3 class="plan-name">{{ plan.name }}</h3>
-                                <div class="plan-price-section">
-                                    <div class="price-row">
-                                        <span class="price">${{ "%.2f"|format(plan.price) if plan.price % 1 != 0 else "%.0f"|format(plan.price) }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="plan-features">
-                                {% for feature in plan.features %}
-                                <div class="feature">
-                                    <img src="{{ url_for('static', filename='tick.png') }}" alt="✓" class="check-icon" width="20" height="20">
-                                    <span>{{ feature }}</span>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            <button class="purchase-btn" data-plan-type="one-time" data-plan-id="{{ plan_id }}"
-                                {% if not session.get('user') %}disabled style="opacity: 0.5; cursor: not-allowed;"{% endif %}
-                                {% if plan_status and plan_status.has_plan and plan_status.plan_id != 'plan_free' %}data-is-adjust="true"{% endif %}>
-                                {% if not session.get('user') %}
-                                    Must be logged in
-                                {% elif plan_status and plan_status.has_plan %}
-                                    {% if plan_status.plan_id == plan_id and plan_status.plan_type == 'one-time' %}
-                                        Current Plan
-                                    {% elif plan_status.plan_id != 'plan_free' %}
-                                        Adjust Plan
-                                    {% else %}
-                                        {{ plan.button_text }}
-                                    {% endif %}
-                                {% else %}
-                                    {{ plan.button_text }}
-                                {% endif %}
-                            </button>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-#}
 
                 <!-- Business Section -->
                 <div class="purchase-section" id="business-section" style="display: none;">
@@ -245,30 +197,13 @@
     </div>
 
     <script>
-        // Dropdown menu toggle
-        const menuIcon = document.getElementById('menu-icon');
-        const dropdownMenu = document.getElementById('dropdown-menu');
-
-        if (menuIcon) {
-            menuIcon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                dropdownMenu.classList.toggle('show');
-            });
-        }
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (dropdownMenu && !dropdownMenu.contains(e.target) && menuIcon && !menuIcon.contains(e.target)) {
-                dropdownMenu.classList.remove('show');
-            }
-        });
-
-        // Mode toggle (Subscriptions vs One-Time vs Business) with fade effect and rate limiting
-        const modeButtons = document.querySelectorAll('.mode-btn');
+        // View toggle (Subscriptions vs Business/Teams) with fade effect and rate limiting
         const subscriptionsSection = document.getElementById('subscriptions-section');
-        const oneTimeSection = document.getElementById('one-time-section');
         const businessSection = document.getElementById('business-section');
-        let isModeToggling = false;  // Rate limiting flag
+        const viewSwitchBtn = document.getElementById('viewSwitchBtn');
+        const billingToggle = document.getElementById('billingToggle');
+        const businessBillingToggle = document.getElementById('businessBillingToggle');
+        let isModeToggling = false;
 
         // Helper function to check if element is visible
         function isVisible(el) {
@@ -277,63 +212,100 @@
             return style.display !== 'none';
         }
 
-        modeButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                // Rate limiting - prevent spam clicking during animation
-                if (isModeToggling) {
-                    return;
+        // Toggle between personal and team plans
+        window.togglePurchaseView = function() {
+            // Rate limiting - prevent spam clicking during animation
+            if (isModeToggling) {
+                return;
+            }
+
+            // Determine which section is currently visible
+            let currentSection = null;
+            let newSection = null;
+            let newView = '';
+
+            if (isVisible(subscriptionsSection)) {
+                currentSection = subscriptionsSection;
+                newSection = businessSection;
+                newView = 'business';
+                viewSwitchBtn.textContent = 'View personal plans';
+            } else {
+                currentSection = businessSection;
+                newSection = subscriptionsSection;
+                newView = 'subscriptions';
+                viewSwitchBtn.textContent = 'View team plans';
+            }
+
+            // Skip if new section doesn't exist
+            if (!newSection) return;
+
+            // Sync billing toggles before switching
+            if (billingToggle && businessBillingToggle) {
+                if (newView === 'business') {
+                    // Switching to business, sync business toggle to match personal
+                    businessBillingToggle.checked = billingToggle.checked;
+                } else {
+                    // Switching to personal, sync personal toggle to match business
+                    billingToggle.checked = businessBillingToggle.checked;
                 }
+            }
 
-                const mode = btn.dataset.mode;
+            // Lock the toggle during animation
+            isModeToggling = true;
 
-                // Update button states
-                modeButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+            // Fade out current section
+            if (currentSection) {
+                currentSection.classList.add('fade-out');
+            }
 
-                // Determine which section is currently visible (using computed style)
-                let currentSection = null;
-                if (isVisible(subscriptionsSection)) currentSection = subscriptionsSection;
-                else if (oneTimeSection && isVisible(oneTimeSection)) currentSection = oneTimeSection;
-                else if (isVisible(businessSection)) currentSection = businessSection;
-
-                // Determine which section to show
-                let newSection = null;
-                if (mode === 'subscriptions') newSection = subscriptionsSection;
-                else if (mode === 'one-time') newSection = oneTimeSection;
-                else if (mode === 'business') newSection = businessSection;
-
-                // Skip if already on the right section or new section is null
-                if (currentSection === newSection || !newSection) return;
-
-                // Lock the toggle during animation
-                isModeToggling = true;
-
-                // Fade out current section
+            // After fade out, switch sections and fade in
+            setTimeout(() => {
                 if (currentSection) {
-                    currentSection.classList.add('fade-out');
+                    currentSection.style.display = 'none';
+                    currentSection.classList.remove('fade-out');
                 }
 
-                // After fade out, switch sections and fade in
+                newSection.style.display = 'block';
+                newSection.classList.add('fade-in');
+
+                // Update pricing display based on toggle state
+                if (newView === 'business') {
+                    const isYearly = businessBillingToggle.checked;
+                    const businessMonthlyPrices = document.querySelectorAll('.business-monthly-price');
+                    const businessYearlyPrices = document.querySelectorAll('.business-yearly-price');
+                    const businessMonthlyPeriods = document.querySelectorAll('.business-monthly-period');
+                    const businessYearlyPeriods = document.querySelectorAll('.business-yearly-period');
+                    const businessYearlySavings = document.querySelectorAll('.business-yearly-savings');
+
+                    businessMonthlyPrices.forEach(el => el.style.display = isYearly ? 'none' : 'flex');
+                    businessYearlyPrices.forEach(el => el.style.display = isYearly ? 'flex' : 'none');
+                    businessMonthlyPeriods.forEach(el => el.style.display = isYearly ? 'none' : 'inline');
+                    businessYearlyPeriods.forEach(el => el.style.display = isYearly ? 'inline' : 'none');
+                    businessYearlySavings.forEach(el => el.style.display = isYearly ? 'block' : 'none');
+                } else {
+                    const isYearly = billingToggle.checked;
+                    const monthlyPrices = document.querySelectorAll('#subscriptions-section .monthly-price');
+                    const yearlyPrices = document.querySelectorAll('#subscriptions-section .yearly-price');
+                    const monthlyPeriods = document.querySelectorAll('#subscriptions-section .monthly-period');
+                    const yearlyPeriods = document.querySelectorAll('#subscriptions-section .yearly-period');
+                    const yearlySavings = document.querySelectorAll('#subscriptions-section .yearly-savings');
+
+                    monthlyPrices.forEach(el => el.style.display = isYearly ? 'none' : 'flex');
+                    yearlyPrices.forEach(el => el.style.display = isYearly ? 'flex' : 'none');
+                    monthlyPeriods.forEach(el => el.style.display = isYearly ? 'none' : 'inline');
+                    yearlyPeriods.forEach(el => el.style.display = isYearly ? 'inline' : 'none');
+                    yearlySavings.forEach(el => el.style.display = isYearly ? 'block' : 'none');
+                }
+
+                // Remove fade-in class after animation and unlock toggle
                 setTimeout(() => {
-                    if (currentSection) {
-                        currentSection.style.display = 'none';
-                        currentSection.classList.remove('fade-out');
-                    }
-
-                    newSection.style.display = 'block';
-                    newSection.classList.add('fade-in');
-
-                    // Remove fade-in class after animation and unlock toggle
-                    setTimeout(() => {
-                        newSection.classList.remove('fade-in');
-                        isModeToggling = false;  // Unlock after animation completes
-                    }, 300);
+                    newSection.classList.remove('fade-in');
+                    isModeToggling = false;  // Unlock after animation completes
                 }, 300);
-            });
-        });
+            }, 300);
+        };
 
         // Billing toggle (Monthly/Yearly) with fade effect on entire cards and rate limiting
-        const billingToggle = document.getElementById('billingToggle');
         const subscriptionCards = document.querySelectorAll('#subscriptions-section .plan-card');
         const monthlyPrices = document.querySelectorAll('#subscriptions-section .monthly-price');
         const yearlyPrices = document.querySelectorAll('#subscriptions-section .yearly-price');
@@ -353,6 +325,11 @@
 
                 isToggling = true;  // Lock the toggle
                 const isYearly = billingToggle.checked;
+
+                // Sync business billing toggle
+                if (businessBillingToggle) {
+                    businessBillingToggle.checked = isYearly;
+                }
 
                 // Fade out all subscription plan cards
                 subscriptionCards.forEach(card => card.classList.add('fade-out'));
@@ -395,7 +372,6 @@
         }
 
         // Business Billing toggle (Monthly/Yearly) with fade effect on entire cards and rate limiting
-        const businessBillingToggle = document.getElementById('businessBillingToggle');
         const businessCards = document.querySelectorAll('#business-section .plan-card');
         const businessMonthlyPrices = document.querySelectorAll('.business-monthly-price');
         const businessYearlyPrices = document.querySelectorAll('.business-yearly-price');
@@ -415,6 +391,11 @@
 
                 isBusinessToggling = true;  // Lock the toggle
                 const isYearly = businessBillingToggle.checked;
+
+                // Sync personal billing toggle
+                if (billingToggle) {
+                    billingToggle.checked = isYearly;
+                }
 
                 // Fade out all business plan cards
                 businessCards.forEach(card => card.classList.add('fade-out'));
@@ -551,6 +532,31 @@
                     await showAlert('Error activating plan: ' + error, 'Error');
                 }
             });
+        });
+
+        // Apply glow effect on hover using data-glow attribute
+        document.querySelectorAll('.plan-card').forEach(card => {
+            const glowColor = card.getAttribute('data-glow');
+            if (glowColor) {
+                // Parse rgba values from string like "rgba(255, 255, 255, 0.6)"
+                const match = glowColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+                if (match) {
+                    const r = match[1];
+                    const g = match[2];
+                    const b = match[3];
+                    const a = match[4] || '1';
+
+                    card.addEventListener('mouseenter', () => {
+                        card.style.filter = `drop-shadow(0 0 15px rgba(${r}, ${g}, ${b}, ${a * 0.5}))`;
+                        card.style.borderColor = `rgba(${r}, ${g}, ${b}, ${a})`;
+                    });
+
+                    card.addEventListener('mouseleave', () => {
+                        card.style.filter = 'drop-shadow(0 0 0px rgba(255, 255, 255, 0))';
+                        card.style.borderColor = '#222225';
+                    });
+                }
+            }
         });
 
     </script>

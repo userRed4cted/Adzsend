@@ -1073,9 +1073,9 @@ def increment_business_usage(user_id, team_id=None):
     conn.close()
 
     # Also record daily stats for analytics
-    # Use team_id=0 for personal stats to avoid NULL in UNIQUE constraint
-    effective_team_id = team_id if team_id else 0
-    record_daily_stat(user_id, effective_team_id)
+    # Use NULL for personal stats, actual team_id for team sends
+    # This ensures personal analytics can properly filter team messages
+    record_daily_stat(user_id, team_id)
 
 
 def record_daily_stat(user_id, team_id):
@@ -1264,15 +1264,13 @@ def get_plan_status(user_id):
             next_reset = (last_reset + timedelta(days=30)).isoformat()
 
     # Get max_channels_per_server from plan config
-    from config import SUBSCRIPTION_PLANS, ONE_TIME_PLANS, BUSINESS_PLANS
+    from config import SUBSCRIPTION_PLANS, BUSINESS_PLANS
     plan_id = subscription['plan_id']
     max_channels_per_server = 2  # Default
 
     # Look up in appropriate plan dictionary
     if plan_id in SUBSCRIPTION_PLANS:
         max_channels_per_server = SUBSCRIPTION_PLANS[plan_id].get('max_channels_per_server', -1)
-    elif plan_id in ONE_TIME_PLANS:
-        max_channels_per_server = ONE_TIME_PLANS[plan_id].get('max_channels_per_server', 2)
     elif plan_id in BUSINESS_PLANS:
         max_channels_per_server = BUSINESS_PLANS[plan_id].get('max_channels_per_server', -1)
 
@@ -2773,11 +2771,11 @@ def get_personal_daily_stats(user_id, start_date=None, end_date=None):
     if not start_date:
         start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
 
-    # Get personal stats (where team_id is NULL or 0)
+    # Get personal stats (where team_id is NULL, excluding team messages)
     cursor.execute('''
         SELECT date, messages_sent
         FROM daily_message_stats
-        WHERE user_id = ? AND (team_id IS NULL OR team_id = 0) AND date >= ? AND date <= ?
+        WHERE user_id = ? AND team_id IS NULL AND date >= ? AND date <= ?
         ORDER BY date ASC
     ''', (user_id, start_date, end_date))
 

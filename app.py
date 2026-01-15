@@ -68,9 +68,7 @@ def inject_user_data():
     if 'user' in session:
         user = get_user_by_id(session.get('user_id'))
         if user:
-            user_data = get_user_data(user['id'])
-            print(f"[DEBUG] inject_user_data: user_id={user['id']}, date_format={user_data.get('date_format')}, profile_photo={user_data.get('profile_photo')}")
-            return {'user_data': user_data}
+            return {'user_data': get_user_data(user['id'])}
     return {'user_data': None}
 
 # Make site config available in all templates
@@ -557,9 +555,25 @@ def verify_code_page():
         return redirect(url_for('purchase'))
     return redirect(url_for('settings'))
 
+@app.route('/discover')
+def discover():
+    from config import NAVBAR
+
+    return render_template('discover.html',
+                         user=session.get('user'),
+                         auth_labels=NAVBAR['auth_buttons'])
+
+@app.route('/support')
+def support():
+    from config import NAVBAR
+
+    return render_template('support.html',
+                         user=session.get('user'),
+                         auth_labels=NAVBAR['auth_buttons'])
+
 @app.route('/purchase')
 def purchase():
-    from config import SUBSCRIPTION_PLANS, ONE_TIME_PLANS, BUSINESS_PLANS
+    from config import SUBSCRIPTION_PLANS, BUSINESS_PLANS
 
     # Get plan status if user is logged in
     plan_status = None
@@ -578,7 +592,6 @@ def purchase():
 
     return render_template('purchase.html',
                          subscription_plans=SUBSCRIPTION_PLANS,
-                         one_time_plans=ONE_TIME_PLANS,
                          business_plans=BUSINESS_PLANS,
                          plan_status=plan_status,
                          has_business=has_business,
@@ -785,15 +798,19 @@ def verify_code_api():
     session.permanent = True
 
     # Return success with redirect URL
-    # Signup goes to purchase page, login goes to settings
-    redirect_url = url_for('purchase') if purpose == 'signup' else url_for('settings')
-    return jsonify({'success': True, 'redirect': redirect_url})
+    # Signup goes to purchase page, login stays on same page (no redirect)
+    if purpose == 'signup':
+        redirect_url = url_for('purchase')
+        return jsonify({'success': True, 'redirect': redirect_url})
+    else:
+        # Login - stay on same page, just reload to update navbar
+        return jsonify({'success': True, 'reload': True})
 
 @app.route('/api/set-plan', methods=['POST'])
 @rate_limit('api')
 def set_plan():
     """API endpoint to activate a plan for a user."""
-    from config import SUBSCRIPTION_PLANS, ONE_TIME_PLANS, BUSINESS_PLANS
+    from config import SUBSCRIPTION_PLANS, BUSINESS_PLANS
     from flask import jsonify
 
     # CSRF protection
@@ -808,9 +825,9 @@ def set_plan():
     if not data:
         return jsonify({'success': False, 'error': 'Invalid request data'}), 400
 
-    plan_type = data.get('plan_type')  # 'subscription', 'one-time', or 'business'
+    plan_type = data.get('plan_type')  # 'subscription' or 'business'
     plan_id = data.get('plan_id')
-    billing_period = data.get('billing_period')  # 'monthly' or 'yearly' (for subscriptions only)
+    billing_period = data.get('billing_period')  # 'monthly' or 'yearly'
 
     # Validate plan data
     is_valid, error_msg = validate_plan_data(plan_type, plan_id, billing_period)
@@ -831,10 +848,7 @@ def set_plan():
             return jsonify({'success': False, 'error': 'Invalid billing period'}), 400
         plan_config = BUSINESS_PLANS[plan_id]
     else:
-        if plan_id not in ONE_TIME_PLANS:
-            return jsonify({'success': False, 'error': 'Invalid one-time plan'}), 400
-        plan_config = ONE_TIME_PLANS[plan_id]
-        billing_period = None  # One-time plans don't have billing periods
+        return jsonify({'success': False, 'error': 'Invalid plan type'}), 400
 
     # Get user from database
     user = get_user_by_id(session.get('user_id'))
@@ -934,13 +948,23 @@ def update_token():
         print(f"[ERROR] Token update error: {str(e)}")
         return {'error': 'Failed to verify token'}, 500
 
-@app.route('/panel')
-def panel():
-    # Redirect old personal panel to new test page
-    return redirect(url_for('test_page'))
+@app.route('/old_personal_panel')
+def old_personal_panel():
+    # Old personal panel - kept for backwards compatibility
+    if 'authenticated' not in session:
+        return redirect(url_for('login_page'))
 
-@app.route('/test')
-def test_page():
+    # Get user info
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login_page'))
+
+    # Redirect to new dashboard
+    return redirect(url_for('dashboard'))
+
+@app.route('/dashboard')
+def dashboard():
     if 'authenticated' not in session:
         return redirect(url_for('login_page'))
 
@@ -1193,11 +1217,12 @@ def send_message_single():
         if resp.status_code == 200 or resp.status_code == 201:
             try:
                 if is_business and owner_user_id:
-                    # For business sends: update owner's usage (team pool) and member's business stats
+                    # For business sends: update owner's and member's business stats
                     from database import increment_business_usage
-                    record_successful_send(owner_user_id)  # Owner's pool gets decremented
                     team_id = team['id'] if team else None
-                    increment_business_usage(user['id'], team_id)   # Member's business stats get updated
+                    increment_business_usage(owner_user_id, team_id)  # Owner's business usage
+                    if user['id'] != owner_user_id:  # Only increment member if not owner
+                        increment_business_usage(user['id'], team_id)  # Member's business stats
                 else:
                     # For personal sends: update user's own usage
                     record_successful_send(user['id'])
@@ -1262,6 +1287,26 @@ def send_message():
     if not data:
         return {'error': 'Invalid request data'}, 400
 
+    is_business = data.get('is_business', False)
+    owner_user_id = None  # Will be set if business send
+    team = None  # Will store team info if business send
+
+    if is_business:
+        # For business sends, check owner's usage limits
+        from database import get_business_team_by_owner, get_business_team_by_member
+        team = get_business_team_by_owner(user['id'])
+        if team:
+            # User is owner
+            owner_user_id = user['id']
+        else:
+            # User is member - get owner (use discord_id from user object)
+            team = get_business_team_by_member(user['discord_id'])
+            if team:
+                owner_user_id = team['owner_user_id']
+
+        if not owner_user_id:
+            return {'error': 'No business team found'}, 404
+
     channels = data.get('channels', [])
     message_content = data.get('message', '').strip()
 
@@ -1292,7 +1337,9 @@ def send_message():
 
     for channel in channels:
         # Check if user can still send before each message
-        can_send, reason, remaining = can_send_message(user['id'])
+        # For business sends, check owner's limits; for personal sends, check user's limits
+        check_user_id = owner_user_id if is_business else user['id']
+        can_send, reason, remaining = can_send_message(check_user_id)
         if not can_send:
             results['failed'].append(f'{channel.get("name")} (Limit reached: {reason})')
             continue
@@ -1311,11 +1358,21 @@ def send_message():
             if resp.status_code == 200 or resp.status_code == 201:
                 results['success'].append(channel_name)
                 # Track successful send in database
-                record_successful_send(user['id'])
+                if is_business and owner_user_id:
+                    # For business sends: update owner's and member's business stats
+                    from database import increment_business_usage
+                    team_id = team['id'] if team else None
+                    increment_business_usage(owner_user_id, team_id)  # Owner's business usage
+                    if user['id'] != owner_user_id:  # Only increment member if not owner
+                        increment_business_usage(user['id'], team_id)  # Member's business stats
+                else:
+                    # For personal sends: update user's own usage
+                    record_successful_send(user['id'])
                 # Also update session for backward compatibility
                 if 'sent_count' not in session:
                     session['sent_count'] = 0
                 session['sent_count'] += 1
+                session.modified = True
             elif resp.status_code == 429:
                 results['failed'].append(f'{channel_name} (Rate limited)')
             else:
@@ -1502,92 +1559,8 @@ def team_panel():
 
 @app.route('/settings')
 def settings():
-    if 'authenticated' not in session:
-        return redirect(url_for('login_page'))
-
-    # Check if IP has changed
-    client_ip = get_client_ip()
-    if 'login_ip' in session and session['login_ip'] != client_ip:
-        session.clear()
-        return redirect(url_for('login_page'))
-
-    # Get user from database
-    user = get_user_by_id(session.get('user_id'))
-    if not user:
-        session.clear()
-        return redirect(url_for('login_page'))
-
-    # Ensure user_id is in session (for users who logged in before this was added)
-    if 'user_id' not in session:
-        session['user_id'] = user['id']
-
-    # Get plan status information
-    plan_status = get_plan_status(user['id'])
-    sent_count = session.get('sent_count', 0)
-
-    # Get user data (includes message_delay)
-    user_data = get_user_data(user['id'])
-
-    # Check if user has business access and get business plan status
-    has_business = has_business_access(user['id'], session['user']['id'])
-    business_plan_status = None
-
-    if has_business:
-        from database import get_business_team_by_owner, get_business_team_by_member, get_business_plan_status
-        # Check if owner
-        team = get_business_team_by_owner(user['id'])
-        if team:
-            # User is owner - get aggregated business plan status
-            business_plan_status = get_business_plan_status(team['id'], user['id'])
-        else:
-            # User is member - get owner's business plan status with aggregated usage
-            team = get_business_team_by_member(session['user']['id'])
-            if team:
-                business_plan_status = get_business_plan_status(team['id'], team['owner_user_id'])
-
-    # Check if user is admin (use email from database, not session, as session might be stale)
-    is_admin_user = is_admin(user.get('email'))
-
-    # Get purchase history for invoices
-    from database import get_purchase_history
-    purchase_history = get_purchase_history(user['id'])
-
-    # Get Discord OAuth info for the Discord linking panel
-    discord_oauth_info = get_discord_oauth_info(user['id'])
-
-    # Check if this is a fresh OAuth callback (user just returned from Discord)
-    is_oauth_callback = request.args.get('discord_success') == '1'
-
-    # Clear OAuth progress if not fully linked AND not a fresh callback
-    # (user refreshed page without completing the token verification step)
-    if discord_oauth_info and discord_oauth_info.get('has_oauth') and not discord_oauth_info.get('is_fully_linked'):
-        if not is_oauth_callback:
-            unlink_discord_oauth(user['id'])
-            discord_oauth_info = None
-
-    # Get email validation config for frontend
-    from config import BLACKLISTED_EMAIL_DOMAINS, ALLOWED_EMAIL_TLDS
-
-    response = app.make_response(render_template('settings.html',
-                                                user=session['user'],
-                                                sent_count=sent_count,
-                                                plan_status=plan_status,
-                                                user_data=user_data,
-                                                has_business=has_business,
-                                                is_owner=is_business_owner(user['id']),
-                                                is_admin_user=is_admin_user,
-                                                business_plan_status=business_plan_status,
-                                                purchase_history=purchase_history,
-                                                discord_oauth_info=discord_oauth_info,
-                                                user_email=user.get('email', ''),
-                                                adzsend_id=user.get('adzsend_id', ''),
-                                                blacklisted_email_domains=BLACKLISTED_EMAIL_DOMAINS,
-                                                allowed_email_tlds=ALLOWED_EMAIL_TLDS))
-    # Prevent caching of settings page
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache'
-    response.headers['Expires'] = '0'
-    return response
+    # Settings are now a popup in the panel, so redirect to panel
+    return redirect(url_for('panel'))
 
 @app.route('/api/change-email', methods=['POST'])
 @rate_limit('api')
@@ -1855,8 +1828,6 @@ def api_save_user_data():
         date_format = data.get('date_format')
         profile_photo = data.get('profile_photo')
 
-        print(f"[DEBUG] api_save_user_data received: date_format={date_format}, profile_photo={profile_photo}")
-
         # Check content filter for draft message and flag user if needed
         if draft_message and draft_message.strip():
             is_valid, filter_reason = check_message_content(draft_message, user['id'])
@@ -1865,7 +1836,6 @@ def api_save_user_data():
 
         # Save to database
         save_user_data(user['id'], selected_channels, draft_message, message_delay, date_format, profile_photo)
-        print(f"[DEBUG] User data saved successfully for user {user['id']}")
 
         return jsonify({'success': True}), 200
 
@@ -2981,12 +2951,12 @@ def handle_link_account_callback(user_id, state):
     # Check for error response
     error = request.args.get('error')
     if error:
-        return redirect(url_for('settings') + '?error=Authorization%20cancelled')
+        return render_template('oauth_callback.html', success=False, error='Authorization cancelled')
 
     # Get authorization code
     code = request.args.get('code')
     if not code:
-        return redirect(url_for('settings') + '?error=No%20authorization%20code')
+        return render_template('oauth_callback.html', success=False, error='No authorization code')
 
     # Exchange code for access token
     token_url = f'{DISCORD_API_BASE}/oauth2/token'
@@ -3003,7 +2973,7 @@ def handle_link_account_callback(user_id, state):
 
         if token_response.status_code != 200:
             print(f"[LINK ACCOUNT] Token exchange failed: {token_response.text}")
-            return redirect(url_for('settings') + '?error=Failed%20to%20get%20access%20token')
+            return render_template('oauth_callback.html', success=False, error='Failed to get access token')
 
         token_json = token_response.json()
         access_token = token_json.get('access_token')
@@ -3020,7 +2990,7 @@ def handle_link_account_callback(user_id, state):
 
         if user_response.status_code != 200:
             print(f"[LINK ACCOUNT] Failed to get user info: {user_response.text}")
-            return redirect(url_for('settings') + '?error=Failed%20to%20get%20user%20info')
+            return render_template('oauth_callback.html', success=False, error='Failed to get user info')
 
         discord_user = user_response.json()
         discord_id = discord_user.get('id')
@@ -3044,14 +3014,14 @@ def handle_link_account_callback(user_id, state):
             'expires_at': expires_at
         }
 
-        # Redirect back to settings for token input
-        return redirect(url_for('settings') + '?link_success=1')
+        # Return a page that closes the popup and notifies the parent window
+        return render_template('oauth_callback.html', success=True)
 
     except requests.exceptions.Timeout:
-        return redirect(url_for('settings') + '?error=Connection%20timeout')
+        return render_template('oauth_callback.html', success=False, error='Connection timeout')
     except Exception as e:
         print(f"[LINK ACCOUNT] Error: {str(e)}")
-        return redirect(url_for('settings') + '?error=An%20error%20occurred')
+        return render_template('oauth_callback.html', success=False, error='An error occurred')
 
 
 @app.route('/discord/callback')

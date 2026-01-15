@@ -2,25 +2,79 @@
     <div class="navbar-content">
         <div class="navbar-left">
             <a href="{{ url_for('home') }}" style="display: flex; align-items: center; gap: 12px; text-decoration: none;">
-                <img src="{{ url_for('static', filename='favicon.png') }}" alt="Logo" style="width: 51px; height: 51px; display: block;">
+                <img src="/static/favicon.png" alt="Logo" style="width: 51px; height: 51px; display: block; object-fit: contain;" loading="eager">
                 <h1 class="navbar-title">Ad <span class="gradient-z">Z</span> send</h1>
             </a>
         </div>
         <div class="nav-right">
-            {% if user %}
-            <div style="display: flex; flex-direction: row; align-items: center; gap: 12px; background: #1A1A1E; padding: 8px 12px; border-radius: 8px; box-shadow: none;">
-                <div class="navbar-profile-circle" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
-                    <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;" class="user-profile-photo">
+            <!-- Navigation Links -->
+            <nav class="nav-links">
+                <a href="{{ url_for('home') }}" class="nav-link" data-page="home">Home</a>
+                <a href="{{ url_for('purchase') }}" class="nav-link" data-page="purchase">Purchase</a>
+                <a href="{{ url_for('discover') }}" class="nav-link" data-page="discover">Discover</a>
+                <a href="{{ url_for('dashboard') if user else '#' }}" class="nav-link{% if not user %} disabled{% endif %}" data-page="dashboard"{% if not user %} onclick="return false;"{% endif %}>Dashboard</a>
+                <a href="{{ url_for('support') }}" class="nav-link" data-page="support">Support</a>
+            </nav>
+
+            <!-- User Profile / Auth Buttons -->
+            <div class="navbar-profile-container">
+                {% if user %}
+                <div class="navbar-profile-circle">
+                    <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" class="user-profile-photo">
                 </div>
-                <span style="color: #dcddde; font-size: 0.9rem;">Welcome!</span>
-                <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" style="width: 14px; height: 14px; cursor: pointer; filter: brightness(0) saturate(100%) invert(56%) sepia(6%) saturate(340%) hue-rotate(194deg) brightness(93%) contrast(87%);" onclick="openSettings()">
+                <span class="navbar-welcome-text">Welcome!</span>
+                <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" class="navbar-settings-icon" onclick="openSettings()">
+                {% else %}
+                <a href="{{ url_for('signup_page') }}" class="navbar-auth-link">Sign up</a>
+                <a href="{{ url_for('login_page') }}" class="navbar-auth-link">Login</a>
+                {% endif %}
             </div>
-            {% elif not session.get('user') %}
-                <div class="auth-buttons">
-                    <a href="{{ url_for('login_page') }}" class="auth-btn login-btn">{{ auth_labels.login }}</a>
-                    <a href="{{ url_for('signup_page') }}" class="auth-btn signup-btn">{{ auth_labels.signup }}</a>
-                </div>
-            {% endif %}
         </div>
     </div>
 </nav>
+
+<script>
+// Detect active page and mark navigation link
+(function() {
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.nav-link');
+
+    navLinks.forEach(link => {
+        const page = link.getAttribute('data-page');
+
+        // Check if current path matches this link
+        let isActive = false;
+
+        if (page === 'home' && (currentPath === '/' || currentPath === '/home')) {
+            isActive = true;
+        } else if (page === 'purchase' && currentPath.startsWith('/purchase')) {
+            isActive = true;
+        } else if (page === 'discover' && currentPath.startsWith('/discover')) {
+            isActive = true;
+        } else if (page === 'dashboard' && currentPath.startsWith('/dashboard')) {
+            isActive = true;
+        } else if (page === 'support' && currentPath.startsWith('/support')) {
+            isActive = true;
+        }
+
+        if (isActive) {
+            link.classList.add('active');
+        }
+    });
+})();
+
+// Logo retry on fail
+(function() {
+    const logoImg = document.querySelector('.navbar-left img[src*="favicon.png"]');
+    if (logoImg) {
+        logoImg.addEventListener('error', function() {
+            // Retry after 1 second
+            setTimeout(() => {
+                const currentSrc = logoImg.src;
+                logoImg.src = '';
+                logoImg.src = currentSrc + '?retry=' + Date.now();
+            }, 1000);
+        });
+    }
+})();
+</script>

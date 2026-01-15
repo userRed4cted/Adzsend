@@ -11,7 +11,7 @@ from .navbar import NAVBAR
 from .colors import COLORS
 from .pages import PAGES, get_page_title, get_page_subtitle, get_page_description, get_page_embed
 from .text import TEXT
-from .plans import SUBSCRIPTION_PLANS, ONE_TIME_PLANS, BUSINESS_PLANS
+from .plans import SUBSCRIPTION_PLANS, BUSINESS_PLANS
 from .admin import ADMIN_EMAILS, is_admin
 from .database_version import DATABASE_VERSION, DATABASE_WIPE_MESSAGE
 from .email import BLACKLISTED_EMAIL_DOMAINS, ALLOWED_EMAIL_TLDS

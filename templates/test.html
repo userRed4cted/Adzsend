@@ -652,7 +652,7 @@
                     <div class="profile-section">
                         {% if discord_linked and discord_info %}
                         <div class="profile-card">
-                            <div class="profile-avatar">
+                            <div class="profile-avatar" style="background: #121215;">
                                 {% if discord_info.avatar %}
                                 <img class="avatar-img" src="https://cdn.discordapp.com/avatars/{{ discord_info.id }}/{{ discord_info.avatar }}.png?size=128" alt="Avatar">
                                 {% else %}
@@ -669,6 +669,9 @@
                         </div>
                         {% else %}
                         <div class="profile-card">
+                            <div class="profile-avatar" style="background: #121215; display: flex; align-items: center; justify-content: center;">
+                                <img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord Logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 0;">
+                            </div>
                             <div class="profile-info">
                                 <div class="profile-name">No Discord Account</div>
                                 <div class="change-account-text">Change account</div>
@@ -1181,7 +1184,7 @@
                                         {% if is_team_owner and user %}
                                             <div class="channel-item analytics-member-item" data-adzsend-id="{{ user.adzsend_id }}" data-is-owner="true" style="cursor: pointer;">
                                                 <div class="mgmt-member-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
-                                                    <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                                                    <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;" class="user-profile-photo">
                                                 </div>
                                                 <span class="channel-name" style="display: flex; align-items: center; gap: 6px;">{{ user.adzsend_id }}<img src="{{ url_for('static', filename='OwnerDiscordCrown.png') }}" alt="Owner" title="Team owner" style="width: 16px; height: 16px;"></span>
                                             </div>

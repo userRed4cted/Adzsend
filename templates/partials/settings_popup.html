@@ -1,4 +1,9 @@
 <!-- Settings Popup -->
+<script>
+    window.userDateFormat = '{{ user_data.date_format if user_data and user_data.date_format else "mm/dd/yy" }}';
+    console.log('[DEBUG] Initial userDateFormat from template:', window.userDateFormat);
+    console.log('[DEBUG] user_data from template:', {{ user_data | tojson if user_data else 'null' }});
+</script>
 <div class="settings-popup-overlay" id="settings-popup-overlay">
     <div class="settings-popup">
         <!-- Settings Side Menu -->
@@ -6,7 +11,7 @@
             <!-- Profile Section -->
             <div class="settings-profile-section">
                 <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
-                    <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;" class="settings-sidebar-profile-img">
+                    <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;" class="user-profile-photo">
                 </div>
                 <span style="color: #dcddde; font-size: 0.9rem;">Welcome!</span>
             </div>
@@ -188,7 +193,7 @@
                     <div class="account-box">
                         <div class="account-profile-photo-container">
                             <div class="account-profile-photo" id="account-profile-photo" title="Change profile photo">
-                                <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" id="account-profile-img">
+                                <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" class="user-profile-photo">
                             </div>
                         </div>
                         <div class="account-info-rows">
@@ -873,58 +878,55 @@
     /* Discord Accounts Gallery View Styles */
     .discord-accounts-gallery-view {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, 100px);
+        gap: 0.75rem;
+        border: 1px solid #222225;
+        border-radius: 8px;
+        padding: 0.75rem;
     }
 
     .discord-gallery-card {
         display: flex;
         flex-direction: column;
         align-items: center;
-        background: #1A1A1E;
-        border: 1px solid #222225;
-        border-radius: 8px;
-        padding: 1.25rem 0.875rem;
-        gap: 0.625rem;
-        min-height: 200px;
-        justify-content: space-between;
+        background: transparent;
+        padding: 0.5rem 0.375rem;
+        gap: 0.5rem;
+        min-height: 88px;
+        width: 100px;
+        justify-content: flex-start;
     }
 
     .discord-gallery-avatar {
-        width: 64px;
-        height: 64px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
-        background-color: #1A1A1E !important;
-        overflow: visible;
+        background: #1A1A1E;
+        overflow: hidden;
         flex-shrink: 0;
         position: relative;
-        margin-top: 0.5rem;
     }
 
     .discord-gallery-avatar img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        border-radius: 50%;
-        background-color: #1A1A1E;
     }
 
     .discord-gallery-username {
         color: #dcddde;
-        font-size: 0.875rem;
+        font-size: 0.8925rem;
         font-family: 'gg sans Medium', sans-serif;
         text-align: center;
         word-break: break-word;
-        line-height: 1.3;
-        margin-top: 0.25rem;
+        line-height: 1.2;
     }
 
     .discord-gallery-id {
         color: #81828A;
-        font-size: 0.8rem;
-        font-family: 'gg sans', sans-serif;
+        font-size: 0.85rem;
+        font-family: 'gg sans Medium', sans-serif;
         text-align: center;
-        margin-bottom: 0.5rem;
     }
 
     .team-owner-crown:hover img {
@@ -1410,19 +1412,43 @@
         // Load saved date format
         function loadSavedDateFormat() {
             const savedFormat = typeof window.userDateFormat !== 'undefined' ? window.userDateFormat : 'mm/dd/yy';
+            console.log('[DEBUG] loadSavedDateFormat called. window.userDateFormat:', window.userDateFormat, 'savedFormat:', savedFormat);
             dateFormatRadios.forEach(radio => {
                 radio.checked = radio.value === savedFormat;
+                console.log('[DEBUG] Radio button', radio.value, 'checked:', radio.checked);
             });
+        }
+
+        // Update all date format labels on page
+        function updateAllDateFormatLabels(format) {
+            // Update all elements with date-format-label class
+            document.querySelectorAll('.date-format-label').forEach(el => {
+                const template = el.getAttribute('data-label-template');
+                if (template) {
+                    el.textContent = template.replace('%FORMAT%', format);
+                } else {
+                    el.textContent = format;
+                }
+            });
+
+            // Update signup date format label
+            const signupDateFormat = document.getElementById('signup-date-format');
+            if (signupDateFormat) {
+                signupDateFormat.textContent = format;
+            }
         }
 
         // Save date format to database and update global variable
         function saveDateFormat(format) {
-            // Update global variable for immediate effect
-            if (typeof window !== 'undefined') {
-                window.userDateFormat = format;
-            }
+            console.log('[DEBUG] saveDateFormat called with format:', format);
 
-            // Dispatch event to notify other parts of the page
+            // Update global variable for immediate effect
+            window.userDateFormat = format;
+
+            // Update all date format labels immediately
+            updateAllDateFormatLabels(format);
+
+            // Dispatch event to notify other parts of the page (for test.html analytics, etc)
             window.dispatchEvent(new CustomEvent('dateFormatChanged', { detail: { format: format } }));
 
             // Save to database
@@ -1436,19 +1462,15 @@
                     date_format: format
                 })
             })
-            .then(response => {
-                if (!response.ok) {
-                    alert('Save failed: HTTP ' + response.status);
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
+                console.log('[DEBUG] Save date format response:', data);
                 if (!data.success) {
-                    alert('Save failed: ' + data.error);
+                    console.error('Failed to save date format:', data.error);
                 }
             })
             .catch(error => {
-                alert('Error: ' + error.message);
+                console.error('Error saving date format:', error);
             });
         }
 
@@ -1906,22 +1928,9 @@
                     currentProfilePhoto = photo;
                     const newPhotoUrl = `/static/profile_photos/${photo}`;
 
-                    // Update ALL profile photos across the entire page
-                    const profileImg = document.getElementById('account-profile-img');
-                    if (profileImg) profileImg.src = newPhotoUrl;
-
-                    const sidebarImg = document.querySelector('.settings-sidebar-profile-img');
-                    if (sidebarImg) sidebarImg.src = newPhotoUrl;
-
-                    // Update all profile photo images (navbar, profile avatar, etc)
-                    document.querySelectorAll('img').forEach(img => {
-                        if (img.src && img.src.includes('/static/profile_photos/') &&
-                            (img.closest('.profile-avatar') ||
-                             img.closest('.navbar-profile-circle') ||
-                             img.closest('.settings-sidebar-profile') ||
-                             img.id === 'account-profile-img')) {
-                            img.src = newPhotoUrl;
-                        }
+                    // Update ALL user profile photos
+                    document.querySelectorAll('.user-profile-photo').forEach(img => {
+                        img.src = newPhotoUrl;
                     });
 
                     closeProfilePicker();

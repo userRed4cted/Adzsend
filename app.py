@@ -68,7 +68,9 @@ def inject_user_data():
     if 'user' in session:
         user = get_user_by_id(session.get('user_id'))
         if user:
-            return {'user_data': get_user_data(user['id'])}
+            user_data = get_user_data(user['id'])
+            print(f"[DEBUG] inject_user_data: user_id={user['id']}, date_format={user_data.get('date_format')}, profile_photo={user_data.get('profile_photo')}")
+            return {'user_data': user_data}
     return {'user_data': None}
 
 # Make site config available in all templates
@@ -1853,6 +1855,8 @@ def api_save_user_data():
         date_format = data.get('date_format')
         profile_photo = data.get('profile_photo')
 
+        print(f"[DEBUG] api_save_user_data received: date_format={date_format}, profile_photo={profile_photo}")
+
         # Check content filter for draft message and flag user if needed
         if draft_message and draft_message.strip():
             is_valid, filter_reason = check_message_content(draft_message, user['id'])
@@ -1861,7 +1865,7 @@ def api_save_user_data():
 
         # Save to database
         save_user_data(user['id'], selected_channels, draft_message, message_delay, date_format, profile_photo)
-        print(f"[DEBUG] Profile photo saved successfully")
+        print(f"[DEBUG] User data saved successfully for user {user['id']}")
 
         return jsonify({'success': True}), 200
 
@@ -3330,15 +3334,16 @@ def get_linked_accounts():
         return {'error': 'Not logged in'}, 401
 
     from database import get_linked_discord_accounts, get_linked_discord_account_count
-    from config import get_account_limit, can_link_more_accounts
+    from config import get_account_limit, can_link_more_accounts, is_admin
 
     user = get_user_by_internal_id(user_id)
     if not user:
         return {'error': 'User not found'}, 404
 
+    user_is_admin = is_admin(user.get('email'))
     accounts = get_linked_discord_accounts(user_id)
     count = get_linked_discord_account_count(user_id)
-    can_link, limit, remaining = can_link_more_accounts(user.get('email'), count)
+    can_link, limit, remaining = can_link_more_accounts(user.get('email'), count, user_is_admin)
 
     return {
         'success': True,
@@ -3401,14 +3406,15 @@ def discord_link_account():
 
     # Check if user can link more accounts
     from database import get_linked_discord_account_count
-    from config import can_link_more_accounts
+    from config import can_link_more_accounts, is_admin
 
     user = get_user_by_internal_id(user_id)
     if not user:
         return redirect(url_for('settings') + '?error=User%20not%20found')
 
+    user_is_admin = is_admin(user.get('email'))
     count = get_linked_discord_account_count(user_id)
-    can_link, limit, remaining = can_link_more_accounts(user.get('email'), count)
+    can_link, limit, remaining = can_link_more_accounts(user.get('email'), count, user_is_admin)
 
     if not can_link:
         return redirect(url_for('settings') + '?error=Account%20limit%20reached')
@@ -3468,7 +3474,7 @@ def verify_link_account_token():
         # Verify that the token belongs to the OAuth-authorized account
         token_user = user_response.json()
         if token_user.get('id') != pending_data['discord_id']:
-            return {'error': 'Token does not match authorized account', 'valid': False}, 200
+            return {'error': 'Incorrect account token', 'valid': False}, 200
 
         # Token is valid, add the account
         from database import add_linked_discord_account

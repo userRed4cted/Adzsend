@@ -4,7 +4,8 @@
 
 let discordAccountsView = 'list'; // 'list' or 'gallery'
 let allDiscordAccounts = [];
-let accountLimit = 4;
+let accountLimit = 3;
+let currentAccountCount = 0;
 let canLinkMoreAccounts = true;
 let pendingLinkAccount = null; // Store pending account data after OAuth
 
@@ -54,7 +55,8 @@ async function loadDiscordAccounts() {
 
         if (data.success) {
             allDiscordAccounts = data.accounts || [];
-            accountLimit = data.limit || 4;
+            accountLimit = data.limit || 3;
+            currentAccountCount = data.count || 0;
             canLinkMoreAccounts = data.can_link || false;
             renderDiscordAccounts(allDiscordAccounts);
         } else {
@@ -81,11 +83,9 @@ function renderListView(accounts) {
 
     container.innerHTML = '';
 
-    // Add "Link Account" card if user can link more
-    if (canLinkMoreAccounts) {
-        const linkCard = createLinkAccountCardList();
-        container.appendChild(linkCard);
-    }
+    // Always add "Link Account" card (disabled if at limit)
+    const linkCard = createLinkAccountCardList();
+    container.appendChild(linkCard);
 
     // Add account cards
     accounts.forEach(account => {
@@ -101,11 +101,9 @@ function renderGalleryView(accounts) {
 
     container.innerHTML = '';
 
-    // Add "Link Account" card if user can link more
-    if (canLinkMoreAccounts) {
-        const linkCard = createLinkAccountCardGallery();
-        container.appendChild(linkCard);
-    }
+    // Always add "Link Account" card (disabled if at limit)
+    const linkCard = createLinkAccountCardGallery();
+    container.appendChild(linkCard);
 
     // Add account cards
     accounts.forEach(account => {
@@ -118,10 +116,19 @@ function renderGalleryView(accounts) {
 function createLinkAccountCardList() {
     const card = document.createElement('div');
     card.className = 'team-current-profile';
-    card.style.cursor = 'pointer';
     card.style.position = 'relative';
 
     const avatarUrl = '/static/discordlogo.png';
+    const isDisabled = !canLinkMoreAccounts;
+
+    // Apply disabled styling
+    if (isDisabled) {
+        card.style.opacity = '0.5';
+        card.style.cursor = 'not-allowed';
+        card.style.pointerEvents = 'none';
+    } else {
+        card.style.cursor = 'pointer';
+    }
 
     card.innerHTML = `
         <div class="team-current-avatar" style="background: #1A1A1E;">
@@ -129,11 +136,15 @@ function createLinkAccountCardList() {
         </div>
         <div class="team-current-info">
             <span class="team-current-id">Link a Discord account</span>
+            <span class="team-current-id" style="color: #81828A; font-size: 0.85rem;">(${currentAccountCount}/${accountLimit} Linked)</span>
         </div>
     `;
 
     // Check if there's pending link data
     if (pendingLinkAccount) {
+        card.style.opacity = '1';
+        card.style.cursor = 'default';
+        card.style.pointerEvents = 'auto';
         // Show token input instead
         card.innerHTML = `
             <div class="team-current-avatar" style="background: #1A1A1E;">
@@ -146,7 +157,7 @@ function createLinkAccountCardList() {
             </div>
             <button class="team-leave-btn" onclick="verifyAndLinkToken(event)">Link</button>
         `;
-    } else {
+    } else if (!isDisabled) {
         card.addEventListener('click', initiateAccountLink);
     }
 
@@ -157,33 +168,44 @@ function createLinkAccountCardList() {
 function createLinkAccountCardGallery() {
     const card = document.createElement('div');
     card.className = 'discord-gallery-card';
-    card.style.cursor = 'pointer';
 
     const avatarUrl = '/static/discordlogo.png';
+    const isDisabled = !canLinkMoreAccounts;
+
+    // Apply disabled styling
+    if (isDisabled) {
+        card.style.opacity = '0.5';
+        card.style.cursor = 'not-allowed';
+        card.style.pointerEvents = 'none';
+    } else {
+        card.style.cursor = 'pointer';
+    }
 
     // Check if there's pending link data
     if (pendingLinkAccount) {
+        card.style.opacity = '1';
+        card.style.cursor = 'default';
+        card.style.pointerEvents = 'auto';
         card.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; flex: 1;">
-                <div class="discord-gallery-avatar" style="background: #1A1A1E;">
-                    <img src="${getDiscordAvatarUrl(pendingLinkAccount.discord_id, pendingLinkAccount.avatar)}" alt="${pendingLinkAccount.username}">
-                </div>
-                <span class="discord-gallery-username">${escapeHtml(pendingLinkAccount.username)}</span>
-                <input type="text" class="search-input" placeholder="Account token" id="discord-token-input-gallery" style="width: 100%; margin: 0.5rem 0;">
-                <span class="discord-gallery-id" id="discord-token-status-gallery" style="font-size: 0.8rem;"></span>
+            <div class="discord-gallery-avatar">
+                <img src="${getDiscordAvatarUrl(pendingLinkAccount.discord_id, pendingLinkAccount.avatar)}" alt="${pendingLinkAccount.username}">
             </div>
-            <button class="team-leave-btn" onclick="verifyAndLinkToken(event)" style="width: 100%; margin-top: auto;">Link</button>
+            <span class="discord-gallery-username">${escapeHtml(pendingLinkAccount.username)}</span>
+            <input type="text" class="search-input" placeholder="Account token" id="discord-token-input-gallery" style="width: 100%;">
+            <span class="discord-gallery-id" id="discord-token-status-gallery"></span>
+            <button class="team-leave-btn" onclick="verifyAndLinkToken(event)">Link</button>
         `;
     } else {
         card.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; flex: 1;">
-                <div class="discord-gallery-avatar" style="background: #1A1A1E;">
-                    <img src="${avatarUrl}" alt="Discord" style="width: 100%; height: 100%; object-fit: contain; padding: 8px;">
-                </div>
-                <span class="discord-gallery-username">Link a Discord account</span>
+            <div class="discord-gallery-avatar">
+                <img src="${avatarUrl}" alt="Discord" style="width: 100%; height: 100%; object-fit: contain; padding: 6px;">
             </div>
+            <span class="discord-gallery-username">Link a Discord account</span>
+            <span class="discord-gallery-id">(${currentAccountCount}/${accountLimit} Linked)</span>
         `;
-        card.addEventListener('click', initiateAccountLink);
+        if (!isDisabled) {
+            card.addEventListener('click', initiateAccountLink);
+        }
     }
 
     return card;
@@ -225,15 +247,13 @@ function createAccountCardGallery(account) {
         : '';
 
     card.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; flex: 1;">
-            <div class="discord-gallery-avatar" style="background: #1A1A1E; position: relative;">
-                <img src="${avatarUrl}" alt="${escapeHtml(account.username)}">
-                ${decorationHtml}
-            </div>
-            <span class="discord-gallery-username">${escapeHtml(account.username)}</span>
-            <span class="discord-gallery-id">${account.discord_id}</span>
+        <div class="discord-gallery-avatar">
+            <img src="${avatarUrl}" alt="${escapeHtml(account.username)}">
+            ${decorationHtml}
         </div>
-        <button class="team-leave-btn" onclick="unlinkDiscordAccount(${account.id}, event)" style="width: 100%; margin-top: auto;">Unlink</button>
+        <span class="discord-gallery-username">${escapeHtml(account.username)}</span>
+        <span class="discord-gallery-id">${account.discord_id}</span>
+        <button class="team-leave-btn" onclick="unlinkDiscordAccount(${account.id}, event)">Unlink</button>
     `;
 
     return card;

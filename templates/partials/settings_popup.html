@@ -1,6 +1,7 @@
 <!-- Settings Popup -->
 <script>
     window.userDateFormat = '{{ user_data.date_format if user_data and user_data.date_format else "mm/dd/yy" }}';
+    window.csrfToken = '{{ csrf_token }}';
 </script>
 <div class="settings-popup-overlay" id="settings-popup-overlay">
     <div class="settings-popup">
@@ -230,7 +231,7 @@
                     <div class="settings-text" style="margin-bottom: 1rem;">We recommend using alternate Discord accounts, build an account history before using.</div>
 
                     <!-- List View Container -->
-                    <div class="team-current-box" id="discord-accounts-list-view" style="display: block;">
+                    <div id="discord-accounts-list-view" style="display: block;">
                         <!-- Accounts will be dynamically loaded here -->
                     </div>
                 </div>
@@ -485,12 +486,16 @@
         padding: 80px 140px 40px 140px;
         overflow-y: auto;
         background: #121215;
+        display: flex;
+        justify-content: center;
     }
 
     /* Settings Page Content Styles */
     .settings-page {
         display: flex;
         flex-direction: column;
+        width: 100%;
+        max-width: 800px;
     }
 
     .settings-subheader {

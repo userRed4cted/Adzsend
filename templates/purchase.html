@@ -38,6 +38,7 @@
     </script>
     <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_modals.js') }}"></script>
+    <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     <style>
         html, body {
             overflow: hidden;
@@ -502,7 +503,7 @@
                 // Show confirmation dialog
                 const confirmMessage = `Are you sure you want to activate the ${planName}${billingInfo} plan?\n\nThis will replace any existing plan on your account.\nYour allowance will be reset and updated to match the new plan.`;
 
-                const confirmed = await showConfirm(confirmMessage, 'Activate Plan', { confirmText: 'Activate' });
+                const confirmed = await customConfirm('Activate Plan', confirmMessage, 'Activate');
                 if (!confirmed) {
                     return; // User cancelled
                 }
@@ -523,13 +524,13 @@
                     });
                     const data = await response.json();
                     if (data.success) {
-                        await showAlert(`${planName}${billingInfo} plan activated successfully!`, 'Success');
+                        await customAlert('Success', `${planName}${billingInfo} plan activated successfully!`);
                         window.location.href = data.redirect_url || '/panel';
                     } else {
-                        await showAlert('Error: ' + (data.error || 'Unknown error'), 'Error');
+                        await customAlert('Error', 'Error: ' + (data.error || 'Unknown error'));
                     }
                 } catch (error) {
-                    await showAlert('Error activating plan: ' + error, 'Error');
+                    await customAlert('Error', 'Error activating plan: ' + error);
                 }
             });
         });

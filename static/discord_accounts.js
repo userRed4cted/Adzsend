@@ -51,7 +51,13 @@ function renderDiscordAccounts(accounts) {
     const linkCard = createLinkAccountCardList();
     container.appendChild(linkCard);
 
-    // Add account cards
+    // If there's a pending link, add the pending card right after
+    if (pendingLinkAccount) {
+        const pendingCard = createPendingLinkCard();
+        container.appendChild(pendingCard);
+    }
+
+    // Add linked account cards
     accounts.forEach(account => {
         const card = createAccountCardList(account);
         container.appendChild(card);
@@ -63,9 +69,15 @@ function createLinkAccountCardList() {
     const card = document.createElement('div');
     card.className = 'team-current-profile';
     card.style.position = 'relative';
+    card.style.marginBottom = '8px';
+    card.style.display = 'flex';
+    card.style.background = '#121215';
+    card.style.border = '1px solid #222225';
+    card.style.borderRadius = '6px';
+    card.style.padding = '15px';
 
     const avatarUrl = '/static/discordlogo.png';
-    const isDisabled = !canLinkMoreAccounts;
+    const isDisabled = !canLinkMoreAccounts || pendingLinkAccount !== null;
 
     // Apply disabled styling
     if (isDisabled) {
@@ -86,26 +98,46 @@ function createLinkAccountCardList() {
         </div>
     `;
 
-    // Check if there's pending link data
-    if (pendingLinkAccount) {
-        card.style.opacity = '1';
-        card.style.cursor = 'default';
-        card.style.pointerEvents = 'auto';
-        // Show token input instead
-        card.innerHTML = `
-            <div class="team-current-avatar" style="background: #1A1A1E;">
-                <img src="${getDiscordAvatarUrl(pendingLinkAccount.discord_id, pendingLinkAccount.avatar)}" alt="${pendingLinkAccount.username}">
-            </div>
-            <div class="team-current-info" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
-                <span class="team-current-id">${escapeHtml(pendingLinkAccount.username)}</span>
-                <input type="text" class="search-input" placeholder="Account token" id="discord-token-input" style="width: 100%; margin: 0;">
-                <span class="team-current-id" id="discord-token-status" style="font-size: 0.8rem;"></span>
-            </div>
-            <button class="team-leave-btn" onclick="verifyAndLinkToken(event)">Link</button>
-        `;
-    } else if (!isDisabled) {
+    if (!isDisabled) {
         card.addEventListener('click', initiateAccountLink);
     }
+
+    return card;
+}
+
+// Create pending link card (shown when OAuth completed but waiting for token)
+function createPendingLinkCard() {
+    const card = document.createElement('div');
+    card.className = 'team-current-profile';
+    card.style.cursor = 'default';
+    card.style.marginBottom = '8px';
+    card.style.display = 'flex';
+    card.style.background = '#121215';
+    card.style.border = '1px solid #222225';
+    card.style.borderRadius = '6px';
+    card.style.padding = '15px';
+
+    card.innerHTML = `
+        <div class="team-current-avatar" style="background: #1A1A1E; position: relative;">
+            <img src="${getDiscordAvatarUrl(pendingLinkAccount.discord_id, pendingLinkAccount.avatar)}" alt="${pendingLinkAccount.username}">
+        </div>
+        <div class="team-current-info" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; flex: 1;">
+            <span class="team-current-id" style="color: #dcddde;">${escapeHtml(pendingLinkAccount.username)}</span>
+            <span class="team-current-id" style="color: #81828A; font-size: 0.85rem;">${pendingLinkAccount.discord_id}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1; max-width: 250px;">
+            <span class="team-current-id" id="discord-token-status" style="font-size: 0.75rem; color: #991a35; min-height: 1rem;">Enter a token</span>
+            <input type="text" class="search-input" placeholder="Account token" id="discord-token-input" style="width: 100%; margin: 0;">
+        </div>
+    `;
+
+    // Add input listener for auto-verification
+    setTimeout(() => {
+        const input = document.getElementById('discord-token-input');
+        if (input) {
+            input.addEventListener('input', debounce(autoVerifyToken, 500));
+        }
+    }, 0);
 
     return card;
 }
@@ -114,6 +146,12 @@ function createLinkAccountCardList() {
 function createAccountCardList(account) {
     const card = document.createElement('div');
     card.className = 'team-current-profile';
+    card.style.marginBottom = '8px';
+    card.style.display = 'flex';
+    card.style.background = '#121215';
+    card.style.border = '1px solid #222225';
+    card.style.borderRadius = '6px';
+    card.style.padding = '15px';
 
     const avatarUrl = getDiscordAvatarUrl(account.discord_id, account.avatar);
     const decorationHtml = account.avatar_decoration
@@ -163,8 +201,28 @@ async function fetchPendingAccount() {
 
 // Initiate account linking
 async function initiateAccountLink() {
-    // Open OAuth in popup
+    // Check if we're on mobile - use different approach
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+        // On mobile, open in same window and use session storage to track return
+        sessionStorage.setItem('discord_link_return', 'settings');
+        window.location.href = '/discord/link-account';
+        return;
+    }
+
+    // Desktop: Open OAuth in popup
     const popup = window.open('/discord/link-account', 'discord_oauth', 'width=500,height=700');
+
+    // Check if popup was blocked
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+        // Popup blocked - fallback to same window
+        customAlert('Popup Blocked', 'Your browser blocked the popup. Redirecting to complete OAuth...').then(() => {
+            sessionStorage.setItem('discord_link_return', 'settings');
+            window.location.href = '/discord/link-account';
+        });
+        return;
+    }
 
     // Listen for messages from the popup
     window.addEventListener('message', async function handleOAuthMessage(event) {
@@ -184,29 +242,36 @@ async function initiateAccountLink() {
             // Remove listener
             window.removeEventListener('message', handleOAuthMessage);
 
-            alert('OAuth failed: ' + (event.data.error || 'Unknown error'));
+            customAlert('OAuth Failed', event.data.error || 'Unknown error');
         }
     });
 }
 
-// Verify and link token
-async function verifyAndLinkToken(event) {
-    event.stopPropagation();
-
+// Auto-verify and link token (called on input with debounce)
+async function autoVerifyToken() {
     const tokenInput = document.getElementById('discord-token-input');
     const statusDiv = document.getElementById('discord-token-status');
-    const token = tokenInput ? tokenInput.value.trim() : '';
+    let token = tokenInput ? tokenInput.value.trim() : '';
 
     if (!token) {
         if (statusDiv) {
-            statusDiv.textContent = 'Please enter a token';
-            statusDiv.style.color = '#f04747';
+            statusDiv.textContent = 'Enter a token';
+            statusDiv.style.color = '#991a35'; // Delete button top gradient color
+        }
+        return;
+    }
+
+    // Check for quotation marks and show error
+    if (token.startsWith('"') || token.startsWith("'") || token.endsWith('"') || token.endsWith("'")) {
+        if (statusDiv) {
+            statusDiv.textContent = 'Remove quotation marks';
+            statusDiv.style.color = '#991a35';
         }
         return;
     }
 
     if (statusDiv) {
-        statusDiv.textContent = 'Verifying...';
+        statusDiv.textContent = 'Verifying';
         statusDiv.style.color = '#81828A';
     }
 
@@ -223,29 +288,31 @@ async function verifyAndLinkToken(event) {
         const data = await response.json();
 
         if (data.success && data.valid) {
-            if (statusDiv) {
-                statusDiv.textContent = 'Account linked!';
-                statusDiv.style.color = '#43b581';
-            }
+            // Show success popup
+            customAlert('WooHoo! Account linked', 'Your Discord account has been successfully linked.');
 
             // Clear pending data
             pendingLinkAccount = null;
 
-            // Reload accounts after short delay
-            setTimeout(() => {
-                loadDiscordAccounts();
-            }, 1000);
+            // Reload accounts immediately
+            loadDiscordAccounts();
         } else {
             if (statusDiv) {
-                statusDiv.textContent = data.error || 'Incorrect account token';
-                statusDiv.style.color = '#f04747';
+                // Check if it's a CSRF error
+                if (response.status === 403 || (data.error && data.error.toLowerCase().includes('csrf'))) {
+                    statusDiv.textContent = 'Invalid CSRF token';
+                    statusDiv.style.color = '#991a35';
+                } else {
+                    statusDiv.textContent = 'Incorrect token';
+                    statusDiv.style.color = '#991a35';
+                }
             }
         }
     } catch (error) {
         console.error('Error verifying token:', error);
         if (statusDiv) {
-            statusDiv.textContent = 'Verification failed';
-            statusDiv.style.color = '#f04747';
+            statusDiv.textContent = 'Network error';
+            statusDiv.style.color = '#991a35';
         }
     }
 }
@@ -254,7 +321,8 @@ async function verifyAndLinkToken(event) {
 async function unlinkDiscordAccount(accountId, event) {
     event.stopPropagation();
 
-    if (!confirm('Are you sure you want to unlink this Discord account?')) {
+    const confirmed = await customConfirm('Unlink Account', 'Are you sure you want to unlink this Discord account?', 'Unlink');
+    if (!confirmed) {
         return;
     }
 
@@ -273,11 +341,11 @@ async function unlinkDiscordAccount(accountId, event) {
             // Reload accounts
             await loadDiscordAccounts();
         } else {
-            alert('Failed to unlink account: ' + (data.error || 'Unknown error'));
+            customAlert('Unlink Failed', data.error || 'Unknown error');
         }
     } catch (error) {
         console.error('Error unlinking account:', error);
-        alert('Failed to unlink account');
+        customAlert('Unlink Failed', 'Failed to unlink account');
     }
 }
 

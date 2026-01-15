@@ -47,4 +47,25 @@ NAVBAR = {
         # Discord server invite link
         'discord_invite': "https://discord.gg/KWt6rvCukp",
     },
+
+    # ==========================================
+    # WELCOME TEXT SLIDESHOW
+    # ==========================================
+    # Rotating welcome messages shown next to profile photo (logged in users only)
+    'welcome_slideshow': {
+        # Messages to rotate through - add/remove as many as you want
+        'messages': [
+            "Hello.",
+            "Welcome!",
+            "Hi :D"
+        ],
+
+        # Time each message shows (in milliseconds)
+        # 5000 = 5 seconds (default)
+        'interval': 5000,
+
+        # How long the fade animation takes (in milliseconds)
+        # 300 = fast fade, 500 = medium fade, 800 = slow fade
+        'fade_duration': 400,
+    },
 }

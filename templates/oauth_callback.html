@@ -14,8 +14,25 @@
             {% endif %}
             window.close();
         } else {
-            // If not opened as popup, redirect to test page
-            window.location.href = '/test';
+            // If not opened as popup (mobile or popup blocked), check for return destination
+            const returnTo = sessionStorage.getItem('discord_link_return');
+            sessionStorage.removeItem('discord_link_return');
+
+            {% if success %}
+            // On success, redirect back to where we came from
+            if (returnTo === 'settings') {
+                window.location.href = '/dashboard?open_settings=discord-accounts';
+            } else {
+                window.location.href = '/dashboard';
+            }
+            {% else %}
+            // On error, redirect to dashboard where popup can be shown
+            if (returnTo === 'settings') {
+                window.location.href = '/dashboard?open_settings=discord-accounts&oauth_error={{ error|urlencode }}';
+            } else {
+                window.location.href = '/dashboard?oauth_error={{ error|urlencode }}';
+            }
+            {% endif %}
         }
     </script>
     <p>Completing OAuth... This window should close automatically.</p>

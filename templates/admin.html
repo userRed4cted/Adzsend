@@ -14,6 +14,7 @@
     </script>
     <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_modals.js') }}"></script>
+    <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     <style>
         /* Custom radio button styling with #15d8bc accent */
         input[type="radio"] {
@@ -530,7 +531,7 @@
                 <a href="{{ url_for('home') }}" class="dropdown-item">Home</a>
                 <a href="{{ url_for('purchase') }}" class="dropdown-item">Purchase</a>
                 {% if not (plan_status and plan_status.plan_id and plan_status.plan_id.startswith('team_plan_')) %}
-                <a href="{{ url_for('panel') }}" class="dropdown-item">Personal Panel</a>
+                <a href="{{ url_for('dashboard') }}" class="dropdown-item">Personal Panel</a>
                 {% endif %}
                 {% if has_business %}
                 {% if is_owner %}
@@ -1408,25 +1409,25 @@
                     const data = await response.json();
 
                     if (data.success) {
-                        await showAlert('User unbanned successfully', 'Success');
+                        await customAlert('Success', 'User unbanned successfully');
                         await selectUser(currentUser.id, { currentTarget: document.querySelector('.user-item.selected') });
                         loadUsers();
                         banConfirmed = false;
                     } else {
-                        await showAlert(data.error || 'Failed to unban user', 'Error');
+                        await customAlert('Error', data.error || 'Failed to unban user');
                         banBtn.disabled = false;
                         banBtn.textContent = 'Unban user';
                     }
                 } catch (error) {
                     console.error('Error unbanning user:', error);
-                    await showAlert('Network error while unbanning user', 'Error');
+                    await customAlert('Error', 'Network error while unbanning user');
                     banBtn.disabled = false;
                     banBtn.textContent = 'Unban user';
                 }
             } else {
                 // Ban action - needs confirmation
                 if (!banConfirmed) {
-                    const confirmation = await showConfirm('Are you sure you want to ban this user? They will not be able to use any panels or be added to teams.', 'Ban user', { danger: true, confirmText: 'Ban user' });
+                    const confirmation = await customConfirm('Ban user', 'Are you sure you want to ban this user? They will not be able to use any panels or be added to teams.', 'Ban user');
                     if (confirmation) {
                         banConfirmed = true;
                         banBtn.textContent = 'Confirm ban';
@@ -1441,12 +1442,12 @@
                         const data = await response.json();
 
                         if (data.success) {
-                            await showAlert('User banned successfully', 'Success');
+                            await customAlert('Success', 'User banned successfully');
                             await selectUser(currentUser.id, { currentTarget: document.querySelector('.user-item.selected') });
                             loadUsers();
                             banConfirmed = false;
                         } else {
-                            await showAlert(data.error || 'Failed to ban user', 'Error');
+                            await customAlert('Error', data.error || 'Failed to ban user');
                             banBtn.disabled = false;
                             banBtn.textContent = 'Ban user';
                             banBtn.classList.remove('confirm-ban');
@@ -1454,7 +1455,7 @@
                         }
                     } catch (error) {
                         console.error('Error banning user:', error);
-                        await showAlert('Network error while banning user', 'Error');
+                        await customAlert('Error', 'Network error while banning user');
                         banBtn.disabled = false;
                         banBtn.textContent = 'Ban user';
                         banBtn.classList.remove('confirm-ban');
@@ -1470,7 +1471,7 @@
             const deleteBtn = document.getElementById('delete-btn');
 
             if (!deleteConfirmed) {
-                const confirmation = await showConfirm('Are you sure you want to permanently delete this account? This action cannot be undone and will remove all user data.', 'Delete account', { danger: true, confirmText: 'Delete account' });
+                const confirmation = await customConfirm('Delete account', 'Are you sure you want to permanently delete this account? This action cannot be undone and will remove all user data.', 'Delete account');
                 if (confirmation) {
                     deleteConfirmed = true;
                     deleteBtn.textContent = 'Confirm Delete';
@@ -1485,13 +1486,13 @@
                     const data = await response.json();
 
                     if (data.success) {
-                        await showAlert('User deleted successfully', 'Success');
+                        await customAlert('Success', 'User deleted successfully');
                         document.getElementById('user-details-panel').innerHTML = '<div class="admin-placeholder">Select a user to view details</div>';
                         currentUser = null;
                         loadUsers();
                         deleteConfirmed = false;
                     } else {
-                        await showAlert(data.error || 'Failed to delete user', 'Error');
+                        await customAlert('Error', data.error || 'Failed to delete user');
                         deleteBtn.disabled = false;
                         deleteBtn.textContent = 'Delete account';
                         deleteBtn.classList.remove('confirm-delete');
@@ -1499,7 +1500,7 @@
                     }
                 } catch (error) {
                     console.error('Error deleting user:', error);
-                    await showAlert('Network error while deleting user', 'Error');
+                    await customAlert('Error', 'Network error while deleting user');
                     deleteBtn.disabled = false;
                     deleteBtn.textContent = 'Delete account';
                     deleteBtn.classList.remove('confirm-delete');
@@ -1581,13 +1582,13 @@
 
                 if (data.success) {
                     closeFlaggingDialog();
-                    await showAlert('User unflagged successfully', 'Success');
+                    await customAlert('Success', 'User unflagged successfully');
                     await selectUser(currentUser.id, { currentTarget: document.querySelector('.user-item.selected') });
                     loadUsers();
                 }
             } catch (error) {
                 console.error('Error unflagging user:', error);
-                await showAlert('Error unflagging user: ' + error, 'Error');
+                await customAlert('Error', 'Error unflagging user: ' + error);
             }
         }
 

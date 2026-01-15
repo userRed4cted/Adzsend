@@ -81,6 +81,7 @@ def inject_site_config():
         'nav_labels': NAVBAR['menu'],
         'discord_invite_url': NAVBAR['links']['discord_invite'],
         'auth_labels': NAVBAR['auth_buttons'],
+        'welcome_slideshow': NAVBAR['welcome_slideshow'],
         'button_styles': BUTTONS,
         'colors': COLORS,
         'pages': PAGES,
@@ -280,7 +281,7 @@ def home():
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
     if 'authenticated' in session:
-        return redirect(url_for('panel'))
+        return redirect(url_for('dashboard'))
 
     if request.method == 'GET':
         error = session.pop('login_error', None)
@@ -346,7 +347,7 @@ def login_page():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup_page():
     if 'authenticated' in session:
-        return redirect(url_for('panel'))
+        return redirect(url_for('dashboard'))
 
     if request.method == 'GET':
         error = session.pop('signup_error', None)
@@ -861,7 +862,7 @@ def set_plan():
         print(f"[PLAN] Plan activated for {session['user']['username']}: {plan_config['name']} ({plan_type})")
 
         # If it's a business plan, create a business team
-        redirect_url = '/panel'
+        redirect_url = '/dashboard'
         if plan_type == 'business':
             from database import create_business_team, get_active_subscription, auto_deny_pending_invitations
             subscription = get_active_subscription(user['id'])
@@ -974,34 +975,48 @@ def dashboard():
         session.clear()
         return redirect(url_for('login_page'))
 
-    # Check if Discord account is linked
-    discord_linked = is_discord_linked(user['id'])
+    # Get linked Discord accounts using new system
+    from database import get_linked_discord_accounts, get_linked_discord_account_by_id
+    linked_accounts = get_linked_discord_accounts(user['id'])
+
+    # Check if any Discord account is linked
+    discord_linked = len(linked_accounts) > 0
     discord_info = None
     guilds = []
+    primary_account = None
 
     if discord_linked:
-        # Decrypt token only when needed for API call
-        user_token = get_decrypted_token(user['discord_id'])
-        if user_token:
-            headers = {'Authorization': user_token}
-            # Fetch Discord user info
-            resp = requests.get('https://discord.com/api/v10/users/@me', headers=headers)
-            if resp.status_code == 200:
-                discord_info = resp.json()
-                # Sync fresh Discord profile data to database
-                avatar_decoration = None
-                if discord_info.get('avatar_decoration_data') and discord_info['avatar_decoration_data'].get('asset'):
-                    avatar_decoration = discord_info['avatar_decoration_data']['asset']
-                update_discord_profile(
-                    user['id'],
-                    discord_info.get('username'),
-                    discord_info.get('avatar'),
-                    avatar_decoration
-                )
-            # Fetch user's guilds
-            guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
-            if guilds_resp.status_code == 200:
-                guilds = guilds_resp.json()
+        # Use the first valid account as primary (or first account if none valid)
+        primary_account = next((acc for acc in linked_accounts if acc.get('is_valid', True)), linked_accounts[0] if linked_accounts else None)
+
+        if primary_account:
+            # Get full account details with token
+            account_details = get_linked_discord_account_by_id(primary_account['id'])
+            if account_details:
+                # Create discord_info from account details
+                discord_info = {
+                    'id': account_details['discord_id'],
+                    'username': account_details['username'],
+                    'avatar': account_details['avatar'],
+                    'avatar_decoration_data': {
+                        'asset': account_details['avatar_decoration']
+                    } if account_details.get('avatar_decoration') else None
+                }
+
+                # Try to fetch guilds using the account's token
+                if account_details.get('discord_token'):
+                    from database.models import decrypt_token
+                    try:
+                        decrypted_token = decrypt_token(account_details['discord_token'])
+                        if decrypted_token:
+                            headers = {'Authorization': decrypted_token}
+                            guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=5)
+                            if guilds_resp.status_code == 200:
+                                guilds = guilds_resp.json()
+                            else:
+                                print(f"[DASHBOARD] Failed to fetch guilds: {guilds_resp.status_code}")
+                    except Exception as e:
+                        print(f"[DASHBOARD] Error fetching guilds: {e}")
 
     # Get plan status and user data
     plan_status = get_plan_status(user['id'])
@@ -1061,6 +1076,8 @@ def dashboard():
     response = app.make_response(render_template('test.html',
         discord_info=discord_info,
         discord_linked=discord_linked,
+        linked_accounts=linked_accounts,
+        primary_account=primary_account,
         guilds=guilds,
         plan_status=plan_status,
         business_plan_status=business_plan_status,
@@ -1560,7 +1577,7 @@ def team_panel():
 @app.route('/settings')
 def settings():
     # Settings are now a popup in the panel, so redirect to panel
-    return redirect(url_for('panel'))
+    return redirect(url_for('dashboard'))
 
 @app.route('/api/change-email', methods=['POST'])
 @rate_limit('api')
@@ -1765,10 +1782,10 @@ def dev_cancel_plan():
         if user:
             cancel_subscription(user['id'])
             print(f"[DEV] Plan reset to free for {session['user']['username']}")
-        return redirect(url_for('panel'))
+        return redirect(url_for('dashboard'))
     except Exception as e:
         print(f"[DEV ERROR] Cancel error: {str(e)}")
-        return redirect(url_for('panel'))
+        return redirect(url_for('dashboard'))
 
 @app.route('/api/flag-self', methods=['POST'])
 @rate_limit('api')

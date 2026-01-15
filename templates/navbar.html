@@ -22,7 +22,7 @@
                 <div class="navbar-profile-circle">
                     <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" class="user-profile-photo">
                 </div>
-                <span class="navbar-welcome-text">Welcome!</span>
+                <span class="navbar-welcome-text" id="navbar-welcome-text">{{ welcome_slideshow.messages[0] }}</span>
                 <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" class="navbar-settings-icon" onclick="openSettings()">
                 {% else %}
                 <a href="{{ url_for('signup_page') }}" class="navbar-auth-link">Sign up</a>
@@ -77,4 +77,65 @@
         });
     }
 })();
+
+// Welcome text slideshow - uses setInterval with requestAnimationFrame fallback
+{% if user %}
+(function() {
+    const welcomeText = document.getElementById('navbar-welcome-text');
+    if (!welcomeText) return;
+
+    const messages = {{ welcome_slideshow.messages | tojson }};
+    const interval = {{ welcome_slideshow.interval }};
+    const fadeDuration = {{ welcome_slideshow.fade_duration }};
+    let currentIndex = 0;
+
+    // Add CSS transition dynamically
+    welcomeText.style.transition = `opacity ${fadeDuration}ms ease`;
+
+    // Auto-scale text to fit container
+    function scaleTextToFit() {
+        const container = welcomeText.parentElement;
+        const maxWidth = 80; // Max width in pixels for the text
+        let fontSize = parseFloat(window.getComputedStyle(welcomeText).fontSize);
+
+        // Reset to default size first
+        welcomeText.style.fontSize = '0.9rem';
+
+        // Check if text overflows
+        if (welcomeText.scrollWidth > maxWidth) {
+            // Reduce font size until it fits
+            while (welcomeText.scrollWidth > maxWidth && fontSize > 8) {
+                fontSize -= 0.5;
+                welcomeText.style.fontSize = fontSize + 'px';
+            }
+        }
+    }
+
+    function changeSlide() {
+        // Fade out
+        welcomeText.style.opacity = '0';
+
+        setTimeout(() => {
+            // Change text
+            currentIndex = (currentIndex + 1) % messages.length;
+            welcomeText.textContent = messages[currentIndex];
+
+            // Auto-scale to fit
+            scaleTextToFit();
+
+            // Fade in
+            welcomeText.style.opacity = '1';
+        }, fadeDuration);
+    }
+
+    // Initial scale check
+    scaleTextToFit();
+
+    // Use setInterval for consistent timing
+    setInterval(changeSlide, interval);
+
+    // Re-scale on window resize
+    window.addEventListener('resize', scaleTextToFit);
+})();
+{% endif %}
 </script>

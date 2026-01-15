@@ -15,6 +15,7 @@
     </script>
     <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_modals.js') }}"></script>
+    <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     <style>
         /* Prevent page scrolling */
         body {
@@ -684,11 +685,11 @@
                     <div class="menu-section">
                         <div class="menu-category">Main</div>
 
-                        <button class="menu-item{% if not discord_linked or is_team_owner or not guilds %} disabled{% else %} active{% endif %}" data-page="personal-panel"{% if not discord_linked or is_team_owner or not guilds %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
+                        <button class="menu-item{% if not discord_linked or is_team_owner or not guilds %} disabled{% else %} active{% endif %}" data-page="personal-panel" id="personal-panel-btn" data-discord-linked="{{ discord_linked|tojson }}" data-has-guilds="{{ (guilds|length > 0)|tojson }}">
                             Personal panel
                         </button>
 
-                        <button class="menu-item{% if not discord_linked or not has_team or not guilds %} disabled{% elif is_team_owner and guilds %} active{% endif %}" data-page="team-panel"{% if not discord_linked or not has_team or not guilds %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
+                        <button class="menu-item{% if not discord_linked or not has_team or not guilds %} disabled{% elif is_team_owner and guilds %} active{% endif %}" data-page="team-panel" id="team-panel-btn" data-discord-linked="{{ discord_linked|tojson }}" data-has-guilds="{{ (guilds|length > 0)|tojson }}">
                             Team panel
                         </button>
 
@@ -2025,13 +2026,45 @@
             }
 
             menuItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    // Skip if button is disabled (server-side check)
+                item.addEventListener('click', async () => {
+                    const targetPage = item.dataset.page;
+                    const discordLinked = item.dataset.discordLinked === 'true';
+                    const hasGuildsData = item.dataset.hasGuilds === 'true';
+
+                    // Show popup for disabled panel buttons
                     if (item.disabled || item.classList.contains('disabled')) {
+                        // Check if it's a panel button (personal or team)
+                        if (targetPage === 'personal-panel' || targetPage === 'team-panel') {
+                            // Check if Discord account is not linked
+                            if (!discordLinked) {
+                                const confirmed = await showConfirm(
+                                    'In order to use the dashboard you need a linked Discord account.',
+                                    'Link a Discord account'
+                                );
+                                if (confirmed) {
+                                    // Open settings popup and navigate to Discord accounts page
+                                    openSettings();
+                                    // Wait a bit for the popup to open
+                                    setTimeout(() => {
+                                        const discordAccountsBtn = document.querySelector('[data-settings-page="discord-accounts"]');
+                                        if (discordAccountsBtn) {
+                                            discordAccountsBtn.click();
+                                        }
+                                    }, 100);
+                                }
+                                return;
+                            }
+                            // Check if user has no guilds/servers
+                            else if (!hasGuildsData) {
+                                await showAlert(
+                                    'To send messages first join a server.',
+                                    "You're not in any servers"
+                                );
+                                return;
+                            }
+                        }
                         return;
                     }
-
-                    const targetPage = item.dataset.page;
 
                     // Server-side validated access control (cannot bypass with inspect element)
                     if (targetPage === 'personal-panel' && (!hasGuilds || isTeamOwner)) {
@@ -3059,13 +3092,13 @@
                                 console.error('Failed to report flagged content:', e);
                             }
 
-                            await showAlert(`Banned words used\n\nYour message contains prohibited content:\n• ${foundWords.join('\n• ')}\n\nPlease remove this content from your message before sending.`, 'Warning');
+                            await customAlert('Warning', `Banned words used\n\nYour message contains prohibited content:\n• ${foundWords.join('\n• ')}\n\nPlease remove this content from your message before sending.`);
                             return; // Stop execution
                         }
 
                         // Show confirmation popup
                         const channelCount = selectedChannels.length;
-                        const confirmed = await showConfirm(`Send message to ${channelCount} channel${channelCount !== 1 ? 's' : ''}?`, 'Send Message', { confirmText: 'Send' });
+                        const confirmed = await customConfirm('Send Message', `Send message to ${channelCount} channel${channelCount !== 1 ? 's' : ''}?`, 'Send');
                         if (!confirmed) return;
 
                         // Clear previous failed channels
@@ -3126,7 +3159,7 @@
                                     return; // Stop execution
                                 } else if (result.limit_reached) {
                                     // Usage limit reached - redirect to settings
-                                    await showAlert('Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to settings page...', 'Limit reached');
+                                    await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to settings page...');
                                     window.location.href = '/settings';
                                     return; // Stop execution
                                 } else if (response.status === 429) {
@@ -3155,7 +3188,7 @@
                             await showSendResults(succeededChannels, rateLimitedChannels, failedChannelsList);
                         } catch (error) {
                             console.error('Send error:', error);
-                            await showAlert(`Error sending message: ${error.message}`, 'Error');
+                            await customAlert('Error', `Error sending message: ${error.message}`);
                         } finally {
                             isSending = false;
                             sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
@@ -3962,13 +3995,13 @@
                                 console.error('Failed to report flagged content:', e);
                             }
 
-                            await showAlert(`Banned words used\n\nThe team message contains prohibited content:\n• ${foundWords.join('\n• ')}\n\nPlease contact the team owner to update the message.`, 'Warning');
+                            await customAlert('Warning', `Banned words used\n\nThe team message contains prohibited content:\n• ${foundWords.join('\n• ')}\n\nPlease contact the team owner to update the message.`);
                             return;
                         }
 
                         // Show confirmation popup
                         const channelCount = teamSelectedChannels.length;
-                        const confirmed = await showConfirm(`Send team message to ${channelCount} channel${channelCount !== 1 ? 's' : ''}?`, 'Send Team Message', { confirmText: 'Send' });
+                        const confirmed = await customConfirm('Send Team Message', `Send team message to ${channelCount} channel${channelCount !== 1 ? 's' : ''}?`, 'Send');
                         if (!confirmed) return;
 
                         teamFailedChannels.clear();
@@ -4016,7 +4049,7 @@
                                     window.location.href = '/settings';
                                     return;
                                 } else if (result.limit_reached) {
-                                    await showAlert('Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to settings page...', 'Limit reached');
+                                    await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to settings page...');
                                     window.location.href = '/settings';
                                     return;
                                 } else if (response.status === 429) {
@@ -4146,13 +4179,13 @@
                             mgmtSaveBtn.innerHTML = 'Save';
                             updateMgmtSaveButton();
                         } else {
-                            await showAlert(result.error || 'Failed to save team message', 'Error');
+                            await customAlert('Error', result.error || 'Failed to save team message');
                             mgmtSaveBtn.innerHTML = 'Save';
                             updateMgmtSaveButton();
                         }
                     } catch (error) {
                         console.error('Save team message error:', error);
-                        await showAlert('Failed to save team message: ' + error.message, 'Error');
+                        await customAlert('Error', 'Failed to save team message: ' + error.message);
                         mgmtSaveBtn.innerHTML = 'Save';
                         updateMgmtSaveButton();
                     }
@@ -4236,12 +4269,12 @@
                         const adzsendId = this.value.trim();
 
                         if (!adzsendId) {
-                            await showAlert('Please enter an Adzsend ID', 'Error');
+                            await customAlert('Error', 'Please enter an Adzsend ID');
                             return;
                         }
 
                         if (!/^\d{18}$/.test(adzsendId)) {
-                            await showAlert('Adzsend ID must be exactly 18 digits', 'Error');
+                            await customAlert('Error', 'Adzsend ID must be exactly 18 digits');
                             return;
                         }
 
@@ -4282,11 +4315,11 @@
                                 `;
                                 mgmtAddList.appendChild(newItem);
                             } else {
-                                await showAlert(result.error || 'Failed to add member', 'Error');
+                                await customAlert('Error', result.error || 'Failed to add member');
                             }
                         } catch (error) {
                             console.error('Add member error:', error);
-                            await showAlert('Failed to add member: ' + error.message, 'Error');
+                            await customAlert('Error', 'Failed to add member: ' + error.message);
                         }
                     }
                 });
@@ -4324,11 +4357,11 @@
                             memberItem.remove();
                             updateEmptyStates();
                         } else {
-                            await showAlert(result.error || 'Failed to cancel invitation', 'Error');
+                            await customAlert('Error', result.error || 'Failed to cancel invitation');
                         }
                     } catch (error) {
                         console.error('Cancel invitation error:', error);
-                        await showAlert('Failed to cancel invitation: ' + error.message, 'Error');
+                        await customAlert('Error', 'Failed to cancel invitation: ' + error.message);
                     }
                 });
             }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Panel - New Design</title>
+    <title>Dashboard - Ad Z send</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
@@ -30,13 +30,13 @@
         }
 
         /* New panel design - wrapper for side menu + content */
-        .test-panel-container {
+        .dashboard-panel-container {
             padding: 1rem;
             flex: 1;
             overflow: hidden;
         }
 
-        .test-main-frame {
+        .dashboard-main-frame {
             background: transparent;
             border: 1px solid #222225;
             border-radius: 12px;
@@ -369,7 +369,7 @@
             position: absolute;
             left: -12px;
             width: 4px;
-            background: #FBFBFB;
+            background: #FFFFFF;
             border-radius: 0 4px 4px 0;
             transition: height 0.15s ease-out, opacity 0.15s ease-out;
             height: 0;
@@ -645,8 +645,8 @@
     <div class="panel">
         {% include 'navbar.html' %}
 
-        <div class="test-panel-container">
-            <div class="test-main-frame">
+        <div class="dashboard-panel-container">
+            <div class="dashboard-main-frame">
                 <!-- Side Menu -->
                 <div class="side-menu">
                     <!-- Discord Profile -->
@@ -685,11 +685,11 @@
                     <div class="menu-section">
                         <div class="menu-category">Main</div>
 
-                        <button class="menu-item{% if not discord_linked or is_team_owner or not guilds %} disabled{% else %} active{% endif %}" data-page="personal-panel" id="personal-panel-btn" data-discord-linked="{{ discord_linked|tojson }}" data-has-guilds="{{ (guilds|length > 0)|tojson }}">
+                        <button class="menu-item{% if not discord_linked or is_team_owner or not guilds %} disabled{% endif %}" data-page="personal-panel" id="personal-panel-btn" data-discord-linked="{{ discord_linked|tojson }}" data-has-guilds="{{ (guilds|length > 0)|tojson }}"{% if not discord_linked or is_team_owner or not guilds %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
                             Personal panel
                         </button>
 
-                        <button class="menu-item{% if not discord_linked or not has_team or not guilds %} disabled{% elif is_team_owner and guilds %} active{% endif %}" data-page="team-panel" id="team-panel-btn" data-discord-linked="{{ discord_linked|tojson }}" data-has-guilds="{{ (guilds|length > 0)|tojson }}">
+                        <button class="menu-item{% if not discord_linked or not has_team or not guilds %} disabled{% endif %}" data-page="team-panel" id="team-panel-btn" data-discord-linked="{{ discord_linked|tojson }}" data-has-guilds="{{ (guilds|length > 0)|tojson }}"{% if not discord_linked or not has_team or not guilds %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
                             Team panel
                         </button>
 
@@ -701,7 +701,7 @@
                             Team management
                         </button>
 
-                        <button class="menu-item{% if not discord_linked %} disabled{% endif %}" data-page="analytics"{% if not discord_linked %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
+                        <button class="menu-item active" data-page="analytics">
                             Analytics
                         </button>
 
@@ -711,7 +711,7 @@
                 <!-- Main Content Area (uses styles.css classes) -->
                 <div class="main-content-wrapper">
                     <!-- Page: Personal Panel -->
-                    <div id="page-personal-panel" class="page-content" style="height: 100%; display: {% if is_team_owner %}none{% else %}flex{% endif %}; flex-direction: column;">
+                    <div id="page-personal-panel" class="page-content" style="height: 100%; display: none; flex-direction: column;">
                     {% if guilds %}
                     <div class="main-layout" style="height: 100%;">
                         <!-- Left: Discord-style Server Sidebar -->
@@ -826,7 +826,7 @@
                     <!-- End Page: Personal Panel -->
 
                     <!-- Page: Team Panel -->
-                    <div id="page-team-panel" class="page-content" style="height: 100%; display: {% if is_team_owner and guilds %}flex{% else %}none{% endif %}; flex-direction: column;">
+                    <div id="page-team-panel" class="page-content" style="height: 100%; display: none; flex-direction: column;">
                     {% if has_team and guilds %}
                     <div class="main-layout" style="height: 100%;">
                         <!-- Left: Discord-style Server Sidebar -->
@@ -1059,7 +1059,7 @@
                     </div>
 
                     <!-- Page: Analytics -->
-                    <div id="page-analytics" class="page-content" style="height: 100%; display: none; flex-direction: row;">
+                    <div id="page-analytics" class="page-content" style="height: 100%; display: flex; flex-direction: row;">
                         <!-- Left Half: Personal Analytics -->
                         <div style="flex: 1; display: flex; flex-direction: column; height: 100%; position: relative;">
                             <!-- Label (replaces radio toggle) -->
@@ -1875,194 +1875,75 @@
 
         // Global function to show collapsible send results (used by both Personal and Team panels)
         async function showSendResults(succeeded, rateLimited, failed) {
-            // Determine title and icon
-            let title, icon;
-            if (succeeded.length === 0 && (rateLimited.length > 0 || failed.length > 0)) {
-                title = 'Failed to send';
-                icon = 'error';
-            } else {
-                title = 'Send succeeded';
-                icon = 'success';
-            }
-
-            // Build collapsible sections HTML
-            let sectionsHTML = '';
+            // Build channel list HTML for scrollable content box
+            let channelsHTML = '';
 
             // Success section
             if (succeeded.length > 0) {
-                sectionsHTML += `
-                    <div class="result-section collapsed">
-                        <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                            <span>Send succeeded (${succeeded.length} Channel${succeeded.length !== 1 ? 's' : ''})</span>
-                            <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
-                        </div>
-                        <div class="result-content">
-                            ${succeeded.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
-                        </div>
-                    </div>
-                `;
+                channelsHTML += `<div style="margin-bottom: 0.75rem;">`;
+                channelsHTML += `<div style="color: #dcddde; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem;">Send succeeded (${succeeded.length})</div>`;
+                channelsHTML += succeeded.map(ch => `<div style="color: #81828A; font-size: 0.8rem; margin-bottom: 0.25rem;"># ${ch}</div>`).join('');
+                channelsHTML += `</div>`;
             }
 
             // Rate limited section
             if (rateLimited.length > 0) {
-                sectionsHTML += `
-                    <div class="result-section collapsed">
-                        <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                            <span>Send rate limited (${rateLimited.length} Channel${rateLimited.length !== 1 ? 's' : ''})</span>
-                            <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
-                        </div>
-                        <div class="result-content">
-                            ${rateLimited.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
-                        </div>
-                    </div>
-                `;
+                channelsHTML += `<div style="margin-bottom: 0.75rem;">`;
+                channelsHTML += `<div style="color: #dcddde; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem;">Rate limited (${rateLimited.length})</div>`;
+                channelsHTML += rateLimited.map(ch => `<div style="color: #81828A; font-size: 0.8rem; margin-bottom: 0.25rem;"># ${ch}</div>`).join('');
+                channelsHTML += `</div>`;
             }
 
             // Failed section
             if (failed.length > 0) {
-                sectionsHTML += `
-                    <div class="result-section collapsed">
-                        <div class="result-header" onclick="this.parentElement.classList.toggle('collapsed')">
-                            <span>Send failed (${failed.length} Channel${failed.length !== 1 ? 's' : ''})</span>
-                            <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px; transition: transform 0.2s;">
-                        </div>
-                        <div class="result-content">
-                            ${failed.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
-                        </div>
-                    </div>
-                `;
+                channelsHTML += `<div style="margin-bottom: 0.75rem;">`;
+                channelsHTML += `<div style="color: #dcddde; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem;">Failed (${failed.length})</div>`;
+                channelsHTML += failed.map(ch => `<div style="color: #81828A; font-size: 0.8rem; margin-bottom: 0.25rem;"># ${ch}</div>`).join('');
+                channelsHTML += `</div>`;
             }
 
-            // Create custom modal
-            const modalHTML = `
-                <style>
-                    .result-section {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        display: block !important;
-                    }
-                    .result-section.collapsed .result-content {
-                        display: none;
-                    }
-                    .result-section.collapsed .collapse-icon {
-                        transform: rotate(180deg);
-                    }
-                    .result-header {
-                        padding: 0 !important;
-                        margin: 0 !important;
-                        cursor: pointer;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        font-weight: 500;
-                        color: #dcddde;
-                        user-select: none;
-                        font-size: 0.85rem;
-                        line-height: 1;
-                    }
-                    .result-header:hover {
-                        opacity: 0.8;
-                    }
-                    .result-header span {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        line-height: 1;
-                    }
-                    .result-content {
-                        max-height: 150px;
-                        overflow-y: auto;
-                        overflow-x: hidden;
-                        padding: 0 !important;
-                        margin: 0 !important;
-                        scroll-behavior: auto;
-                    }
-                    .result-content::-webkit-scrollbar {
-                        width: 5px;
-                    }
-                    .result-content::-webkit-scrollbar-track {
-                        background: transparent;
-                    }
-                    .result-content::-webkit-scrollbar-thumb {
-                        background: rgba(255, 255, 255, 0.2);
-                        border-radius: 3px;
-                    }
-                    .result-channel-item {
-                        padding: 0 !important;
-                        margin: 0 !important;
-                        color: #81828A;
-                        font-size: 0.75rem;
-                        background: transparent;
-                        line-height: 1;
-                        display: block !important;
-                    }
-                </style>
-                <div style="max-height: 300px; overflow-y: auto; overflow-x: hidden; scroll-behavior: auto; padding: 0 !important; margin: 0 !important; display: flex; flex-direction: column; gap: 0;">
-                    ${sectionsHTML}
-                </div>
-            `;
-
-            await showAlert(modalHTML, title, { icon: icon, allowHtml: true });
+            await customAlert('Completed', 'Your message was sent to:', { contentHtml: channelsHTML });
         }
 
         // Side menu page switching
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             const menuItems = document.querySelectorAll('.menu-item[data-page]');
             const pageContents = document.querySelectorAll('.page-content');
 
             // Server-side validated access flags (cannot be bypassed via inspect element)
+            const discordLinked = {{ 'true' if discord_linked else 'false' }};
             const hasGuilds = {{ 'true' if guilds else 'false' }};
             const hasTeam = {{ 'true' if has_team else 'false' }};
             const isTeamOwner = {{ 'true' if is_team_owner else 'false' }};
 
-            // Set correct initial page display for team owners
-            if (isTeamOwner && hasGuilds) {
-                pageContents.forEach(page => {
-                    if (page.id === 'page-team-panel') {
-                        page.style.display = 'flex';
-                    } else if (page.id === 'page-personal-panel') {
-                        page.style.display = 'none';
+            // Show popup on page load if user has no Discord account linked
+            if (!discordLinked) {
+                await customAlert(
+                    'Link a Discord account',
+                    'In order to use all dashboard features you need a linked Discord account.'
+                );
+                // Open settings popup and navigate to Discord accounts page
+                openSettings();
+                setTimeout(() => {
+                    const discordAccountsBtn = document.querySelector('[data-settings-page="discord-accounts"]');
+                    if (discordAccountsBtn) {
+                        discordAccountsBtn.click();
                     }
-                });
+                }, 100);
+            } else if (!hasGuilds) {
+                // User has account linked but no servers
+                await customAlert(
+                    "You're not in any servers",
+                    'To send messages join a server/guild'
+                );
             }
 
             menuItems.forEach(item => {
-                item.addEventListener('click', async () => {
+                item.addEventListener('click', () => {
                     const targetPage = item.dataset.page;
-                    const discordLinked = item.dataset.discordLinked === 'true';
-                    const hasGuildsData = item.dataset.hasGuilds === 'true';
 
-                    // Show popup for disabled panel buttons
+                    // Prevent clicks on disabled buttons
                     if (item.disabled || item.classList.contains('disabled')) {
-                        // Check if it's a panel button (personal or team)
-                        if (targetPage === 'personal-panel' || targetPage === 'team-panel') {
-                            // Check if Discord account is not linked
-                            if (!discordLinked) {
-                                const confirmed = await showConfirm(
-                                    'In order to use the dashboard you need a linked Discord account.',
-                                    'Link a Discord account'
-                                );
-                                if (confirmed) {
-                                    // Open settings popup and navigate to Discord accounts page
-                                    openSettings();
-                                    // Wait a bit for the popup to open
-                                    setTimeout(() => {
-                                        const discordAccountsBtn = document.querySelector('[data-settings-page="discord-accounts"]');
-                                        if (discordAccountsBtn) {
-                                            discordAccountsBtn.click();
-                                        }
-                                    }, 100);
-                                }
-                                return;
-                            }
-                            // Check if user has no guilds/servers
-                            else if (!hasGuildsData) {
-                                await showAlert(
-                                    'To send messages first join a server.',
-                                    "You're not in any servers"
-                                );
-                                return;
-                            }
-                        }
                         return;
                     }
 
@@ -2770,9 +2651,26 @@
 
                         const data = await response.json();
 
-                        // Check for token_invalid error - redirect to settings
-                        if (data.token_invalid) {
-                            window.location.href = '/settings';
+                        // Check for token_invalid error - show token update popup
+                        if (data.token_invalid && data.account_info) {
+                            channelsList.innerHTML = '<div class="no-selection">Token expired - please update</div>';
+                            showTokenUpdatePopup(data.account_info, (success) => {
+                                if (success) {
+                                    // Token updated, reload the page to refresh everything
+                                    window.location.reload();
+                                } else {
+                                    // User closed without updating, unlink the account
+                                    fetch(`/api/linked-accounts/${data.account_info.account_id}/unlink`, {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-Token': window.csrfToken || '{{ csrf_token }}'
+                                        }
+                                    }).then(() => {
+                                        window.location.reload();
+                                    });
+                                }
+                            });
                             return;
                         }
 
@@ -3158,9 +3056,9 @@
                                     window.location.href = '/settings';
                                     return; // Stop execution
                                 } else if (result.limit_reached) {
-                                    // Usage limit reached - redirect to settings
-                                    await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to settings page...');
-                                    window.location.href = '/settings';
+                                    // Usage limit reached - redirect to billing in settings
+                                    await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
+                                    window.location.href = '/settings#billing';
                                     return; // Stop execution
                                 } else if (response.status === 429) {
                                     // Rate limited by Discord - mark and skip (don't retry)
@@ -3995,13 +3893,13 @@
                                 console.error('Failed to report flagged content:', e);
                             }
 
-                            await customAlert('Warning', `Banned words used\n\nThe team message contains prohibited content:\n• ${foundWords.join('\n• ')}\n\nPlease contact the team owner to update the message.`);
+                            await customAlert('Warning', `Banned words used\n\nYour message contains prohibited content:\n• ${foundWords.join('\n• ')}\n\nPlease remove this content from your message before sending.`);
                             return;
                         }
 
                         // Show confirmation popup
                         const channelCount = teamSelectedChannels.length;
-                        const confirmed = await customConfirm('Send Team Message', `Send team message to ${channelCount} channel${channelCount !== 1 ? 's' : ''}?`, 'Send');
+                        const confirmed = await customConfirm('Send Message', `Send message to ${channelCount} channel${channelCount !== 1 ? 's' : ''}?`, 'Send');
                         if (!confirmed) return;
 
                         teamFailedChannels.clear();
@@ -4049,8 +3947,8 @@
                                     window.location.href = '/settings';
                                     return;
                                 } else if (result.limit_reached) {
-                                    await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to settings page...');
-                                    window.location.href = '/settings';
+                                    await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
+                                    window.location.href = '/settings#billing';
                                     return;
                                 } else if (response.status === 429) {
                                     const channelKey = `${channel.guildId}-${channel.id}`;
@@ -4073,7 +3971,7 @@
                             await showSendResults(succeededChannels, rateLimitedChannels, failedChannelsList);
                         } catch (error) {
                             console.error('Team send error:', error);
-                            await showAlert(`Error sending team message: ${error.message}`, 'Error');
+                            await customAlert('Error', `Error sending message: ${error.message}`);
                         } finally {
                             teamIsSending = false;
                             teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessage;
@@ -4269,12 +4167,11 @@
                         const adzsendId = this.value.trim();
 
                         if (!adzsendId) {
-                            await customAlert('Error', 'Please enter an Adzsend ID');
                             return;
                         }
 
                         if (!/^\d{18}$/.test(adzsendId)) {
-                            await customAlert('Error', 'Adzsend ID must be exactly 18 digits');
+                            await customAlert('Failed', 'Adzsend account with this ID dose not exist, please check again.');
                             return;
                         }
 
@@ -4315,11 +4212,11 @@
                                 `;
                                 mgmtAddList.appendChild(newItem);
                             } else {
-                                await customAlert('Error', result.error || 'Failed to add member');
+                                await customAlert('Failed', 'Adzsend account with this ID dose not exist, please check again.');
                             }
                         } catch (error) {
                             console.error('Add member error:', error);
-                            await customAlert('Error', 'Failed to add member: ' + error.message);
+                            await customAlert('Failed', 'Adzsend account with this ID dose not exist, please check again.');
                         }
                     }
                 });
@@ -4377,7 +4274,7 @@
 
                     const adzsendId = memberItem.dataset.adzsendId;
 
-                    const confirmed = await showConfirm('Remove this team member?', 'Remove Member', { confirmText: 'Remove' });
+                    const confirmed = await customConfirm('Remove this team member?', 'Remove Member', { confirmText: 'Remove' });
                     if (!confirmed) return;
 
                     try {
@@ -4397,11 +4294,11 @@
                             memberItem.remove();
                             updateEmptyStates();
                         } else {
-                            await showAlert(result.error || 'Failed to remove member', 'Error');
+                            await customAlert(result.error || 'Failed to remove member', 'Error');
                         }
                     } catch (error) {
                         console.error('Remove member error:', error);
-                        await showAlert('Failed to remove member: ' + error.message, 'Error');
+                        await customAlert('Failed to remove member: ' + error.message, 'Error');
                     }
                 });
             }

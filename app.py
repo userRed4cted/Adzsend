@@ -76,11 +76,6 @@ def inject_user_data():
 def inject_site_config():
     return {
         'site_config': get_all_config(),
-        'site_title': NAVBAR['branding']['title'],
-        'site_subtitle': NAVBAR['branding']['subtitle'],
-        'nav_labels': NAVBAR['menu'],
-        'discord_invite_url': NAVBAR['links']['discord_invite'],
-        'auth_labels': NAVBAR['auth_buttons'],
         'welcome_slideshow': NAVBAR['welcome_slideshow'],
         'button_styles': BUTTONS,
         'colors': COLORS,
@@ -964,6 +959,58 @@ def old_personal_panel():
     # Redirect to new dashboard
     return redirect(url_for('dashboard'))
 
+@app.route('/debug-guilds')
+def debug_guilds():
+    if 'authenticated' not in session:
+        return "Not logged in", 401
+
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return "User not found", 404
+
+    from database import get_linked_discord_accounts, get_linked_discord_account_by_id
+    linked_accounts = get_linked_discord_accounts(user['id'])
+
+    debug_info = {
+        'user_id': user['id'],
+        'linked_accounts_count': len(linked_accounts),
+        'accounts': []
+    }
+
+    for acc in linked_accounts:
+        account_details = get_linked_discord_account_by_id(acc['id'])
+        acc_info = {
+            'id': acc['id'],
+            'username': acc['username'],
+            'discord_id': acc['discord_id'],
+            'has_discord_token': account_details.get('discord_token') is not None if account_details else False
+        }
+
+        if account_details and account_details.get('discord_token'):
+            from database.models import decrypt_token
+            try:
+                decrypted_token = decrypt_token(account_details['discord_token'])
+                acc_info['token_decrypted'] = decrypted_token is not None
+
+                if decrypted_token:
+                    headers = {'Authorization': decrypted_token}
+                    guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=5)
+                    acc_info['api_status'] = guilds_resp.status_code
+
+                    if guilds_resp.status_code == 200:
+                        guilds = guilds_resp.json()
+                        acc_info['guilds_count'] = len(guilds)
+                        acc_info['guilds'] = [{'name': g['name'], 'id': g['id']} for g in guilds[:5]]
+                    else:
+                        acc_info['api_error'] = guilds_resp.text[:200]
+            except Exception as e:
+                acc_info['error'] = str(e)
+
+        debug_info['accounts'].append(acc_info)
+
+    import json
+    return f"<pre>{json.dumps(debug_info, indent=2)}</pre>"
+
 @app.route('/dashboard')
 def dashboard():
     if 'authenticated' not in session:
@@ -985,15 +1032,24 @@ def dashboard():
     guilds = []
     primary_account = None
 
+    print(f"[DASHBOARD] User {user['id']} - Linked accounts: {len(linked_accounts)}")
+
+    # Fetch guilds from ALL linked accounts and merge them
+    all_guilds = []
+    guild_to_account = {}  # Map guild_id -> account_id for token lookup
+
     if discord_linked:
-        # Use the first valid account as primary (or first account if none valid)
-        primary_account = next((acc for acc in linked_accounts if acc.get('is_valid', True)), linked_accounts[0] if linked_accounts else None)
+        # Use the first account as primary for discord_info (don't filter by is_valid)
+        primary_account = linked_accounts[0] if linked_accounts else None
+
+        print(f"[DASHBOARD] Primary account: {primary_account['id'] if primary_account else None}")
 
         if primary_account:
-            # Get full account details with token
+            # Get full account details with token for discord_info
             account_details = get_linked_discord_account_by_id(primary_account['id'])
+            print(f"[DASHBOARD] Account details retrieved: {account_details is not None}")
             if account_details:
-                # Create discord_info from account details
+                # Create discord_info from primary account
                 discord_info = {
                     'id': account_details['discord_id'],
                     'username': account_details['username'],
@@ -1003,20 +1059,74 @@ def dashboard():
                     } if account_details.get('avatar_decoration') else None
                 }
 
-                # Try to fetch guilds using the account's token
-                if account_details.get('discord_token'):
-                    from database.models import decrypt_token
-                    try:
-                        decrypted_token = decrypt_token(account_details['discord_token'])
-                        if decrypted_token:
-                            headers = {'Authorization': decrypted_token}
-                            guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=5)
-                            if guilds_resp.status_code == 200:
-                                guilds = guilds_resp.json()
-                            else:
-                                print(f"[DASHBOARD] Failed to fetch guilds: {guilds_resp.status_code}")
-                    except Exception as e:
-                        print(f"[DASHBOARD] Error fetching guilds: {e}")
+        # Fetch guilds from ALL linked accounts
+        for acc in linked_accounts:
+            print(f"[DASHBOARD] Checking account {acc['id']}, is_valid: {acc.get('is_valid')}")
+
+            # Don't skip based on is_valid - try all accounts
+            # The is_valid field might be NULL/None for newly linked accounts
+            # if not acc.get('is_valid', True):
+            #     print(f"[DASHBOARD] Skipping invalid account {acc['id']}")
+            #     continue
+
+            account_details = get_linked_discord_account_by_id(acc['id'])
+            if not account_details:
+                print(f"[DASHBOARD] No details found for account {acc['id']}")
+                continue
+
+            if not account_details.get('discord_token'):
+                print(f"[DASHBOARD] No token found for account {acc['id']}")
+                continue
+
+            print(f"[DASHBOARD] Account {acc['id']} has valid token, fetching guilds...")
+
+            try:
+                token = account_details['discord_token']
+                headers = {'Authorization': token}
+                guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=5)
+                print(f"[DASHBOARD] Account {acc['id']} guilds API response: {guilds_resp.status_code}")
+
+                if guilds_resp.status_code == 200:
+                    account_guilds = guilds_resp.json()
+                    print(f"[DASHBOARD] Account {acc['id']} guilds fetched: {len(account_guilds)} servers")
+
+                    # Add account_id to each guild and track mapping
+                    for guild in account_guilds:
+                        guild['_account_id'] = acc['id']  # Store which account this guild belongs to
+                        guild_to_account[guild['id']] = acc['id']
+                        all_guilds.append(guild)
+                elif guilds_resp.status_code == 401:
+                    # Token is invalid - mark account as needing token update
+                    print(f"[DASHBOARD] Account {acc['id']} has invalid token (401)")
+                    # Set is_valid to 0 so frontend shows update popup
+                    import sqlite3
+                    conn = sqlite3.connect('marketing_panel.db')
+                    cursor = conn.cursor()
+                    cursor.execute('UPDATE linked_discord_accounts SET is_valid = 0 WHERE id = ?', (acc['id'],))
+                    conn.commit()
+                    conn.close()
+                else:
+                    print(f"[DASHBOARD] Account {acc['id']} failed to fetch guilds: {guilds_resp.status_code}")
+            except Exception as e:
+                print(f"[DASHBOARD] Error fetching guilds for account {acc['id']}: {e}")
+
+    guilds = all_guilds
+    print(f"[DASHBOARD] Final guilds count from all accounts: {len(guilds)}")
+
+    # Fallback to old single-account system if new system found nothing
+    if len(guilds) == 0 and user.get('discord_token'):
+        print(f"[DASHBOARD] No guilds from new system, trying legacy token")
+        try:
+            legacy_token = get_decrypted_token(user['discord_id'])
+            if legacy_token:
+                headers = {'Authorization': legacy_token}
+                guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=5)
+                print(f"[DASHBOARD] Legacy token guilds API response: {guilds_resp.status_code}")
+                if guilds_resp.status_code == 200:
+                    guilds = guilds_resp.json()
+                    print(f"[DASHBOARD] Legacy token guilds fetched: {len(guilds)} servers")
+        except Exception as e:
+            print(f"[DASHBOARD] Error with legacy token: {e}")
 
     # Get plan status and user data
     plan_status = get_plan_status(user['id'])
@@ -1073,7 +1183,7 @@ def dashboard():
     purchase_history = get_purchase_history(user['id'])
 
     csrf_token = generate_csrf_token()
-    response = app.make_response(render_template('test.html',
+    response = app.make_response(render_template('dashboard.html',
         discord_info=discord_info,
         discord_linked=discord_linked,
         linked_accounts=linked_accounts,
@@ -1114,10 +1224,19 @@ def get_guild_channels(guild_id):
     if not validate_discord_id(guild_id):
         return {'error': 'Invalid guild ID'}, 400
 
-    # Decrypt token only when needed for API call
-    user_token = get_decrypted_token(user['discord_id'])
+    # Get token from linked Discord accounts (new system)
+    from database import get_linked_discord_accounts, get_linked_discord_account_by_id
+    linked_accounts = get_linked_discord_accounts(user['id'])
+
+    user_token = None
+    if linked_accounts:
+        primary_account = linked_accounts[0]
+        account_details = get_linked_discord_account_by_id(primary_account['id'])
+        if account_details:
+            user_token = account_details.get('discord_token')
+
     if not user_token:
-        return {'error': 'Token error'}, 401
+        return {'error': 'No linked Discord account'}, 401
     headers = {'Authorization': user_token}
 
     try:
@@ -1134,11 +1253,17 @@ def get_guild_channels(guild_id):
             text_channels = [ch for ch in channels if ch.get('type') == 0]
             return {'channels': text_channels}, 200
         elif resp.status_code == 401:
-            # Token is invalid/expired - unlink Discord account
-            user = get_user_by_id(session.get('user_id'))
-            if user:
-                full_unlink_discord_account(user['id'])
-            return {'error': 'Token invalid', 'token_invalid': True}, 401
+            # Token is invalid/expired - return account info for token update popup
+            # Don't unlink immediately, let user update the token
+            return {
+                'error': 'Token invalid',
+                'token_invalid': True,
+                'account_info': {
+                    'account_id': primary_account['id'],
+                    'username': primary_account.get('username', 'Unknown'),
+                    'discord_id': primary_account.get('discord_id', 'Unknown')
+                }
+            }, 401
         else:
             return {'error': 'Failed to fetch channels'}, resp.status_code
     except requests.exceptions.Timeout:
@@ -1194,13 +1319,78 @@ def send_message_single():
     if not can_send:
         return {'error': f'Cannot send message: {reason}', 'limit_reached': True}, 403
 
-    # Decrypt token ONLY when sending - this is the secure approach
-    user_token = get_decrypted_token(user['discord_id'])
-    if not user_token:
-        return {'error': 'Token error'}, 401
-    headers = {'Authorization': user_token, 'Content-Type': 'application/json'}
-
     channel = data.get('channel', {})
+    guild_id = channel.get('guildId')
+
+    print(f"[SEND] Attempting to send to guild {guild_id}, channel {channel.get('id')}, channel name: {channel.get('name')}")
+
+    # Get token from linked Discord accounts based on which account has this guild
+    from database import get_linked_discord_accounts, get_linked_discord_account_by_id
+    linked_accounts = get_linked_discord_accounts(user['id'])
+
+    print(f"[SEND] Found {len(linked_accounts)} linked accounts")
+
+    if not linked_accounts:
+        return {'error': 'No Discord account linked'}, 401
+
+    # Find which account has access to this guild
+    user_token = None
+    account_used = None
+
+    for acc in linked_accounts:
+        print(f"[SEND] Checking account {acc['id']}, is_valid: {acc.get('is_valid')}")
+
+        # Don't skip based on is_valid - try all accounts
+        # if not acc.get('is_valid', True):
+        #     print(f"[SEND] Skipping invalid account {acc['id']}")
+        #     continue
+
+        account_details = get_linked_discord_account_by_id(acc['id'])
+        if not account_details or not account_details.get('discord_token'):
+            print(f"[SEND] Account {acc['id']} has no token")
+            continue
+
+        print(f"[SEND] Account {acc['id']} has token, checking guilds...")
+
+        # Fetch guilds for this account to check if it has the target guild
+        try:
+            token = account_details['discord_token']
+            headers_check = {'Authorization': token}
+            guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers_check, timeout=5)
+
+            if guilds_resp.status_code == 200:
+                account_guilds = guilds_resp.json()
+                guild_ids = [g['id'] for g in account_guilds]
+
+                print(f"[SEND] Account {acc['id']} has {len(account_guilds)} guilds")
+                print(f"[SEND] Looking for guild {guild_id} in account {acc['id']}")
+
+                if guild_id in guild_ids:
+                    user_token = token
+                    account_used = acc
+                    print(f"[SEND] ✓ MATCH! Using account {acc['id']} for guild {guild_id}")
+                    break
+                else:
+                    print(f"[SEND] Guild {guild_id} NOT found in account {acc['id']}")
+            else:
+                print(f"[SEND] Failed to fetch guilds for account {acc['id']}: HTTP {guilds_resp.status_code}")
+        except Exception as e:
+            print(f"[SEND] Error checking account {acc['id']}: {e}")
+            continue
+
+    if not user_token:
+        # Fallback to first account if guild not found
+        print(f"[SEND] Guild {guild_id} not found in any account, using first account")
+        primary_account = linked_accounts[0] if linked_accounts else None
+        if primary_account:
+            account_details = get_linked_discord_account_by_id(primary_account['id'])
+            if account_details and account_details.get('discord_token'):
+                user_token = account_details['discord_token']
+
+    if not user_token:
+        return {'error': 'Discord account token not found'}, 401
+
+    headers = {'Authorization': user_token, 'Content-Type': 'application/json'}
     message_content = data.get('message', '').strip()
 
     # Validate channel ID
@@ -1294,10 +1484,20 @@ def send_message():
     if not user:
         return {'error': 'User not found'}, 404
 
-    # Decrypt token ONLY when sending - this is the secure approach
-    user_token = get_decrypted_token(user['discord_id'])
-    if not user_token:
-        return {'error': 'Token error'}, 401
+    # Get token from linked Discord accounts (new multi-account system)
+    from database import get_linked_discord_accounts, get_linked_discord_account_by_id
+    linked_accounts = get_linked_discord_accounts(user['id'])
+    if not linked_accounts:
+        return {'error': 'No Discord account linked'}, 401
+
+    # Use the first valid account as primary
+    primary_account = next((acc for acc in linked_accounts if acc.get('is_valid', True)), linked_accounts[0])
+    account_details = get_linked_discord_account_by_id(primary_account['id'])
+
+    if not account_details or not account_details.get('discord_token'):
+        return {'error': 'Discord account token not found'}, 401
+
+    user_token = account_details['discord_token']
     headers = {'Authorization': user_token, 'Content-Type': 'application/json'}
 
     data = request.json
@@ -1372,6 +1572,7 @@ def send_message():
                 timeout=10
             )
 
+            print(f"[SEND] Channel: {channel_name}, Status: {resp.status_code}")
             if resp.status_code == 200 or resp.status_code == 201:
                 results['success'].append(channel_name)
                 # Track successful send in database
@@ -1394,9 +1595,12 @@ def send_message():
                 results['failed'].append(f'{channel_name} (Rate limited)')
             else:
                 try:
-                    error_msg = resp.json().get('message', 'Unknown error')
+                    error_data = resp.json()
+                    error_msg = error_data.get('message', 'Unknown error')
+                    print(f"[SEND ERROR] Channel: {channel_name}, Status: {resp.status_code}, Response: {error_data}")
                 except:
                     error_msg = f'HTTP {resp.status_code}'
+                    print(f"[SEND ERROR] Channel: {channel_name}, Status: {resp.status_code}, Could not parse response")
                 results['failed'].append(f'{channel_name} ({error_msg})')
         except requests.exceptions.Timeout:
             results['failed'].append(f'{channel_name} (Request timeout)')
@@ -1407,8 +1611,8 @@ def send_message():
 
 @app.route('/team-management')
 def team_management():
-    """Team plan management page for team owners - ARCHIVED, redirects to test page."""
-    return redirect(url_for('test_page'))
+    """Team plan management page for team owners - ARCHIVED, redirects to dashboard."""
+    return redirect(url_for('dashboard'))
 
     client_ip = get_client_ip()
     if 'login_ip' in session and session['login_ip'] != client_ip:
@@ -3516,6 +3720,91 @@ def unlink_account(account_id):
         return {'error': 'Account not found or already unlinked'}, 404
 
     return {'success': True, 'message': 'Account unlinked successfully'}
+
+
+@app.route('/api/linked-accounts/update-token', methods=['POST'])
+def update_account_token():
+    """Update the token for a linked Discord account."""
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    data = request.json
+    if not data:
+        return {'error': 'Invalid request'}, 400
+
+    account_id = data.get('account_id')
+    new_token = data.get('token', '').strip()
+
+    if not account_id or not new_token:
+        return {'error': 'Missing account_id or token'}, 400
+
+    # Basic token format validation
+    if len(new_token) < 50 or '.' not in new_token:
+        return {'error': 'Invalid token format'}, 400
+
+    # Verify the account belongs to this user
+    from database import get_linked_discord_account_by_id, get_linked_discord_accounts
+    linked_accounts = get_linked_discord_accounts(user_id)
+    account_ids = [acc['id'] for acc in linked_accounts]
+
+    if account_id not in account_ids:
+        return {'error': 'Account not found'}, 404
+
+    # Verify the token is valid by making a Discord API call
+    headers = {'Authorization': new_token}
+    try:
+        resp = requests.get('https://discord.com/api/v10/users/@me', headers=headers, timeout=10)
+
+        if resp.status_code != 200:
+            return {'error': 'Invalid Discord token'}, 400
+
+        user_data = resp.json()
+        token_discord_id = user_data.get('id')
+
+        # Get the account to verify the token matches the same Discord user
+        account = get_linked_discord_account_by_id(account_id)
+        if not account:
+            return {'error': 'Account not found'}, 404
+
+        if token_discord_id != account['discord_id']:
+            return {'error': 'Token does not match this Discord account'}, 400
+
+        # Update the token in database
+        from database.models import encrypt_token, get_db
+        encrypted_token = encrypt_token(new_token)
+        if not encrypted_token:
+            return {'error': 'Failed to encrypt token'}, 500
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE linked_discord_accounts
+            SET discord_token = ?, is_valid = 1, last_verified = CURRENT_TIMESTAMP,
+                username = ?, avatar = ?, avatar_decoration = ?
+            WHERE id = ? AND user_id = ?
+        ''', (
+            encrypted_token,
+            user_data.get('username'),
+            user_data.get('avatar'),
+            user_data.get('avatar_decoration_data', {}).get('asset') if user_data.get('avatar_decoration_data') else None,
+            account_id,
+            user_id
+        ))
+        conn.commit()
+        conn.close()
+
+        return {'success': True, 'message': 'Token updated successfully'}
+
+    except requests.exceptions.Timeout:
+        return {'error': 'Discord API timeout'}, 500
+    except Exception as e:
+        print(f"[TOKEN UPDATE] Error: {e}")
+        return {'error': 'Failed to verify token'}, 500
 
 
 @app.route('/logout')

@@ -304,18 +304,7 @@
     </div>
 </div>
 
-<!-- Profile Photo Picker Popup -->
-<div class="profile-picker-overlay" id="profile-picker-overlay">
-    <div class="profile-picker-popup">
-        <div class="profile-picker-header">
-            <span class="profile-picker-title">Choose profile photo</span>
-            <button class="profile-picker-close" onclick="closeProfilePicker()">&times;</button>
-        </div>
-        <div class="profile-picker-grid" id="profile-picker-grid">
-            <!-- Profile photos will be loaded here -->
-        </div>
-    </div>
-</div>
+<!-- Profile Photo Picker now uses custom popup system -->
 
 <style>
     /* Font declarations for settings popup */
@@ -1797,43 +1786,60 @@
             });
         }
 
-        // Profile photo picker
+        // Profile photo picker using custom popup
         const profilePhotoEl = document.getElementById('account-profile-photo');
-        const pickerOverlay = document.getElementById('profile-picker-overlay');
-        const pickerGrid = document.getElementById('profile-picker-grid');
 
         // Open profile picker
         if (profilePhotoEl) {
             profilePhotoEl.addEventListener('click', function() {
-                loadProfilePicker();
-                pickerOverlay.classList.add('show');
+                showProfilePhotoPicker();
             });
         }
 
-        // Close profile picker
-        window.closeProfilePicker = function() {
-            pickerOverlay.classList.remove('show');
-        };
+        // Show profile photo picker popup
+        function showProfilePhotoPicker() {
+            // Build grid HTML - centered with margin-top to avoid X button
+            let gridHTML = '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 4.5rem auto 1.5rem auto; max-width: fit-content;">';
 
-        // Click overlay to close
-        if (pickerOverlay) {
-            pickerOverlay.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeProfilePicker();
-                }
-            });
-        }
-
-        // Load profile photos into grid
-        function loadProfilePicker() {
-            pickerGrid.innerHTML = '';
             profilePhotos.forEach(photo => {
-                const item = document.createElement('div');
-                item.className = 'profile-picker-item';
-                item.innerHTML = `<img src="/static/profile_photos/${photo}" alt="${photo}">`;
-                item.addEventListener('click', () => selectProfilePhoto(photo));
-                pickerGrid.appendChild(item);
+                gridHTML += `
+                    <div class="profile-picker-item" data-photo="${photo}" style="
+                        width: 80px;
+                        height: 80px;
+                        border-radius: 50%;
+                        overflow: hidden;
+                        cursor: pointer;
+                    ">
+                        <img src="/static/profile_photos/${photo}" alt="${photo}" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                `;
             });
+
+            gridHTML += '</div>';
+
+            // Show popup using custom system (no title, no text, no button)
+            customAlert('', '', { contentHtml: gridHTML, hideButton: true, allowHtml: true });
+
+            // Remove the inner content box styling for profile picker (keep main popup background)
+            setTimeout(() => {
+                const contentEl = document.getElementById('custom-popup-content');
+                if (contentEl) {
+                    contentEl.style.background = 'none';
+                    contentEl.style.border = 'none';
+                    contentEl.style.padding = '0';
+                    contentEl.style.marginBottom = '0';
+                }
+            }, 0);
+
+            // Add click handlers after popup is shown
+            setTimeout(() => {
+                document.querySelectorAll('.profile-picker-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const photo = this.dataset.photo;
+                        selectProfilePhoto(photo);
+                    });
+                });
+            }, 100);
         }
 
         // Select and save profile photo
@@ -1861,7 +1867,9 @@
                         img.src = newPhotoUrl;
                     });
 
-                    closeProfilePicker();
+                    // Close the popup
+                    const overlay = document.getElementById('custom-popup-overlay');
+                    if (overlay) overlay.classList.remove('active');
                 } else {
                     console.error('Failed to save profile photo:', data.error);
                 }

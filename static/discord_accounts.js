@@ -74,7 +74,7 @@ function createLinkAccountCardList() {
     card.style.background = '#121215';
     card.style.border = '1px solid #222225';
     card.style.borderRadius = '6px';
-    card.style.padding = '15px';
+    card.style.padding = '13px';
 
     const avatarUrl = '/static/discordlogo.png';
     const isDisabled = !canLinkMoreAccounts || pendingLinkAccount !== null;
@@ -115,7 +115,7 @@ function createPendingLinkCard() {
     card.style.background = '#121215';
     card.style.border = '1px solid #222225';
     card.style.borderRadius = '6px';
-    card.style.padding = '15px';
+    card.style.padding = '13px';
 
     card.innerHTML = `
         <div class="team-current-avatar" style="background: #1A1A1E; position: relative;">
@@ -151,7 +151,7 @@ function createAccountCardList(account) {
     card.style.background = '#121215';
     card.style.border = '1px solid #222225';
     card.style.borderRadius = '6px';
-    card.style.padding = '15px';
+    card.style.padding = '13px';
 
     const avatarUrl = getDiscordAvatarUrl(account.discord_id, account.avatar);
     const decorationHtml = account.avatar_decoration
@@ -261,8 +261,8 @@ async function autoVerifyToken() {
         return;
     }
 
-    // Check for quotation marks and show error
-    if (token.startsWith('"') || token.startsWith("'") || token.endsWith('"') || token.endsWith("'")) {
+    // Check for quotation marks anywhere in token and show error
+    if (token.includes('"') || token.includes("'")) {
         if (statusDiv) {
             statusDiv.textContent = 'Remove quotation marks';
             statusDiv.style.color = '#991a35';
@@ -287,20 +287,32 @@ async function autoVerifyToken() {
 
         const data = await response.json();
 
-        if (data.success && data.valid) {
-            // Show success popup
-            customAlert('WooHoo! Account linked', 'Your Discord account has been successfully linked.');
+        console.log('Verify token response:', response.status, data);
 
+        if (data.success && data.valid) {
             // Clear pending data
             pendingLinkAccount = null;
 
-            // Reload accounts immediately
-            loadDiscordAccounts();
+            // Reload accounts immediately to update the UI
+            await loadDiscordAccounts();
+
+            // Dispatch custom event to notify dashboard/other pages to refresh
+            // This allows the dashboard to update without page reload
+            window.dispatchEvent(new CustomEvent('discord-account-linked', {
+                detail: { account: data.account }
+            }));
+
+            // Show success popup
+            await customAlert('WooHoo! Account linked', 'Your Discord account has been successfully linked.');
         } else {
             if (statusDiv) {
                 // Check if it's a CSRF error
                 if (response.status === 403 || (data.error && data.error.toLowerCase().includes('csrf'))) {
                     statusDiv.textContent = 'Invalid CSRF token';
+                    statusDiv.style.color = '#991a35';
+                } else if (data.error) {
+                    // Show the actual error message from the API
+                    statusDiv.textContent = data.error;
                     statusDiv.style.color = '#991a35';
                 } else {
                     statusDiv.textContent = 'Incorrect token';
@@ -311,7 +323,7 @@ async function autoVerifyToken() {
     } catch (error) {
         console.error('Error verifying token:', error);
         if (statusDiv) {
-            statusDiv.textContent = 'Network error';
+            statusDiv.textContent = 'Network error: ' + error.message;
             statusDiv.style.color = '#991a35';
         }
     }

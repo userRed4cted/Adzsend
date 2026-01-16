@@ -2737,9 +2737,71 @@ input:checked + .toggle-slider:before {
     border: 1px solid #222225;
     border-radius: 8px;
     padding: 1.25rem 1.5rem 1.5rem 1.5rem;
-    min-width: 300px;
-    max-width: 500px;
+    width: 440px;
+    max-width: 90vw;
     position: relative;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Scrollable content area for popups */
+.custom-popup-content {
+    background: #121215;
+    border: 1px solid #222225;
+    border-radius: 6px;
+    padding: 0.75rem;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+
+.custom-popup-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-popup-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-popup-content::-webkit-scrollbar-thumb {
+    background: #3a3a40;
+    border-radius: 3px;
+}
+
+.custom-popup-content::-webkit-scrollbar-thumb:hover {
+    background: #4a4a50;
+}
+
+/* Token input styling for popup */
+.custom-popup-input {
+    width: 100%;
+    background: #121215;
+    border: 1px solid #222225;
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    color: #dcddde;
+    font-size: 0.875rem;
+    font-family: "gg sans", sans-serif;
+    margin-top: 0.5rem;
+    box-sizing: border-box;
+}
+
+.custom-popup-input:focus {
+    outline: none;
+    border-color: #15d8bc;
+}
+
+.custom-popup-input::placeholder {
+    color: #81828A;
+}
+
+/* Status text for token input */
+.custom-popup-status {
+    font-size: 0.75rem;
+    color: #991a35;
+    margin-top: 0.25rem;
+    min-height: 1rem;
 }
 
 /* Close Button (X) */
@@ -2765,9 +2827,9 @@ input:checked + .toggle-slider:before {
 }
 
 .custom-popup-close:hover {
-    color: #dcddde;
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: #1A1A1E;
+    border-color: #222225;
+    color: white;
 }
 
 /* Popup Title */

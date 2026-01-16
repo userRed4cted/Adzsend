@@ -1820,13 +1820,15 @@
             // Show popup using custom system (no title, no text, no button)
             customAlert('', '', { contentHtml: gridHTML, hideButton: true, allowHtml: true });
 
-            // Remove the inner content box styling for profile picker (keep main popup background)
+            // Style the content box to match scrollable content areas
             setTimeout(() => {
                 const contentEl = document.getElementById('custom-popup-content');
                 if (contentEl) {
-                    contentEl.style.background = 'none';
-                    contentEl.style.border = 'none';
+                    contentEl.style.background = '#121215';
+                    contentEl.style.border = '1px solid #222225';
+                    contentEl.style.borderRadius = '6px';
                     contentEl.style.padding = '0';
+                    contentEl.style.marginTop = '2.5rem';
                     contentEl.style.marginBottom = '0';
                 }
             }, 0);

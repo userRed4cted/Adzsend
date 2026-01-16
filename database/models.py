@@ -2771,11 +2771,11 @@ def get_personal_daily_stats(user_id, start_date=None, end_date=None):
     if not start_date:
         start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
 
-    # Get personal stats (where team_id is NULL, excluding team messages)
+    # Get personal stats (where team_id is NULL or 0, excluding team messages)
     cursor.execute('''
         SELECT date, messages_sent
         FROM daily_message_stats
-        WHERE user_id = ? AND team_id IS NULL AND date >= ? AND date <= ?
+        WHERE user_id = ? AND (team_id IS NULL OR team_id = 0) AND date >= ? AND date <= ?
         ORDER BY date ASC
     ''', (user_id, start_date, end_date))
 

@@ -4,6 +4,7 @@ import secrets
 from dotenv import load_dotenv
 import requests
 import uuid
+import sqlite3
 from datetime import timedelta, datetime
 from urllib.parse import urlencode
 
@@ -1099,8 +1100,8 @@ def dashboard():
                     # Token is invalid - mark account as needing token update
                     print(f"[DASHBOARD] Account {acc['id']} has invalid token (401)")
                     # Set is_valid to 0 so frontend shows update popup
-                    import sqlite3
-                    conn = sqlite3.connect('marketing_panel.db')
+                    from database import get_db
+                    conn = get_db()
                     cursor = conn.cursor()
                     cursor.execute('UPDATE linked_discord_accounts SET is_valid = 0 WHERE id = ?', (acc['id'],))
                     conn.commit()

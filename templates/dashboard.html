@@ -1875,34 +1875,96 @@
 
         // Global function to show collapsible send results (used by both Personal and Team panels)
         async function showSendResults(succeeded, rateLimited, failed) {
-            // Build channel list HTML for scrollable content box
-            let channelsHTML = '';
+            // Determine title based on results
+            let title = succeeded.length > 0 ? 'Send succeeded' : 'Failed to send';
+
+            // Build collapsible sections HTML with styles
+            const modalHTML = `
+                <style>
+                    .result-section { margin-bottom: 8px; }
+                    .result-section.collapsed .result-content { display: none; }
+                    .result-section.collapsed .collapse-icon { transform: rotate(-90deg); }
+                    .result-header {
+                        cursor: pointer;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 8px 0;
+                        user-select: none;
+                    }
+                    .result-header:hover { opacity: 0.8; }
+                    .result-header span {
+                        color: #dcddde;
+                        font-size: 0.85rem;
+                        font-weight: 500;
+                    }
+                    .collapse-icon {
+                        transition: transform 0.2s;
+                        filter: brightness(0) invert(1);
+                    }
+                    .result-content {
+                        padding-left: 8px;
+                        margin-top: 4px;
+                    }
+                    .result-channel-item {
+                        color: #81828A;
+                        font-size: 0.75rem;
+                        margin-bottom: 4px;
+                    }
+                </style>
+                <div style="max-width: 400px;">
+            `;
+
+            let sectionsHTML = modalHTML;
 
             // Success section
             if (succeeded.length > 0) {
-                channelsHTML += `<div style="margin-bottom: 0.75rem;">`;
-                channelsHTML += `<div style="color: #dcddde; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem;">Send succeeded (${succeeded.length})</div>`;
-                channelsHTML += succeeded.map(ch => `<div style="color: #81828A; font-size: 0.8rem; margin-bottom: 0.25rem;"># ${ch}</div>`).join('');
-                channelsHTML += `</div>`;
+                sectionsHTML += `
+                    <div class="result-section collapsed">
+                        <div class="result-header">
+                            <span>Send succeeded (${succeeded.length} Channel${succeeded.length !== 1 ? 's' : ''})</span>
+                            <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px;">
+                        </div>
+                        <div class="result-content">
+                            ${succeeded.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
             }
 
             // Rate limited section
             if (rateLimited.length > 0) {
-                channelsHTML += `<div style="margin-bottom: 0.75rem;">`;
-                channelsHTML += `<div style="color: #dcddde; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem;">Rate limited (${rateLimited.length})</div>`;
-                channelsHTML += rateLimited.map(ch => `<div style="color: #81828A; font-size: 0.8rem; margin-bottom: 0.25rem;"># ${ch}</div>`).join('');
-                channelsHTML += `</div>`;
+                sectionsHTML += `
+                    <div class="result-section collapsed">
+                        <div class="result-header">
+                            <span>Rate limited (${rateLimited.length} Channel${rateLimited.length !== 1 ? 's' : ''})</span>
+                            <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px;">
+                        </div>
+                        <div class="result-content">
+                            ${rateLimited.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
             }
 
             // Failed section
             if (failed.length > 0) {
-                channelsHTML += `<div style="margin-bottom: 0.75rem;">`;
-                channelsHTML += `<div style="color: #dcddde; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.4rem;">Failed (${failed.length})</div>`;
-                channelsHTML += failed.map(ch => `<div style="color: #81828A; font-size: 0.8rem; margin-bottom: 0.25rem;"># ${ch}</div>`).join('');
-                channelsHTML += `</div>`;
+                sectionsHTML += `
+                    <div class="result-section collapsed">
+                        <div class="result-header">
+                            <span>Send failed (${failed.length} Channel${failed.length !== 1 ? 's' : ''})</span>
+                            <img src="/static/openorclose.png" class="collapse-icon" style="width: 16px; height: 16px;">
+                        </div>
+                        <div class="result-content">
+                            ${failed.map(ch => `<div class="result-channel-item"># ${ch}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
             }
 
-            await customAlert('Completed', 'Your message was sent to:', { contentHtml: channelsHTML });
+            sectionsHTML += `</div>`;
+
+            await customAlert(title, sectionsHTML, { allowHtml: true });
         }
 
         // Side menu page switching
@@ -1974,6 +2036,10 @@
                     // Redraw personal chart when analytics page becomes visible
                     if (targetPage === 'analytics') {
                         setTimeout(() => {
+                            // Initialize analytics if not already done
+                            if (typeof initPersonalAnalytics === 'function') {
+                                initPersonalAnalytics();
+                            }
                             if (typeof drawPersonalChart === 'function') {
                                 drawPersonalChart();
                             }
@@ -4809,6 +4875,11 @@
 
                     startInput.value = startValue;
                     endInput.value = endValue;
+
+                    // Update the custom date displays
+                    if (typeof updateCustomDateDisplays === 'function') {
+                        updateCustomDateDisplays();
+                    }
 
                     // Load initial data
                     loadPersonalDailyStats();

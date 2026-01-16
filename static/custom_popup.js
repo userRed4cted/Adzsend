@@ -77,6 +77,16 @@ function showCustomPopup(title, message, buttonText = 'Ok', options = {}) {
             titleEl.textContent = title;  // Title is always plain text
             textEl.innerHTML = message;   // Message can be HTML
             textEl.style.display = message ? 'block' : 'none';
+
+            // Add event listeners for collapsible sections after HTML is inserted
+            setTimeout(() => {
+                const resultHeaders = textEl.querySelectorAll('.result-header');
+                resultHeaders.forEach(header => {
+                    header.addEventListener('click', function() {
+                        this.parentElement.classList.toggle('collapsed');
+                    });
+                });
+            }, 0);
         } else {
             titleEl.textContent = title;
             textEl.textContent = message;

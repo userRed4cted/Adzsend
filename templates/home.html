@@ -62,16 +62,16 @@
                     </div>
 
                     <!-- Hero title -->
-                    <h2 class="hero-title hero-fade-in" id="hero-title" style="animation-delay: 0.2s;">{{ slideshow_messages[0] }}</h2>
+                    <h2 class="hero-title hero-fade-in" id="hero-title" style="animation-delay: 0.3s;">{{ slideshow_messages[0] }}</h2>
 
                     <!-- CTA Buttons -->
-                    <div class="hero-buttons hero-fade-in" style="animation-delay: 0.4s;">
+                    <div class="hero-buttons hero-fade-in" style="animation-delay: 0.6s;">
                         <a href="{{ discord_server_url }}" target="_blank" class="discord-btn"><img src="{{ url_for('static', filename='discordlogo.png') }}" alt="Discord" class="discord-btn-icon">Our Discord server</a>
                         <a href="{{ url_for('purchase') }}" class="view-pricing-btn">{{ hero_cta_button_text }}</a>
                     </div>
 
                     <!-- Panel Images - 3 images with rotation -->
-                    <div class="hero-panel-images hero-fade-in" style="animation-delay: 0.6s;">
+                    <div class="hero-panel-images hero-fade-in" style="animation-delay: 0.9s;">
                         <div class="hero-panel-image hero-panel-left" onclick="openLightbox(0)">
                             <img src="{{ url_for('static', filename=hero_panel_images[0]) }}" alt="Panel Preview">
                         </div>
@@ -84,7 +84,7 @@
                     </div>
 
                     <!-- Scroll Indicator -->
-                    <div class="scroll-indicator hero-fade-in" id="scroll-indicator" style="animation-delay: 0.8s;">
+                    <div class="scroll-indicator hero-fade-in" id="scroll-indicator" style="animation-delay: 1.2s;">
                         <span class="scroll-text">{{ scroll_indicator_text }}</span>
                         <div class="scroll-arrow">&#8595;</div>
                     </div>
@@ -163,112 +163,121 @@
     </div>
 
     <script>
-        // Hero text slideshow - uses requestAnimationFrame for background-safe timing
+        // Remove will-change after initial animations complete
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                document.querySelectorAll('.hero-fade-in').forEach(el => {
+                    el.style.willChange = 'auto';
+                });
+            }, 2200); // Last element: 1.2s delay + 1s animation
+        });
+
+        // Hero text slideshow - optimized with CSS transitions only
         const heroTitle = document.getElementById('hero-title');
         const messages = {{ slideshow_messages | tojson }};
         const interval = {{ slideshow_interval }};
         const fadeDuration = {{ slideshow_fade_duration }};
         let currentIndex = 0;
-        let lastSlideTime = Date.now();
+        let lastSlideTime = performance.now();
+        let rafId;
 
-        // Remove hero-fade-in class after initial animation completes (0.8s delay + 0.8s duration)
+        // Remove hero-fade-in class after initial animation
         setTimeout(() => {
             heroTitle.classList.remove('hero-fade-in');
-        }, 1600);
+            heroTitle.style.willChange = 'auto';
+        }, 1300); // 0.3s delay + 1s animation
 
         function changeSlide() {
-            // Fade out
-            heroTitle.classList.add('fade-out');
+            // Use CSS opacity transition only (GPU accelerated)
+            heroTitle.style.opacity = '0';
 
             setTimeout(() => {
-                // Change text
+                // Change text during invisible state
                 currentIndex = (currentIndex + 1) % messages.length;
                 heroTitle.textContent = messages[currentIndex];
 
-                // Fade in
-                heroTitle.classList.remove('fade-out');
-                heroTitle.classList.add('fade-in');
-
-                setTimeout(() => {
-                    heroTitle.classList.remove('fade-in');
-                }, fadeDuration);
+                // Fade back in
+                heroTitle.style.opacity = '1';
             }, fadeDuration);
         }
 
-        // Use requestAnimationFrame for smooth background-safe slideshow
-        function slideshowLoop() {
-            const now = Date.now();
-            if (now - lastSlideTime >= interval) {
+        // Optimized slideshow loop with proper RAF usage
+        function slideshowLoop(currentTime) {
+            if (currentTime - lastSlideTime >= interval) {
                 changeSlide();
-                lastSlideTime = now;
+                lastSlideTime = currentTime;
             }
-            requestAnimationFrame(slideshowLoop);
+            rafId = requestAnimationFrame(slideshowLoop);
         }
 
         // Start slideshow
-        requestAnimationFrame(slideshowLoop);
+        rafId = requestAnimationFrame(slideshowLoop);
 
-        // Pause leaf animation when tab is hidden (matches slideshow behavior)
-        const wumpusLeaf = document.querySelector('.wumpus-leaf');
-        if (wumpusLeaf) {
-            document.addEventListener('visibilitychange', function() {
-                if (document.hidden) {
-                    wumpusLeaf.style.animationPlayState = 'paused';
-                } else {
-                    wumpusLeaf.style.animationPlayState = 'running';
-                }
-            });
-        }
+        // Stop slideshow when tab is hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (rafId) cancelAnimationFrame(rafId);
+            } else {
+                lastSlideTime = performance.now();
+                rafId = requestAnimationFrame(slideshowLoop);
+            }
+        }, { passive: true });
 
-        // Scroll indicator visibility - optimized with passive listener
+        // Single optimized scroll handler with batched updates
         const scrollIndicator = document.getElementById('scroll-indicator');
+        const aboutSection = document.querySelector('.about-section');
         const panelContainer = document.querySelector('.panel-container');
-        let scrollTicking = false;
 
         if (panelContainer) {
-            panelContainer.addEventListener('scroll', function() {
-                if (!scrollTicking) {
-                    window.requestAnimationFrame(function() {
-                        if (panelContainer.scrollTop > 50) {
-                            scrollIndicator.classList.add('hidden');
-                        } else {
-                            scrollIndicator.classList.remove('hidden');
-                        }
-                        scrollTicking = false;
-                    });
-                    scrollTicking = true;
-                }
-            }, { passive: true });
+            let scrollTicking = false;
+            let aboutVisible = false;
+
+            const handleScroll = () => {
+                if (scrollTicking) return;
+                scrollTicking = true;
+
+                requestAnimationFrame(() => {
+                    const scrollTop = panelContainer.scrollTop;
+
+                    // Update scroll indicator
+                    if (scrollTop > 50) {
+                        scrollIndicator.classList.add('hidden');
+                    } else {
+                        scrollIndicator.classList.remove('hidden');
+                    }
+
+                    scrollTicking = false;
+                });
+            };
+
+            panelContainer.addEventListener('scroll', handleScroll, { passive: true });
         }
 
-        // About section fade-in on scroll (only once)
-        const aboutSection = document.querySelector('.about-section');
-        const panelContainerForObserver = document.querySelector('.panel-container');
-        if (aboutSection && panelContainerForObserver) {
-            let hasScrolled = false;
-
-            // Only start observing after user has scrolled
-            panelContainerForObserver.addEventListener('scroll', function initObserver() {
-                if (!hasScrolled && panelContainerForObserver.scrollTop > 10) {
-                    hasScrolled = true;
-                    panelContainerForObserver.removeEventListener('scroll', initObserver);
-
-                    const aboutObserver = new IntersectionObserver(function(entries) {
-                        entries.forEach(function(entry) {
-                            if (entry.isIntersecting) {
+        // About section fade-in - only when actually visible on screen
+        if (aboutSection && panelContainer) {
+            const aboutObserver = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            requestAnimationFrame(() => {
                                 entry.target.classList.add('visible');
-                                aboutObserver.unobserve(entry.target);
-                            }
-                        });
-                    }, {
-                        root: panelContainerForObserver,
-                        threshold: 0.1,
-                        rootMargin: '0px'
+                                // Remove will-change after animation completes
+                                setTimeout(() => {
+                                    entry.target.style.willChange = 'auto';
+                                }, 1000);
+                            });
+                            aboutObserver.unobserve(entry.target);
+                        }
                     });
-
-                    aboutObserver.observe(aboutSection);
+                },
+                {
+                    root: panelContainer,
+                    threshold: 0.3,
+                    rootMargin: '0px'
                 }
-            }, { passive: true });
+            );
+
+            aboutObserver.observe(aboutSection);
         }
 
         // Lightbox for hero panel images
@@ -325,16 +334,16 @@
             if (event.key === 'ArrowRight') nextImage(event);
         });
 
-        // Count-up animation for Discord stats (multiple items)
-        (function() {
+        // Count-up animation for Discord stats - optimized version
+        (() => {
             const statNumbers = document.querySelectorAll('.stat-number[data-target]');
             if (statNumbers.length === 0) return;
 
-            statNumbers.forEach(function(statNumber) {
+            statNumbers.forEach(statNumber => {
                 let hasAnimated = false;
-                const targetValue = statNumber.dataset.target; // e.g., "250M+"
+                const targetValue = statNumber.dataset.target;
 
-                // Parse the numeric part and suffix
+                // Parse numeric part and suffix
                 const match = targetValue.match(/^(\d+(?:\.\d+)?)(.*)/);
                 if (!match) {
                     statNumber.textContent = targetValue;
@@ -342,44 +351,67 @@
                 }
 
                 const numericValue = parseFloat(match[1]);
-                const suffix = match[2]; // e.g., "M+"
+                const suffix = match[2];
+
+                // Pre-calculate step size for better performance
+                const steps = 60; // 60 updates total
+                const stepValue = numericValue / steps;
 
                 function animateCount() {
                     if (hasAnimated) return;
                     hasAnimated = true;
 
-                    const duration = 1200; // 1.2 seconds for faster animation
+                    // Enable GPU acceleration for this element
+                    statNumber.style.willChange = 'contents';
+
+                    const duration = 1200;
                     const startTime = performance.now();
+                    let lastUpdate = 0;
 
                     function update(currentTime) {
                         const elapsed = currentTime - startTime;
                         const progress = Math.min(elapsed / duration, 1);
 
-                        // Smooth ease-out with less aggressive deceleration
+                        // Ease-out curve
                         const easeOut = 1 - Math.pow(1 - progress, 2);
                         const currentValue = Math.round(numericValue * easeOut);
 
-                        statNumber.textContent = currentValue + suffix;
+                        // Only update if value changed (reduces reflows)
+                        if (currentValue !== lastUpdate) {
+                            statNumber.textContent = currentValue + suffix;
+                            lastUpdate = currentValue;
+                        }
 
                         if (progress < 1) {
                             requestAnimationFrame(update);
                         } else {
-                            statNumber.textContent = targetValue; // Ensure final value is exact
+                            statNumber.textContent = targetValue;
+                            // Remove will-change after animation
+                            statNumber.style.willChange = 'auto';
                         }
                     }
 
                     requestAnimationFrame(update);
                 }
 
-                // Use Intersection Observer to trigger animation when visible
-                const observer = new IntersectionObserver(function(entries) {
-                    entries.forEach(function(entry) {
-                        if (entry.isIntersecting) {
-                            animateCount();
-                            observer.unobserve(entry.target);
-                        }
-                    });
-                }, { threshold: 0.5 }); // Trigger when 50% visible
+                // Use IntersectionObserver for efficient visibility detection
+                const observer = new IntersectionObserver(
+                    (entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                // Schedule animation for next idle period
+                                requestIdleCallback(() => {
+                                    animateCount();
+                                }, { timeout: 500 });
+                                observer.unobserve(entry.target);
+                            }
+                        });
+                    },
+                    {
+                        threshold: 0.3,
+                        rootMargin: '100px'
+                    }
+                );
 
                 observer.observe(statNumber);
             });

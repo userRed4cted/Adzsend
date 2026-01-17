@@ -85,14 +85,14 @@ SUBSCRIPTION_PLANS = {
         # Element: Large price number on plan card
         # price_monthly: Shown when "Monthly" toggle is selected
         # price_yearly: Shown when "Yearly" toggle is selected (total per year)
-        'price_monthly': 7,
+        'price_monthly': 8,
         'price_yearly': 72,
 
         # FEATURES LIST
         # Element: Bullet points with checkmarks on plan card
         # Each string is one feature line
         'features': [
-            '500 message posts per week',
+            '800 message posts per week',
             'Unlimited channel and server selections',
             'Advanced analytics',
             'Personal panel',
@@ -101,7 +101,7 @@ SUBSCRIPTION_PLANS = {
         # MESSAGE LIMIT
         # How many messages user can send
         # -1 = unlimited, any positive number = that limit
-        'message_limit': 500,
+        'message_limit': 800,
 
         # USAGE TYPE
         # 'allowance' = limit resets after period (daily/weekly/monthly)
@@ -147,7 +147,7 @@ SUBSCRIPTION_PLANS = {
     # -------------------------------------------------------------------------
     'plan_2': {
         'name': 'Max x3 & x5',
-        'price_monthly': 15,
+        'price_monthly': 17.50,
         'price_yearly': 160,
         'features': [
             'x3 or x5 (of Pro) message posting',
@@ -155,7 +155,7 @@ SUBSCRIPTION_PLANS = {
             'Advanced analytics',
             'Personal panel',
         ],
-        'message_limit': 1500,  # x5=2500 -1 = unlimited
+        'message_limit': 2400,  # x5=4000 -1 = unlimited
         'usage_type': 'amount',
         'allowance_period': 'Weekly',
         'glow_color': 'rgba(21, 216, 188, 0.6)',

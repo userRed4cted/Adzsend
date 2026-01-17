@@ -294,6 +294,72 @@ function showSuspendedAccountPopup(accountInfo) {
     });
 }
 
+// Show user suspension popup (when Adzsend account is suspended)
+function showSuspendPopup() {
+    initCustomPopup();
+
+    const overlay = document.getElementById('custom-popup-overlay');
+    const popup = document.getElementById('custom-popup');
+    const closeBtn = document.getElementById('custom-popup-close');
+    const titleEl = document.getElementById('custom-popup-title');
+    const textEl = document.getElementById('custom-popup-text');
+    const btnEl = document.getElementById('custom-popup-btn');
+    const contentEl = document.getElementById('custom-popup-content');
+    const tokenSection = document.getElementById('custom-popup-token-section');
+
+    // Reset
+    contentEl.style.display = 'none';
+    contentEl.innerHTML = '';
+    tokenSection.style.display = 'none';
+
+    // Set content
+    titleEl.textContent = 'Account suspended';
+    titleEl.style.display = 'block';
+    textEl.textContent = 'Your account has been suspended, if you want to appeal or believe this was a mistake, contact us.';
+    textEl.style.display = 'block';
+    btnEl.textContent = 'Resolve';
+    btnEl.style.display = 'block';
+
+    // Override close behavior - refresh page on X or click outside
+    const handleClose = () => {
+        location.reload();
+    };
+
+    // Remove old listeners by cloning
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    newCloseBtn.addEventListener('click', handleClose);
+
+    // Click outside refreshes page
+    const handleOverlayClick = (e) => {
+        if (e.target === overlay) {
+            location.reload();
+        }
+    };
+    overlay.removeEventListener('click', handleOverlayClick);
+    overlay.addEventListener('click', handleOverlayClick);
+
+    // Button redirects to contact page
+    const newBtn = btnEl.cloneNode(true);
+    btnEl.parentNode.replaceChild(newBtn, btnEl);
+    newBtn.textContent = 'Resolve';
+    newBtn.addEventListener('click', () => {
+        window.location.href = '/contact';
+    });
+
+    // ESC key refreshes page
+    const handleEsc = (e) => {
+        if (e.key === 'Escape' && overlay.classList.contains('active')) {
+            location.reload();
+        }
+    };
+    document.addEventListener('keydown', handleEsc);
+
+    // Show popup
+    overlay.classList.add('active');
+    currentPopup = overlay;
+}
+
 // Initialize on page load
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initCustomPopup);

@@ -224,6 +224,39 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Standing Section -->
+                    <div class="settings-subheader" style="margin-top: 1.5rem;">Standing</div>
+                    <div class="settings-text">Thanks for upholding the Adzsend Terms of Service and Community Guidelines. If you break the rules, it will show up here.</div>
+
+                    <div class="standing-bar">
+                        <div class="standing-step {% if db_user and db_user.banned %}{% elif db_user and db_user.flagged %}{% else %}active{% endif %}">
+                            <div class="standing-circle">
+                                {% if db_user and not db_user.banned and not db_user.flagged %}
+                                <img src="{{ url_for('static', filename='tick.png') }}" alt="All good" class="standing-icon">
+                                {% endif %}
+                            </div>
+                            <span class="standing-label">All&nbsp;good!</span>
+                        </div>
+                        <div class="standing-line"></div>
+                        <div class="standing-step {% if db_user and db_user.flagged and not db_user.banned %}active{% endif %}">
+                            <div class="standing-circle">
+                                {% if db_user and db_user.flagged and not db_user.banned %}
+                                <img src="{{ url_for('static', filename='flag.png') }}" alt="Flagged" class="standing-icon">
+                                {% endif %}
+                            </div>
+                            <span class="standing-label">Flagged</span>
+                        </div>
+                        <div class="standing-line"></div>
+                        <div class="standing-step {% if db_user and db_user.banned %}active{% endif %}">
+                            <div class="standing-circle">
+                                {% if db_user and db_user.banned %}
+                                <img src="{{ url_for('static', filename='x.png') }}" alt="Suspended" class="standing-icon">
+                                {% endif %}
+                            </div>
+                            <span class="standing-label">Suspended</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Discord Accounts Page -->
@@ -1061,6 +1094,81 @@
 
     .account-edit-btn:hover {
         color: #10b89e;
+    }
+
+    /* Standing Bar Styles */
+    .standing-bar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-top: 1.5rem;
+        padding: 0;
+        gap: 0;
+        width: 100%;
+        min-height: 80px;
+    }
+
+    .standing-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        flex: 0 0 auto;
+    }
+
+    .standing-circle {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #1A1A1E;
+        border: 2px solid #1A1A1E;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        flex-shrink: 0;
+    }
+
+    .standing-step.active .standing-circle {
+        width: 40px;
+        height: 40px;
+        background: #15d8bc;
+        border-color: #15d8bc;
+    }
+
+    .standing-step:nth-child(3).active .standing-circle {
+        background: #ffa500;
+        border-color: #ffa500;
+    }
+
+    .standing-step:nth-child(5).active .standing-circle {
+        background: #991a35;
+        border-color: #991a35;
+    }
+
+    .standing-icon {
+        width: 18px;
+        height: 18px;
+        filter: brightness(0) invert(1);
+    }
+
+    .standing-label {
+        font-size: 0.75rem;
+        color: #dcddde;
+        text-align: center;
+        font-family: 'gg sans Medium', sans-serif;
+        white-space: nowrap;
+        line-height: 1.2;
+    }
+
+    .standing-line {
+        flex: 1;
+        height: 2px;
+        background: #1A1A1E;
+        margin-top: 20px;
+        margin-left: 8px;
+        margin-right: 8px;
+        min-width: 30px;
     }
 
     /* Profile Photo Picker Popup */

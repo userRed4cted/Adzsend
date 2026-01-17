@@ -69,8 +69,12 @@ def inject_user_data():
     if 'user' in session:
         user = get_user_by_id(session.get('user_id'))
         if user:
-            return {'user_data': get_user_data(user['id'])}
-    return {'user_data': None}
+            # Inject both user_data and db_user (full database user with banned/flagged status)
+            return {
+                'user_data': get_user_data(user['id']),
+                'db_user': user  # Full user object from database with banned, flagged, flag_count, etc
+            }
+    return {'user_data': None, 'db_user': None}
 
 # Make site config available in all templates
 @app.context_processor

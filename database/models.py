@@ -1890,34 +1890,63 @@ def ban_user(user_id):
 
 
 def unban_user(user_id):
-    """Unban a user."""
+    """Unban a user and reset flag count."""
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('UPDATE users SET banned = 0 WHERE id = ?', (user_id,))
+    cursor.execute('UPDATE users SET banned = 0, flag_count = 0 WHERE id = ?', (user_id,))
     conn.commit()
     conn.close()
 
 
 def flag_user(user_id, reason=None):
-    """Flag a user for inappropriate content."""
+    """Flag a user for inappropriate content. Auto-bans on 3rd flag."""
     conn = get_db()
     cursor = conn.cursor()
     flagged_at = datetime.now().isoformat()
+
+    # Get current flag count
+    cursor.execute('SELECT flag_count FROM users WHERE id = ?', (user_id,))
+    row = cursor.fetchone()
+    current_count = row[0] if row and row[0] is not None else 0
+    new_count = current_count + 1
+
     # Increment flag_count each time user is flagged
     cursor.execute('''
         UPDATE users
-        SET flagged = 1, flag_reason = ?, flagged_at = ?, flag_count = COALESCE(flag_count, 0) + 1
+        SET flagged = 1, flag_reason = ?, flagged_at = ?, flag_count = ?
         WHERE id = ?
-    ''', (reason, flagged_at, user_id))
+    ''', (reason, flagged_at, new_count, user_id))
+
+    # Auto-ban if this is the 3rd flag
+    if new_count >= 3:
+        cursor.execute('UPDATE users SET banned = 1 WHERE id = ?', (user_id,))
+
+        # Get user's discord_id and remove from teams
+        cursor.execute('SELECT discord_id FROM users WHERE id = ?', (user_id,))
+        user_row = cursor.fetchone()
+        if user_row:
+            discord_id = user_row[0]
+            # Mark accepted team memberships as 'banned'
+            cursor.execute('''
+                UPDATE business_team_members
+                SET invitation_status = 'banned'
+                WHERE member_discord_id = ? AND invitation_status = 'accepted'
+            ''', (discord_id,))
+            # Delete pending invitations
+            cursor.execute('''
+                DELETE FROM business_team_members
+                WHERE member_discord_id = ? AND invitation_status = 'pending'
+            ''', (discord_id,))
+
     conn.commit()
     conn.close()
 
 
 def unflag_user(user_id):
-    """Remove flag from a user."""
+    """Remove flag from a user and reset flag count."""
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('UPDATE users SET flagged = 0, flag_reason = NULL, flagged_at = NULL WHERE id = ?', (user_id,))
+    cursor.execute('UPDATE users SET flagged = 0, flag_reason = NULL, flagged_at = NULL, flag_count = 0 WHERE id = ?', (user_id,))
     conn.commit()
     conn.close()
 

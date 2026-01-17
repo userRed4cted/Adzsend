@@ -2063,6 +2063,18 @@
                         return;
                     }
 
+                    // Check if user is banned before accessing panels
+                    const isBanned = {{ 'true' if db_user and db_user.banned else 'false' }};
+                    if ((targetPage === 'personal-panel' || targetPage === 'team-panel') && isBanned) {
+                        showSuspendPopup();
+                        // Force back to analytics
+                        setTimeout(() => {
+                            const analyticsBtn = document.querySelector('[data-page="analytics"]');
+                            if (analyticsBtn) analyticsBtn.click();
+                        }, 100);
+                        return;
+                    }
+
                     // Update active state on menu items
                     menuItems.forEach(mi => mi.classList.remove('active'));
                     item.classList.add('active');
@@ -3099,7 +3111,7 @@
                                 console.error('Failed to report flagged content:', e);
                             }
 
-                            await customAlert('Warning', `Banned words used\n\nYour message contains prohibited content:\n• ${foundWords.join('\n• ')}\n\nPlease remove this content from your message before sending.`);
+                            await customAlert('Warning', `Your message contains prohibited content:\n• ${foundWords.join('\n• ')}`);
                             return; // Stop execution
                         }
 
@@ -4018,7 +4030,7 @@
                                 console.error('Failed to report flagged content:', e);
                             }
 
-                            await customAlert('Warning', `Banned words used\n\nYour message contains prohibited content:\n• ${foundWords.join('\n• ')}\n\nPlease remove this content from your message before sending.`);
+                            await customAlert('Warning', `Your message contains prohibited content:\n• ${foundWords.join('\n• ')}`);
                             return;
                         }
 
@@ -4796,15 +4808,19 @@
             });
             ctx.stroke();
 
-            // Draw points
+            // Draw points (stroke first, then fill for perfect centering)
             points.forEach(p => {
+                // Draw background circle (stroke)
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#121215';
+                ctx.fill();
+
+                // Draw foreground circle (main color)
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
                 ctx.fillStyle = '#15d8bc';
                 ctx.fill();
-                ctx.strokeStyle = '#121215';
-                ctx.lineWidth = 2;
-                ctx.stroke();
             });
 
             // Draw Y-axis labels
@@ -5179,15 +5195,19 @@
             });
             ctx.stroke();
 
-            // Draw points
+            // Draw points (stroke first, then fill for perfect centering)
             points.forEach(p => {
+                // Draw background circle (stroke)
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#121215';
+                ctx.fill();
+
+                // Draw foreground circle (main color)
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
                 ctx.fillStyle = '#15d8bc';
                 ctx.fill();
-                ctx.strokeStyle = '#121215';
-                ctx.lineWidth = 2;
-                ctx.stroke();
             });
 
             // Draw Y-axis labels

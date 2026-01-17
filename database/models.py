@@ -1733,10 +1733,16 @@ def get_current_team_for_member(discord_id):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT bt.*, u.username as owner_username, u.discord_id as owner_discord_id, u.avatar as owner_avatar, u.adzsend_id as owner_adzsend_id
+        SELECT bt.*,
+               u.username as owner_username,
+               u.discord_id as owner_discord_id,
+               u.avatar as owner_avatar,
+               u.adzsend_id as owner_adzsend_id,
+               ud.profile_photo as owner_profile_photo
         FROM business_team_members btm
         JOIN business_teams bt ON btm.team_id = bt.id
         JOIN users u ON bt.owner_user_id = u.id
+        LEFT JOIN user_data ud ON u.id = ud.user_id
         WHERE btm.member_discord_id = ? AND btm.invitation_status = 'accepted'
         ORDER BY btm.added_at DESC LIMIT 1
     ''', (discord_id,))

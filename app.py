@@ -554,19 +554,27 @@ def verify_code_page():
 
 @app.route('/discover')
 def discover():
-    from config import NAVBAR
+    user = None
+    user_data = None
+    if 'user' in session:
+        user = session.get('user')
+        user_data = get_user_data(session.get('user_id'))
 
     return render_template('discover.html',
-                         user=session.get('user'),
-                         auth_labels=NAVBAR['auth_buttons'])
+                         user=user,
+                         user_data=user_data)
 
 @app.route('/support')
 def support():
-    from config import NAVBAR
+    user = None
+    user_data = None
+    if 'user' in session:
+        user = session.get('user')
+        user_data = get_user_data(session.get('user_id'))
 
     return render_template('support.html',
-                         user=session.get('user'),
-                         auth_labels=NAVBAR['auth_buttons'])
+                         user=user,
+                         user_data=user_data)
 
 @app.route('/purchase')
 def purchase():
@@ -577,6 +585,7 @@ def purchase():
     has_business = False
     is_admin_user = False
     is_owner = False
+    user_data = None
     if 'user' in session:
         user = get_user_by_id(session.get('user_id'))
         if user:
@@ -584,8 +593,7 @@ def purchase():
             has_business = has_business_access(user['id'], session['user']['id'])
             is_owner = is_business_owner(user['id'])
             is_admin_user = is_admin(user.get('email'))
-
-    from config import NAVBAR
+            user_data = get_user_data(user['id'])
 
     return render_template('purchase.html',
                          subscription_plans=SUBSCRIPTION_PLANS,
@@ -595,7 +603,7 @@ def purchase():
                          is_owner=is_owner,
                          is_admin_user=is_admin_user,
                          user=session.get('user'),
-                         auth_labels=NAVBAR['auth_buttons'])
+                         user_data=user_data)
 
 @app.route('/api/resend-code', methods=['POST'])
 @rate_limit('api')
@@ -1061,6 +1069,7 @@ def dashboard():
                 }
 
         # Fetch guilds from ALL linked accounts
+        suspended_accounts = []  # Track suspended/deleted accounts for popup
         for acc in linked_accounts:
             print(f"[DASHBOARD] Checking account {acc['id']}, is_valid: {acc.get('is_valid')}")
 
@@ -1106,6 +1115,22 @@ def dashboard():
                     cursor.execute('UPDATE linked_discord_accounts SET is_valid = 0 WHERE id = ?', (acc['id'],))
                     conn.commit()
                     conn.close()
+                elif guilds_resp.status_code == 403:
+                    # Check if account is suspended/deleted
+                    try:
+                        error_data = guilds_resp.json()
+                        error_code = error_data.get('code', 0)
+                        if error_code in [40001, 40002]:
+                            print(f"[DASHBOARD] Account {acc['id']} is suspended/disabled (code {error_code})")
+                            # Unlink the account and store info for popup
+                            from database.models import unlink_discord_account
+                            suspended_accounts.append({
+                                'username': acc.get('username', 'Unknown'),
+                                'discord_id': acc.get('discord_id', 'Unknown')
+                            })
+                            unlink_discord_account(user['id'], acc['id'])
+                    except Exception as e:
+                        print(f"[DASHBOARD] Error parsing 403 response: {e}")
                 else:
                     print(f"[DASHBOARD] Account {acc['id']} failed to fetch guilds: {guilds_resp.status_code}")
             except Exception as e:
@@ -1203,6 +1228,32 @@ def dashboard():
         purchase_history=purchase_history,
         BLACKLISTED_WORDS=BLACKLISTED_WORDS,
         PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS,
+        csrf_token=csrf_token,
+        suspended_accounts=suspended_accounts
+    ))
+    # Prevent caching
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+@app.route('/bridge')
+def bridge():
+    if 'authenticated' not in session:
+        return redirect(url_for('login_page'))
+
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        session.clear()
+        return redirect(url_for('login_page'))
+
+    # Get user data
+    user_data = get_user_data(user['id'])
+
+    csrf_token = generate_csrf_token()
+    response = app.make_response(render_template('bridge.html',
+        user=session.get('user'),
+        user_data=user_data,
         csrf_token=csrf_token
     ))
     # Prevent caching
@@ -1446,9 +1497,48 @@ def send_message_single():
                 # Message was sent successfully, return success anyway
             return {'success': True, 'channel': channel_name}, 200
         elif resp.status_code == 401:
-            # Token is invalid/expired - unlink Discord account
-            full_unlink_discord_account(user['id'])
-            return {'success': False, 'error': 'Token invalid', 'token_invalid': True}, 401
+            # Token is invalid/expired - mark account as needing token update
+            account_info = None
+            if account_used:
+                from database import get_db
+                conn = get_db()
+                cursor = conn.cursor()
+                cursor.execute('UPDATE linked_discord_accounts SET is_valid = 0 WHERE id = ?', (account_used['id'],))
+                conn.commit()
+                conn.close()
+                account_info = {
+                    'account_id': account_used['id'],
+                    'username': account_used.get('username', 'Unknown'),
+                    'discord_id': account_used.get('discord_id', 'Unknown')
+                }
+            return {'success': False, 'error': 'Token invalid', 'token_invalid': True, 'account_info': account_info}, 401
+        elif resp.status_code == 403:
+            # Check if account is suspended/deleted/disabled
+            try:
+                error_data = resp.json()
+                error_code = error_data.get('code', 0)
+                # Discord error codes for account issues:
+                # 40001 = Unauthorized (account disabled)
+                # 40002 = You need to verify your account
+                # 40007 = User is banned from this guild
+                # 50001 = Missing Access
+                if error_code in [40001, 40002] and account_used:
+                    # Account is suspended/disabled - unlink it
+                    from database.models import unlink_discord_account
+                    unlink_discord_account(user['id'], account_used['id'])
+                    return {
+                        'success': False,
+                        'error': 'Account unavailable',
+                        'account_suspended': True,
+                        'account_info': {
+                            'account_id': account_used['id'],
+                            'username': account_used.get('username', 'Unknown'),
+                            'discord_id': account_used.get('discord_id', 'Unknown')
+                        }
+                    }, 403
+            except:
+                pass
+            return {'success': False, 'error': 'Access denied'}, 403
         elif resp.status_code == 429:
             # Extract retry_after from Discord's response
             try:
@@ -2611,6 +2701,9 @@ def get_current_team():
             members = get_team_members(owner_team['id'])
             accepted_members = [m for m in members if m.get('status') == 'accepted']
 
+            # Get user data for profile photo
+            user_data = get_user_data(user['id'])
+
             return {
                 'success': True,
                 'is_owner': True,
@@ -2619,7 +2712,8 @@ def get_current_team():
                     'username': user.get('username'),
                     'discord_id': user.get('discord_id'),
                     'avatar': user.get('avatar'),
-                    'adzsend_id': user.get('adzsend_id')
+                    'adzsend_id': user.get('adzsend_id'),
+                    'profile_photo': user_data.get('profile_photo') if user_data else 'Light_Blue.jpg'
                 },
                 'team_members': [{
                     'username': m.get('member_username'),

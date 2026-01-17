@@ -795,14 +795,21 @@
                         <div class="panel-divider"></div>
 
                         <!-- Middle: Message Composer Only -->
-                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; background: transparent; padding: 0 0.75rem; border: none; box-sizing: border-box;">
-                            <!-- Personal panel label - matching view-mode-toggle position -->
-                            <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
-                                <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Personal panel</span>
+                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; background: transparent; padding: 0 0.75rem; border: none; box-sizing: border-box; position: relative;">
+                            <!-- Loading overlay -->
+                            <div id="personal-message-loading" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 10;">
+                                <div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
                             </div>
-                            <!-- Message Composer -->
-                            <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
-                                <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
+
+                            <!-- Content - hidden until loaded -->
+                            <div id="personal-message-content" style="opacity: 0; pointer-events: none; flex: 1; display: flex; flex-direction: column; height: 100%;">
+                                <!-- Personal panel label - matching view-mode-toggle position -->
+                                <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
+                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Personal panel</span>
+                                </div>
+                                <!-- Message Composer -->
+                                <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
+                                    <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
                                     <!-- Emoji button - top right corner (disabled) -->
                                     <button id="emoji-btn" type="button" disabled style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: not-allowed; padding: 0; z-index: 2; opacity: 0.5;">
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
@@ -818,6 +825,7 @@
                                     </button>
                                 </div>
                             </div>
+                            </div><!-- End personal-message-content -->
                         </div>
 
                     </div>
@@ -910,14 +918,21 @@
                         <div class="panel-divider"></div>
 
                         <!-- Middle: Message Composer Only -->
-                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; background: transparent; padding: 0 0.75rem; border: none; box-sizing: border-box;">
-                            <!-- Team panel label - matching view-mode-toggle position -->
-                            <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
-                                <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Team panel (message set by team owner)</span>
+                        <div style="flex: 1; display: flex; flex-direction: column; height: 100%; background: transparent; padding: 0 0.75rem; border: none; box-sizing: border-box; position: relative;">
+                            <!-- Loading overlay -->
+                            <div id="team-message-loading" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 10;">
+                                <div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
                             </div>
-                            <!-- Message Composer -->
-                            <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
-                                <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
+
+                            <!-- Content - hidden until loaded -->
+                            <div id="team-message-content" style="opacity: 0; pointer-events: none; flex: 1; display: flex; flex-direction: column; height: 100%;">
+                                <!-- Team panel label - matching view-mode-toggle position -->
+                                <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
+                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Team panel (message set by team owner)</span>
+                                </div>
+                                <!-- Message Composer -->
+                                <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
+                                    <div class="message-input-container" style="flex: 1; display: flex; flex-direction: column; background: #1A1A1E; border: 1px solid #222225; border-radius: 8px; position: relative; min-height: 0;">
                                     <!-- Emoji button - top right corner (disabled) -->
                                     <button id="team-emoji-btn" type="button" disabled style="position: absolute; top: 8px; right: 8px; background: transparent; border: none; cursor: not-allowed; padding: 0; z-index: 2; opacity: 0.5;">
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
@@ -933,6 +948,7 @@
                                     </button>
                                 </div>
                             </div>
+                            </div><!-- End team-message-content -->
                         </div>
 
                     </div>
@@ -1062,40 +1078,47 @@
                     <div id="page-analytics" class="page-content" style="height: 100%; display: flex; flex-direction: row;">
                         <!-- Left Half: Personal Analytics -->
                         <div style="flex: 1; display: flex; flex-direction: column; height: 100%; position: relative;">
-                            <!-- Label (replaces radio toggle) -->
-                            <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
-                                <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Personal analytics</span>
+                            <!-- Loading overlay - shows in center until everything loads -->
+                            <div id="personal-analytics-loading" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 10;">
+                                <div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
                             </div>
 
-                            <!-- Personal Analytics Stats -->
-                            <div id="personal-analytics-stats" style="display: flex; flex-direction: column; padding: 0 1rem; margin-bottom: 0.5rem;">
-                                <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
-                                    <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across personal panel</span>
-                                    <span id="stat-personal-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                            <!-- Content - hidden until loaded -->
+                            <div id="personal-analytics-content" style="opacity: 0; pointer-events: none; flex: 1; display: flex; flex-direction: column; height: 100%;">
+                                <!-- Label (replaces radio toggle) -->
+                                <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
+                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Personal analytics</span>
                                 </div>
-                                <div style="height: 1px; background: #222225;"></div>
-                                <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
-                                    <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across team panels</span>
-                                    <span id="stat-team-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
-                                </div>
-                                <div style="height: 1px; background: #222225;"></div>
-                                <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
-                                    <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across all panels</span>
-                                    <span id="stat-total-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
-                                </div>
-                                <div style="height: 1px; background: #222225;"></div>
-                                <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
-                                    <span class="date-format-label" data-label-template="Date with most messages sent on personal panel (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Date with most messages sent on personal panel ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
-                                    <span id="stat-peak-date-personal" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
-                                </div>
-                                <div style="height: 1px; background: #222225;"></div>
-                                <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
-                                    <span class="date-format-label" data-label-template="Date with most messages sent across all panels (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Date with most messages sent across all panels ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
-                                    <span id="stat-peak-date-all" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
-                                </div>
-                            </div>
 
-                            <!-- Personal Chart Section -->
+                                <!-- Personal Analytics Stats -->
+                                <div id="personal-analytics-stats" style="display: flex; flex-direction: column; padding: 0 1rem; margin-bottom: 0.5rem;">
+                                    <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                                        <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across personal panel</span>
+                                        <span id="stat-personal-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                    </div>
+                                    <div style="height: 1px; background: #222225;"></div>
+                                    <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                                        <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across team panels</span>
+                                        <span id="stat-team-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                    </div>
+                                    <div style="height: 1px; background: #222225;"></div>
+                                    <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                                        <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across all panels</span>
+                                        <span id="stat-total-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                    </div>
+                                    <div style="height: 1px; background: #222225;"></div>
+                                    <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                                        <span class="date-format-label" data-label-template="Date with most messages sent on personal panel (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Date with most messages sent on personal panel ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
+                                        <span id="stat-peak-date-personal" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                    </div>
+                                    <div style="height: 1px; background: #222225;"></div>
+                                    <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
+                                        <span class="date-format-label" data-label-template="Date with most messages sent across all panels (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Date with most messages sent across all panels ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
+                                        <span id="stat-peak-date-all" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Personal Chart Section -->
                             <div style="flex: 1; display: flex; flex-direction: column; padding: 1rem; min-height: 0;">
                                 <div class="date-range-container" style="margin-bottom: 1rem;">
                                     <div class="date-input-group">
@@ -1154,6 +1177,7 @@
                                     </div>
                                 </div>
                             </div>
+                            </div><!-- End personal-analytics-content -->
                         </div>
 
                         <!-- Vertical Divider -->
@@ -1164,13 +1188,20 @@
                             <!-- Top Half: Individual team member analytics -->
                             <div style="flex: 1 1 50%; display: flex; flex-direction: column; min-height: 0; max-height: calc(50% - 0.5px); position: relative;">
                                 {% if is_team_owner %}
-                                <!-- Label -->
-                                <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
-                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Individual team member analytics</span>
+                                <!-- Loading overlay - shows in center until everything loads -->
+                                <div id="team-analytics-loading" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 10;">
+                                    <div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
                                 </div>
 
-                                <!-- Header (search bar) -->
-                                <div class="unified-header">
+                                <!-- Content - hidden until loaded -->
+                                <div id="team-analytics-content" style="opacity: 0; pointer-events: none; flex: 1; display: flex; flex-direction: column; height: 100%;">
+                                    <!-- Label -->
+                                    <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
+                                        <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Individual team member analytics</span>
+                                    </div>
+
+                                    <!-- Header (search bar) -->
+                                    <div class="unified-header">
                                     <div class="header-section">
                                         <div class="channels-search">
                                             <input type="text" id="analytics-team-search" class="search-input" placeholder="Search Adzsend ID" oninput="filterAnalyticsMembersList()">
@@ -1202,6 +1233,7 @@
                                         {% endfor %}
                                     </div>
                                 </div>
+                                </div><!-- End team-analytics-content -->
                                 {% else %}
                                 <!-- Non-owner message -->
                                 <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center;">
@@ -1564,7 +1596,8 @@
 
         .chart-tooltip {
             position: absolute;
-            background: #282930;
+            background: #1A1A1E;
+            border: 1px solid #222225;
             color: #dcddde;
             padding: 0.5rem 0.75rem;
             border-radius: 6px;
@@ -1573,6 +1606,7 @@
             z-index: 10;
             display: none;
             white-space: nowrap;
+            text-align: center;
         }
 
         .chart-summary {
@@ -1977,6 +2011,15 @@
             const hasGuilds = {{ 'true' if guilds else 'false' }};
             const hasTeam = {{ 'true' if has_team else 'false' }};
             const isTeamOwner = {{ 'true' if is_team_owner else 'false' }};
+
+            // Check for suspended/deleted accounts detected during page load
+            const suspendedAccounts = {{ suspended_accounts | tojson | safe }};
+            if (suspendedAccounts && suspendedAccounts.length > 0) {
+                // Show popup for each suspended account
+                for (const account of suspendedAccounts) {
+                    await showSuspendedAccountPopup(account);
+                }
+            }
 
             // Show popup on page load if user has no Discord account linked
             if (!discordLinked) {
@@ -3117,9 +3160,25 @@
                                     const channelKey = `${channel.guildId}-${channel.id}`;
                                     failedChannels.delete(channelKey);
                                     updateFailedChannelStatus(channel);
+                                } else if (result.account_suspended) {
+                                    // Account is suspended/deleted - show popup and reload
+                                    const accountInfo = result.account_info || {
+                                        username: 'Unknown',
+                                        discord_id: 'Unknown'
+                                    };
+                                    await showSuspendedAccountPopup(accountInfo);
+                                    window.location.reload();
+                                    return; // Stop execution
                                 } else if (result.token_invalid) {
-                                    // Token is invalid - redirect to settings
-                                    window.location.href = '/settings';
+                                    // Token is invalid - show token update popup with input
+                                    const accountInfo = result.account_info || {
+                                        username: 'Unknown',
+                                        discord_id: result.account_id || 'Unknown',
+                                        account_id: result.account_id
+                                    };
+                                    await showTokenUpdatePopup(accountInfo, () => {
+                                        window.location.reload();
+                                    });
                                     return; // Stop execution
                                 } else if (result.limit_reached) {
                                     // Usage limit reached - redirect to billing in settings
@@ -4009,8 +4068,25 @@
                                     const channelKey = `${channel.guildId}-${channel.id}`;
                                     teamFailedChannels.delete(channelKey);
                                     teamUpdateFailedChannelStatus(channel);
+                                } else if (result.account_suspended) {
+                                    // Account is suspended/deleted - show popup and reload
+                                    const accountInfo = result.account_info || {
+                                        username: 'Unknown',
+                                        discord_id: 'Unknown'
+                                    };
+                                    await showSuspendedAccountPopup(accountInfo);
+                                    window.location.reload();
+                                    return;
                                 } else if (result.token_invalid) {
-                                    window.location.href = '/settings';
+                                    // Token is invalid - show token update popup with input
+                                    const accountInfo = result.account_info || {
+                                        username: 'Unknown',
+                                        discord_id: result.account_id || 'Unknown',
+                                        account_id: result.account_id
+                                    };
+                                    await showTokenUpdatePopup(accountInfo, () => {
+                                        window.location.reload();
+                                    });
                                     return;
                                 } else if (result.limit_reached) {
                                     await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
@@ -4500,7 +4576,7 @@
 
         async function loadAnalyticsInfo() {
             const container = document.getElementById('analytics-info-content');
-            container.innerHTML = '<div class="no-data-message">Loading...</div>';
+            container.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
 
             try {
                 const response = await fetch(`/api/team/member/${currentMemberId}/analytics`);
@@ -4532,6 +4608,11 @@
                     // Adjust end date if it's after server date
                     if (serverDate && new Date(endInput.value) > new Date(serverDate)) {
                         endInput.value = serverDate;
+                    }
+
+                    // Update custom date displays to reflect the adjusted dates
+                    if (typeof updateCustomDateDisplays === 'function') {
+                        updateCustomDateDisplays();
                     }
 
                     container.innerHTML = `
@@ -4598,10 +4679,34 @@
         async function loadDailyStats() {
             const startDate = document.getElementById('analytics-start-date').value;
             const endDate = document.getElementById('analytics-end-date').value;
+            const canvas = document.getElementById('analytics-chart');
+
+            if (canvas) {
+                // Show loading state on canvas
+                const ctx = canvas.getContext('2d');
+                const width = canvas.width;
+                const height = canvas.height;
+                ctx.clearRect(0, 0, width, height);
+
+                // Center the loading dots
+                const loadingText = document.createElement('div');
+                loadingText.style.position = 'absolute';
+                loadingText.style.top = '50%';
+                loadingText.style.left = '50%';
+                loadingText.style.transform = 'translate(-50%, -50%)';
+                loadingText.innerHTML = '<div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+                loadingText.id = 'analytics-chart-loading';
+                canvas.parentElement.style.position = 'relative';
+                canvas.parentElement.appendChild(loadingText);
+            }
 
             try {
                 const response = await fetch(`/api/team/member/${currentMemberId}/daily-stats?start_date=${startDate}&end_date=${endDate}`);
                 const data = await response.json();
+
+                // Remove loading indicator
+                const loadingEl = document.getElementById('analytics-chart-loading');
+                if (loadingEl) loadingEl.remove();
 
                 if (data.success) {
                     chartData = data.data.stats || [];
@@ -4617,6 +4722,9 @@
                     console.error('Failed to load daily stats:', data.error);
                 }
             } catch (error) {
+                // Remove loading indicator on error
+                const loadingEl = document.getElementById('analytics-chart-loading');
+                if (loadingEl) loadingEl.remove();
                 console.error('Error loading daily stats:', error);
             }
         }
@@ -4750,7 +4858,7 @@
 
                     if (closest) {
                         chartTooltip.style.display = 'block';
-                        chartTooltip.innerHTML = `<strong>${closest.count} ads</strong><br>${formatDateShort(closest.date)}`;
+                        chartTooltip.innerHTML = `<strong>${closest.count}</strong><br>${formatDateShort(closest.date)}`;
 
                         // Position tooltip below the point
                         const tooltipHeight = chartTooltip.offsetHeight;
@@ -4798,12 +4906,53 @@
         let personalChartData = [];
         let personalAccountCreated = null;
         let personalServerDate = null;
+        let personalSummaryLoaded = false;
+        let personalChartLoaded = false;
+
+        function checkAndShowPersonalContent() {
+            if (personalSummaryLoaded && personalChartLoaded) {
+                const loadingEl = document.getElementById('personal-analytics-loading');
+                const contentEl = document.getElementById('personal-analytics-content');
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (contentEl) {
+                    contentEl.style.opacity = '1';
+                    contentEl.style.pointerEvents = 'auto';
+                }
+            }
+        }
 
         // Initialize personal analytics when page loads
         document.addEventListener('DOMContentLoaded', function() {
             initPersonalAnalytics();
             setupPersonalDateHandlers();
             loadPersonalAnalyticsSummary();
+
+            // Team analytics is server-rendered, just show it
+            const teamLoadingEl = document.getElementById('team-analytics-loading');
+            const teamContentEl = document.getElementById('team-analytics-content');
+            if (teamLoadingEl) teamLoadingEl.style.display = 'none';
+            if (teamContentEl) {
+                teamContentEl.style.opacity = '1';
+                teamContentEl.style.pointerEvents = 'auto';
+            }
+
+            // Personal panel message is server-rendered, just show it
+            const personalMsgLoadingEl = document.getElementById('personal-message-loading');
+            const personalMsgContentEl = document.getElementById('personal-message-content');
+            if (personalMsgLoadingEl) personalMsgLoadingEl.style.display = 'none';
+            if (personalMsgContentEl) {
+                personalMsgContentEl.style.opacity = '1';
+                personalMsgContentEl.style.pointerEvents = 'auto';
+            }
+
+            // Team panel message is server-rendered, just show it
+            const teamMsgLoadingEl = document.getElementById('team-message-loading');
+            const teamMsgContentEl = document.getElementById('team-message-content');
+            if (teamMsgLoadingEl) teamMsgLoadingEl.style.display = 'none';
+            if (teamMsgContentEl) {
+                teamMsgContentEl.style.opacity = '1';
+                teamMsgContentEl.style.pointerEvents = 'auto';
+            }
         });
 
         async function loadPersonalAnalyticsSummary() {
@@ -4814,7 +4963,7 @@
                 if (data.success) {
                     const summary = data.data;
 
-                    // Update stat values
+                    // Update stat values (UI already exists in HTML)
                     document.getElementById('stat-personal-all-time').textContent = summary.personal_all_time.toLocaleString();
                     document.getElementById('stat-team-all-time').textContent = summary.team_all_time.toLocaleString();
                     document.getElementById('stat-total-all-time').textContent = summary.total_all_time.toLocaleString();
@@ -4822,11 +4971,16 @@
                     // Format dates using user's preferred format
                     document.getElementById('stat-peak-date-personal').textContent = formatDateWithUserFormat(summary.personal_peak_date);
                     document.getElementById('stat-peak-date-all').textContent = formatDateWithUserFormat(summary.all_peak_date);
+
+                    personalSummaryLoaded = true;
+                    checkAndShowPersonalContent();
                 } else {
                     console.error('Failed to load personal analytics summary:', data.error);
                 }
             } catch (error) {
                 console.error('Error loading personal analytics summary:', error);
+                personalSummaryLoaded = true;
+                checkAndShowPersonalContent();
             }
         }
 
@@ -4947,11 +5101,16 @@
 
                     // Draw chart
                     drawPersonalChart();
+
+                    personalChartLoaded = true;
+                    checkAndShowPersonalContent();
                 } else {
                     console.error('Failed to load personal daily stats:', data.error);
                 }
             } catch (error) {
                 console.error('Error loading personal daily stats:', error);
+                personalChartLoaded = true;
+                checkAndShowPersonalContent();
             }
         }
 
@@ -5077,7 +5236,7 @@
 
                     if (closest) {
                         personalChartTooltip.style.display = 'block';
-                        personalChartTooltip.innerHTML = `<strong>${closest.count} ads</strong><br>${formatDateShort(closest.date)}`;
+                        personalChartTooltip.innerHTML = `<strong>${closest.count}</strong><br>${formatDateShort(closest.date)}`;
 
                         const tooltipHeight = personalChartTooltip.offsetHeight;
                         const tooltipWidth = personalChartTooltip.offsetWidth;

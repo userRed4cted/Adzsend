@@ -212,7 +212,7 @@ function showTokenUpdatePopup(accountInfo, onClose) {
                 return;
             }
 
-            tokenStatus.textContent = 'Verifying...';
+            tokenStatus.textContent = 'Verifying';
             tokenStatus.style.color = '#81828A';
 
             try {
@@ -265,6 +265,32 @@ function showTokenUpdatePopup(accountInfo, onClose) {
 
         // Focus input
         setTimeout(() => newInput.focus(), 100);
+    });
+}
+
+// Show suspended account popup
+function showSuspendedAccountPopup(accountInfo) {
+    const username = accountInfo.username || 'Unknown';
+    const discordId = accountInfo.discord_id || 'Unknown';
+
+    return new Promise((resolve) => {
+        showCustomPopup(
+            'Whoops, no action is required',
+            `It seems ${username} (${discordId}) is unavailable, this can be due to moderation actions against your account, account deletion, etc. Your account has been unlinked, feel free to link a new account!`,
+            'Link another account'
+        ).then(() => {
+            // Open settings and navigate to Discord accounts page
+            if (typeof openSettings === 'function') {
+                openSettings();
+                setTimeout(() => {
+                    const discordAccountsBtn = document.querySelector('[data-settings-page="discord-accounts"]');
+                    if (discordAccountsBtn) {
+                        discordAccountsBtn.click();
+                    }
+                }, 100);
+            }
+            resolve();
+        });
     });
 }
 

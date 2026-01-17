@@ -116,14 +116,15 @@ body {
     margin-top: 50px;
     background: #121215;
     opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 1.04s ease, transform 1.04s ease;
+    transform: translate3d(0, 30px, 0);
+    transition: opacity 2.08s ease, transform 2.08s ease;
     will-change: opacity, transform;
+    backface-visibility: hidden;
 }
 
 .about-section.visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
 }
 
 .about-title {
@@ -852,11 +853,11 @@ body {
 @keyframes heroFadeIn {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translate3d(0, 20px, 0);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translate3d(0, 0, 0);
     }
 }
 
@@ -865,6 +866,8 @@ body {
     animation: heroFadeIn 0.8s ease forwards;
     will-change: opacity, transform;
     contain: layout style paint;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 /* Hero Heading Section */

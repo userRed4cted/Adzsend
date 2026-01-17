@@ -52,7 +52,7 @@
                 <!-- Interval Page -->
                 <div class="settings-page" id="settings-page-interval" style="display: none;">
                     <div class="settings-subheader">Interval</div>
-                    <div class="settings-text">Change the rate at which messages send across all panels, can help with performance and conectivity issues. Recommended to be kept at 1 second.</div>
+                    <div class="settings-text">Change the rate at which messages send in Discord, recommended to be kept at 2 seconds.</div>
 
                     <div class="interval-slider-container">
                         <div class="interval-slider-track">
@@ -65,7 +65,7 @@
                             <div class="interval-slider-thumb" id="interval-slider-thumb"></div>
                         </div>
                         <div class="interval-slider-labels">
-                            <span data-value="0">No delay</span>
+                            <span data-value="0" class="disabled-delay-option" style="opacity: 0.5; pointer-events: none; cursor: default;">No delay</span>
                             <span data-value="1000">1 second</span>
                             <span data-value="2000">2 seconds</span>
                             <span data-value="5000">5 seconds</span>
@@ -155,30 +155,37 @@
                 </div>
 
                 <!-- Teams Page -->
-                <div class="settings-page" id="settings-page-teams" style="display: none;">
-                    <!-- Team Invites Section -->
-                    <div class="settings-subheader">Team invites</div>
-                    <div class="settings-text">Accept or deny team join requests.</div>
-
-                    <div class="team-invitations-box" id="team-invitations-box">
-                        <div id="team-invitations-list">
-                            <div class="team-no-invitations">No invitations</div>
-                        </div>
+                <div class="settings-page" id="settings-page-teams" style="display: none; position: relative;">
+                    <!-- Loading overlay - shows in center until everything loads -->
+                    <div id="teams-loading" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 10;">
+                        <div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
                     </div>
 
-                    <!-- Manage Teams Section -->
-                    <div class="settings-subheader" style="margin-top: 2rem;">Manage teams</div>
-                    <div class="settings-text">Manage what teams your appart of.</div>
+                    <!-- Content - hidden until loaded -->
+                    <div id="teams-content" style="opacity: 0; pointer-events: none;">
+                        <!-- Team Invites Section -->
+                        <div class="settings-subheader">Team invites</div>
+                        <div class="settings-text">Accept or deny team join requests.</div>
 
-                    <div class="team-current-box" id="team-current-box">
-                        <div class="team-current-profile">
-                            <div class="team-current-avatar" id="team-current-avatar"></div>
-                            <div class="team-current-info">
-                                <span class="team-current-id" id="team-current-id">None</span>
+                        <div class="team-invitations-box" id="team-invitations-box">
+                            <div id="team-invitations-list">
                             </div>
-                            <button class="team-leave-btn" id="team-leave-btn" disabled>Leave</button>
-                            <div class="team-owner-crown" id="team-owner-crown" style="display: none;">
-                                <img src="{{ url_for('static', filename='OwnerDiscordCrown.png') }}" alt="Owner">
+                        </div>
+
+                        <!-- Manage Teams Section -->
+                        <div class="settings-subheader" style="margin-top: 2rem;">Manage teams</div>
+                        <div class="settings-text">Manage what teams your appart of.</div>
+
+                        <div class="team-current-box" id="team-current-box">
+                            <div class="team-current-profile">
+                                <div class="team-current-avatar" id="team-current-avatar"></div>
+                                <div class="team-current-info">
+                                    <span class="team-current-id" id="team-current-id">None</span>
+                                </div>
+                                <button class="team-leave-btn" id="team-leave-btn" disabled>Leave</button>
+                                <div class="team-owner-crown" id="team-owner-crown" style="display: none;" title="Team owner">
+                                    <img src="{{ url_for('static', filename='OwnerDiscordCrown.png') }}" alt="Owner">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -220,19 +227,26 @@
                 </div>
 
                 <!-- Discord Accounts Page -->
-                <div class="settings-page" id="settings-page-discord-accounts" style="display: none;">
-                    <div class="settings-subheader">Linked Discord accounts</div>
-                    <div class="settings-text">Manage linked Discord accounts to send messages via them in the panel.</div>
-
-                    <!-- Search Bar -->
-                    <div style="margin-top: 1rem; margin-bottom: 0.5rem;">
-                        <input type="text" class="search-input" placeholder="Search" id="discord-accounts-search-input" style="width: 100%;">
+                <div class="settings-page" id="settings-page-discord-accounts" style="display: none; position: relative;">
+                    <!-- Loading overlay - shows in center until everything loads -->
+                    <div id="discord-accounts-loading" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; z-index: 10;">
+                        <div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
                     </div>
-                    <div class="settings-text" style="margin-bottom: 1rem;">We recommend using alternate Discord accounts, build an account history before using.</div>
 
-                    <!-- List View Container -->
-                    <div id="discord-accounts-list-view" style="display: block;">
-                        <!-- Accounts will be dynamically loaded here -->
+                    <!-- Content - hidden until loaded -->
+                    <div id="discord-accounts-content" style="opacity: 0; pointer-events: none;">
+                        <div class="settings-subheader">Linked Discord accounts</div>
+                        <div class="settings-text">Manage linked Discord accounts to send messages via them in the panel.</div>
+
+                        <!-- Search Bar -->
+                        <div style="margin-top: 1rem; margin-bottom: 0.5rem;">
+                            <input type="text" class="search-input" placeholder="Search" id="discord-accounts-search-input" style="width: 100%;">
+                        </div>
+                        <div class="settings-text" style="margin-bottom: 1rem;">We recommend using alternate Discord accounts, build an account history before using.</div>
+
+                        <!-- List View Container -->
+                        <div id="discord-accounts-list-view" style="display: block;">
+                        </div>
                     </div>
                 </div>
 
@@ -850,11 +864,6 @@
         height: 18px;
     }
 
-    .team-owner-crown:hover img {
-        opacity: 1;
-        transform: scale(1.1);
-    }
-
     /* Billing Page Styles */
     .settings-text-with-action {
         display: flex;
@@ -1197,26 +1206,29 @@
             { value: 10000, percent: 100 }
         ];
 
-        let currentDelay = 1000; // Default
+        let currentDelay = 2000; // Default
 
         // Load saved delay from server
         function loadSavedDelay() {
             // Try to get from window.userMessageDelay if available (set by the page)
-            const savedDelay = typeof window.userMessageDelay !== 'undefined' ? window.userMessageDelay : 1000;
+            let savedDelay = typeof window.userMessageDelay !== 'undefined' ? window.userMessageDelay : 2000;
+            // Prevent setting to 0 (no delay is disabled)
+            if (savedDelay === 0) savedDelay = 2000;
             setSliderToValue(savedDelay);
         }
 
         function getPercentForValue(value) {
             const stop = delayStops.find(s => s.value === value);
-            return stop ? stop.percent : 25; // Default to 1 second position
+            return stop ? stop.percent : 50; // Default to 2 seconds position
         }
 
         function getValueForPercent(percent) {
-            // Find nearest stop
-            let nearest = delayStops[0];
+            // Find nearest stop (excluding 0 - no delay)
+            let nearest = delayStops[1]; // Start from 1000 (1 second)
             let minDist = Math.abs(percent - nearest.percent);
 
-            for (const stop of delayStops) {
+            for (let i = 1; i < delayStops.length; i++) {
+                const stop = delayStops[i];
                 const dist = Math.abs(percent - stop.percent);
                 if (dist < minDist) {
                     minDist = dist;
@@ -1459,14 +1471,27 @@
     // Teams functionality
     (function() {
         let acceptedInvitation = false;
+        let invitationsLoaded = false;
+        let currentTeamLoaded = false;
+
+        function checkAndShowContent() {
+            if (invitationsLoaded && currentTeamLoaded) {
+                const loadingEl = document.getElementById('teams-loading');
+                const contentEl = document.getElementById('teams-content');
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (contentEl) {
+                    contentEl.style.opacity = '1';
+                    contentEl.style.pointerEvents = 'auto';
+                }
+            }
+        }
 
         function loadTeamInvitations() {
+            const invitationsList = document.getElementById('team-invitations-list');
             fetch('/api/team/invitations')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        const invitationsList = document.getElementById('team-invitations-list');
-
                         if (data.invitations && data.invitations.length > 0) {
                             invitationsList.innerHTML = '';
 
@@ -1513,9 +1538,15 @@
                         } else {
                             invitationsList.innerHTML = '<div class="team-no-invitations">No invitations</div>';
                         }
+                        invitationsLoaded = true;
+                        checkAndShowContent();
                     }
                 })
-                .catch(error => console.error('Error loading invitations:', error));
+                .catch(error => {
+                    console.error('Error loading invitations:', error);
+                    invitationsLoaded = true;
+                    checkAndShowContent();
+                });
         }
 
         async function acceptInvitation(memberId) {
@@ -1556,11 +1587,12 @@
         }
 
         function loadCurrentTeam() {
+            const avatarEl = document.getElementById('team-current-avatar');
+            const idEl = document.getElementById('team-current-id');
+
             fetch('/api/team/current')
                 .then(response => response.json())
                 .then(data => {
-                    const avatarEl = document.getElementById('team-current-avatar');
-                    const idEl = document.getElementById('team-current-id');
                     const leaveBtn = document.getElementById('team-leave-btn');
                     const crownEl = document.getElementById('team-owner-crown');
                     const invitationsList = document.getElementById('team-invitations-list');
@@ -1576,7 +1608,7 @@
 
                         // Owner can't join other teams
                         if (invitationsList) {
-                            invitationsList.innerHTML = '<div class="team-no-invitations">Team owner, can\'t join other teams</div>';
+                            invitationsList.innerHTML = '<div class="team-no-invitations">Cant join other teams as team owner.</div>';
                         }
                     } else if (data.success && data.in_team) {
                         // User is in a team
@@ -1588,7 +1620,7 @@
                         leaveBtn.style.display = 'block';
                         leaveBtn.disabled = false;
                         leaveBtn.textContent = 'Leave';
-                        crownEl.style.display = 'none';
+                        crownEl.style.display = 'flex';
                     } else {
                         // Not in any team
                         acceptedInvitation = false;
@@ -1599,12 +1631,16 @@
                         leaveBtn.textContent = 'Leave';
                         crownEl.style.display = 'none';
                     }
+                    currentTeamLoaded = true;
+                    checkAndShowContent();
                 })
                 .catch(error => {
                     console.error('Error loading current team:', error);
                     document.getElementById('team-current-id').textContent = 'None';
                     document.getElementById('team-leave-btn').disabled = true;
                     document.getElementById('team-owner-crown').style.display = 'none';
+                    currentTeamLoaded = true;
+                    checkAndShowContent();
                 });
         }
 
@@ -1799,7 +1835,7 @@
         // Show profile photo picker popup
         function showProfilePhotoPicker() {
             // Build grid HTML - centered with margin-top to avoid X button
-            let gridHTML = '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 4.5rem auto 1.5rem auto; max-width: fit-content;">';
+            let gridHTML = '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 0.75rem auto; max-width: fit-content;">';
 
             profilePhotos.forEach(photo => {
                 gridHTML += `

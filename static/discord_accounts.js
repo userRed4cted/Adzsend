@@ -32,6 +32,15 @@ async function loadDiscordAccounts() {
             currentAccountCount = data.count || 0;
             canLinkMoreAccounts = data.can_link || false;
             renderDiscordAccounts(allDiscordAccounts);
+
+            // Hide loading, show content
+            const loadingEl = document.getElementById('discord-accounts-loading');
+            const contentEl = document.getElementById('discord-accounts-content');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (contentEl) {
+                contentEl.style.opacity = '1';
+                contentEl.style.pointerEvents = 'auto';
+            }
         } else {
             console.error('Failed to load Discord accounts:', data.error);
         }

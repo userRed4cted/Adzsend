@@ -10,7 +10,6 @@ from .homepage import HOMEPAGE
 from .navbar import NAVBAR
 from .colors import COLORS
 from .pages import PAGES, get_page_title, get_page_subtitle, get_page_description, get_page_embed
-from .text import TEXT
 from .plans import SUBSCRIPTION_PLANS, BUSINESS_PLANS
 from .admin import ADMIN_EMAILS, is_admin
 from .database_version import DATABASE_VERSION, DATABASE_WIPE_MESSAGE
@@ -20,7 +19,8 @@ from .discord_accounts import (
     get_account_limit, can_link_more_accounts
 )
 from .support import SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS
-from .tos_rules import TOS_SECTIONS, GUIDELINES_SECTIONS
+from .terms import TERMS_SECTIONS
+from .guidelines import GUIDELINES_SECTIONS
 
 # Import site-wide settings
 from .site import (
@@ -49,7 +49,6 @@ def get_all_config():
         'navbar': NAVBAR,
         'colors': COLORS,
         'pages': PAGES,
-        'text': TEXT,
         # Backwards compatibility aliases
         'page_titles': PAGES['titles'],
     }

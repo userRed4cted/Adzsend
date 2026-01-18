@@ -29,11 +29,10 @@ from database import (
 
 # Config imports
 from config import (
-    BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, TEXT, get_all_config, is_admin,
+    BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, get_all_config, is_admin,
     DATABASE_VERSION, DATABASE_WIPE_MESSAGE, SITE,
     get_page_description, get_page_embed,
-    SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS,
-    TOS_SECTIONS, GUIDELINES_SECTIONS
+    SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS
 )
 
 # Security imports
@@ -87,7 +86,6 @@ def inject_site_config():
         'button_styles': BUTTONS,
         'colors': COLORS,
         'pages': PAGES,
-        'text': TEXT,
         'db_version': DATABASE_VERSION,
         'db_wipe_message': DATABASE_WIPE_MESSAGE,
         # Site-wide settings (font, layout, etc.)
@@ -278,9 +276,7 @@ def home():
                          has_business=has_business,
                          is_owner=is_owner,
                          is_admin_user=is_admin_user,
-                         user=user,
-                         tos_sections=TOS_SECTIONS,
-                         guidelines_sections=GUIDELINES_SECTIONS)
+                         user=user)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
@@ -575,9 +571,7 @@ def discover():
 
     return render_template('discover.html',
                          user=user,
-                         user_data=user_data,
-                         tos_sections=TOS_SECTIONS,
-                         guidelines_sections=GUIDELINES_SECTIONS)
+                         user_data=user_data)
 
 @app.route('/support')
 def support():
@@ -594,9 +588,8 @@ def support():
                          support_faq_title=SUPPORT_FAQ_TITLE,
                          support_contact_text=SUPPORT_CONTACT_TEXT,
                          faq_items=FAQ_ITEMS,
-                         tos_sections=TOS_SECTIONS,
-                         guidelines_sections=GUIDELINES_SECTIONS,
                          discord_server_url=HOMEPAGE['hero']['discord_server_url'])
+
 
 @app.route('/purchase')
 def purchase():
@@ -625,9 +618,7 @@ def purchase():
                          is_owner=is_owner,
                          is_admin_user=is_admin_user,
                          user=session.get('user'),
-                         user_data=user_data,
-                         tos_sections=TOS_SECTIONS,
-                         guidelines_sections=GUIDELINES_SECTIONS)
+                         user_data=user_data)
 
 @app.route('/api/resend-code', methods=['POST'])
 @rate_limit('api')
@@ -1253,9 +1244,7 @@ def dashboard():
         BLACKLISTED_WORDS=BLACKLISTED_WORDS,
         PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS,
         csrf_token=csrf_token,
-        suspended_accounts=suspended_accounts,
-        tos_sections=TOS_SECTIONS,
-        guidelines_sections=GUIDELINES_SECTIONS
+        suspended_accounts=suspended_accounts
     ))
     # Prevent caching
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -1280,15 +1269,70 @@ def bridge():
     response = app.make_response(render_template('bridge.html',
         user=session.get('user'),
         user_data=user_data,
-        csrf_token=csrf_token,
-        tos_sections=TOS_SECTIONS,
-        guidelines_sections=GUIDELINES_SECTIONS
+        csrf_token=csrf_token
     ))
     # Prevent caching
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+
+
+def parse_markdown_links(text):
+    """Parse [text](url) markdown links and convert to HTML"""
+    if not text:
+        return text
+    import re
+    # Pattern: [link text](url)
+    pattern = r'\[([^\]]+)\]\(([^\)]+)\)'
+    return re.sub(pattern, r'<a href="\2" class="navbar-auth-link">\1</a>', text)
+
+
+@app.route('/guidelines')
+def guidelines():
+    """Community Guidelines page"""
+    from config.guidelines import GUIDELINES_SECTIONS, GUIDELINES_TITLE, GUIDELINES_EFFECTIVE_DATE, GUIDELINES_LAST_UPDATED
+
+    # Get user data if logged in
+    user = None
+    user_data = None
+    if 'authenticated' in session and 'user_id' in session:
+        user = session.get('user')
+        user_data = get_user_data(session.get('user_id'))
+
+    return render_template('guidelines.html',
+        sections=GUIDELINES_SECTIONS,
+        page_title=GUIDELINES_TITLE,
+        effective_date=GUIDELINES_EFFECTIVE_DATE,
+        last_updated=GUIDELINES_LAST_UPDATED,
+        user=user,
+        user_data=user_data,
+        parse_links=parse_markdown_links
+    )
+
+
+@app.route('/terms')
+def terms():
+    """Terms of Service page"""
+    from config.terms import TERMS_SECTIONS, TERMS_TITLE, TERMS_EFFECTIVE_DATE, TERMS_LAST_UPDATED
+
+    # Get user data if logged in
+    user = None
+    user_data = None
+    if 'authenticated' in session and 'user_id' in session:
+        user = session.get('user')
+        user_data = get_user_data(session.get('user_id'))
+
+    return render_template('terms.html',
+        sections=TERMS_SECTIONS,
+        page_title=TERMS_TITLE,
+        effective_date=TERMS_EFFECTIVE_DATE,
+        last_updated=TERMS_LAST_UPDATED,
+        user=user,
+        user_data=user_data,
+        parse_links=parse_markdown_links
+    )
+
 
 @app.route('/api/guild/<guild_id>/channels')
 @rate_limit('api')

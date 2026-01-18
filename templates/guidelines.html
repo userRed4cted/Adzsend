@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Guidelines - Adzsend</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='navbar.css') }}">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121215;
+            color: #ffffff;
+            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+
+        .guidelines-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 80px 40px 40px 40px;
+        }
+
+        .guidelines-header {
+            margin-bottom: 40px;
+        }
+
+        .guidelines-main-title {
+            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-weight: 700;
+            font-size: 64px;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .guidelines-subtitle {
+            font-size: 16px;
+            color: #b5bac1;
+            margin-bottom: 8px;
+        }
+
+        .guidelines-section {
+            margin-bottom: 48px;
+        }
+
+        .section-title {
+            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-weight: 700;
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+
+        .section-description {
+            font-size: 16px;
+            line-height: 1.625;
+            color: #dbdee1;
+            margin-bottom: 24px;
+        }
+
+        .guideline-item {
+            margin-bottom: 24px;
+        }
+
+        .guideline-number {
+            font-weight: 700;
+            color: #ffffff;
+            margin-right: 8px;
+        }
+
+        .guideline-title {
+            font-weight: 700;
+            color: #ffffff;
+            display: inline;
+        }
+
+        .guideline-content {
+            font-size: 16px;
+            line-height: 1.625;
+            color: #dbdee1;
+            margin-top: 8px;
+            white-space: pre-line;
+        }
+
+        .guideline-paragraph {
+            font-size: 16px;
+            line-height: 1.625;
+            color: #dbdee1;
+            margin-bottom: 24px;
+        }
+
+        /* Link styling - same as navbar-auth-link */
+        .navbar-auth-link {
+            color: #00a8fc;
+            text-decoration: none;
+            transition: text-decoration 0.2s;
+        }
+
+        .navbar-auth-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+    {% include 'partials/settings_popup.html' %}
+
+    <div class="guidelines-container">
+        <div class="guidelines-header">
+            <h1 class="guidelines-main-title">{{ page_title }}</h1>
+            {% if effective_date %}
+            <p class="guidelines-subtitle">Effective: {{ effective_date }}</p>
+            {% endif %}
+            <p class="guidelines-subtitle">Last Updated: {{ last_updated }}</p>
+        </div>
+
+        {% for section in sections %}
+        <div class="guidelines-section">
+            {% for rule in section.rules %}
+            <div class="guideline-item">
+                {% if rule.number %}
+                    {# Numbered guideline #}
+                    <span class="guideline-number">{{ rule.number }}.</span>
+                    <p class="guideline-content" style="display: inline;">{{ parse_links(rule.content) | safe }}</p>
+                {% else %}
+                    {# Non-numbered paragraph #}
+                    <p class="guideline-paragraph">{{ parse_links(rule.content) | safe }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <script src="{{ url_for('static', filename='navbar.js') }}"></script>
+</body>
+</html>

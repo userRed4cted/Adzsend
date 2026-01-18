@@ -4816,10 +4816,6 @@
                 const response = await fetch(`/api/team/member/${currentMemberId}/daily-stats?start_date=${startDate}&end_date=${endDate}`);
                 const data = await response.json();
 
-                // Remove loading indicator
-                const loadingEl = document.getElementById('analytics-chart-loading');
-                if (loadingEl) loadingEl.remove();
-
                 if (data.success) {
                     chartData = data.data.stats || [];
 
@@ -4834,10 +4830,11 @@
                     console.error('Failed to load daily stats:', data.error);
                 }
             } catch (error) {
-                // Remove loading indicator on error
+                console.error('Error loading daily stats:', error);
+            } finally {
+                // ALWAYS remove loading indicator
                 const loadingEl = document.getElementById('analytics-chart-loading');
                 if (loadingEl) loadingEl.remove();
-                console.error('Error loading daily stats:', error);
             }
         }
 

@@ -682,6 +682,16 @@ body {
     filter: brightness(0) saturate(100%) invert(56%) sepia(6%) saturate(340%) hue-rotate(194deg) brightness(93%) contrast(87%);
 }
 
+/* Navbar Bottom Links */
+.navbar-bottom-links {
+    position: absolute;
+    bottom: -28px;
+    left: 2rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
 /* Navbar Auth Links (for non-logged-in users) */
 .navbar-auth-link {
     background: transparent;
@@ -3004,4 +3014,94 @@ input:checked + .toggle-slider:before {
     text-align: center;
     margin: 0;
     font-family: 'gg sans Medium', sans-serif;
+}
+
+/* Terms Page */
+.terms-content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+}
+
+.terms-hero {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.terms-hero-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.terms-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.terms-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.terms-subheader {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+
+.terms-text {
+    font-size: 1rem;
+    color: #dcddde;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Guidelines Page */
+.guidelines-content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+}
+
+.guidelines-hero {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.guidelines-hero-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+}
+
+.guidelines-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.guidelines-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.guidelines-subheader {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+
+.guidelines-text {
+    font-size: 1rem;
+    color: #dcddde;
+    line-height: 1.6;
+    margin: 0;
 }

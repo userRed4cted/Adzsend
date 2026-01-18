@@ -2964,10 +2964,17 @@ def add_linked_discord_account(user_id, discord_id, username, avatar, avatar_dec
 
 
 def get_linked_discord_accounts(user_id):
-    """Get all linked Discord accounts for a user."""
+    """
+    Get all linked Discord accounts for a user.
+
+    SECURITY: This function is used in API endpoints that return data to clients.
+    DO NOT add discord_token to the SELECT query - tokens must NEVER be exposed to clients.
+    Use get_linked_discord_account_by_id() if you need the decrypted token for API calls.
+    """
     conn = get_db()
     cursor = conn.cursor()
 
+    # SECURITY: discord_token is intentionally NOT selected to prevent token exposure
     cursor.execute('''
         SELECT id, discord_id, username, avatar, avatar_decoration, linked_at, last_verified, is_valid
         FROM linked_discord_accounts
@@ -2994,7 +3001,16 @@ def get_linked_discord_account_count(user_id):
 
 
 def get_linked_discord_account_by_id(account_id):
-    """Get a specific linked Discord account by its ID."""
+    """
+    Get a specific linked Discord account by its ID with decrypted token.
+
+    SECURITY: This function returns the DECRYPTED token for use in Discord API calls.
+    NEVER return this data directly to clients via API endpoints.
+    Use get_linked_discord_accounts() for client-facing data (no tokens).
+
+    Returns:
+        dict: Account info with decrypted discord_token, or None if not found
+    """
     conn = get_db()
     cursor = conn.cursor()
 
@@ -3012,7 +3028,7 @@ def get_linked_discord_account_by_id(account_id):
         return None
 
     account_dict = dict(account)
-    # Decrypt token if needed
+    # Decrypt token for Discord API usage
     if account_dict.get('discord_token'):
         account_dict['discord_token'] = decrypt_token(account_dict['discord_token'])
 

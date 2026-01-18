@@ -39,12 +39,6 @@
                 <button class="settings-menu-item" data-settings-page="date-format">Date format</button>
             </div>
             <div class="settings-menu-divider"></div>
-            <div class="settings-menu-section">
-                <div class="settings-menu-category">Rules</div>
-                <button class="settings-menu-item" data-settings-page="terms-of-service">Terms of service</button>
-                <button class="settings-menu-item" data-settings-page="community-guidelines">Community guidelines</button>
-            </div>
-            <div class="settings-menu-divider"></div>
             <button class="settings-logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">Logout</button>
         </div>
         <!-- Settings Content -->
@@ -99,26 +93,6 @@
                             <span>yy/mm/dd</span>
                         </label>
                     </div>
-                </div>
-
-                <!-- Terms of Service Page -->
-                <div class="settings-page" id="settings-page-terms-of-service" style="display: none;">
-                    {% for section in tos_sections %}
-                    <div class="settings-section">
-                        <div class="settings-subheader">{{ section.subheader }}</div>
-                        <div class="settings-text">{{ section.descriptor }}</div>
-                    </div>
-                    {% endfor %}
-                </div>
-
-                <!-- Community Guidelines Page -->
-                <div class="settings-page" id="settings-page-community-guidelines" style="display: none;">
-                    {% for section in guidelines_sections %}
-                    <div class="settings-section">
-                        <div class="settings-subheader">{{ section.subheader }}</div>
-                        <div class="settings-text">{{ section.descriptor }}</div>
-                    </div>
-                    {% endfor %}
                 </div>
 
                 <!-- Usage Page -->
@@ -253,7 +227,7 @@
 
                     <!-- Standing Section -->
                     <div class="settings-subheader" style="margin-top: 2rem;">Standing</div>
-                    <div class="settings-text">Thanks for upholding the Adzsend Terms of Service and Community Guidelines. If you break the rules, it will show up here.</div>
+                    <div class="settings-text">Thanks for upholding the Adzsend <a href="/terms" class="navbar-auth-link">Terms of Service</a> and <a href="/guidelines" class="navbar-auth-link">Community Guidelines</a>. If you break the rules, it will show up here.</div>
 
                     <div class="standing-bar">
                         <div class="standing-step {% if db_user and db_user.banned %}{% elif db_user and db_user.flagged %}{% else %}active{% endif %}">
@@ -1355,6 +1329,15 @@
             }
         });
     });
+
+    // Function to navigate to a specific settings page programmatically
+    function navigateToSettingsPage(pageName) {
+        // Find and click the corresponding menu item
+        const menuItem = document.querySelector(`.settings-menu-item[data-settings-page="${pageName}"]`);
+        if (menuItem) {
+            menuItem.click();
+        }
+    }
 
     // Interval Slider functionality
     (function() {

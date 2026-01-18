@@ -315,14 +315,18 @@ function showSuspendPopup() {
     // Set content
     titleEl.textContent = 'Account suspended';
     titleEl.style.display = 'block';
-    textEl.textContent = 'Your account has been suspended, if you want to appeal or believe this was a mistake, contact us.';
+    textEl.textContent = 'Your account has been suspended, if you want to appeal or believe this was a mistake, contact support.';
     textEl.style.display = 'block';
     btnEl.textContent = 'Resolve';
     btnEl.style.display = 'block';
 
-    // Override close behavior - refresh page on X or click outside
+    // Override close behavior - just close popup and return to analytics
     const handleClose = () => {
-        location.reload();
+        overlay.classList.remove('active');
+        currentPopup = null;
+        // Force back to analytics tab
+        const analyticsBtn = document.querySelector('[data-page="analytics"]');
+        if (analyticsBtn) analyticsBtn.click();
     };
 
     // Remove old listeners by cloning
@@ -330,27 +334,27 @@ function showSuspendPopup() {
     closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
     newCloseBtn.addEventListener('click', handleClose);
 
-    // Click outside refreshes page
+    // Click outside closes popup
     const handleOverlayClick = (e) => {
         if (e.target === overlay) {
-            location.reload();
+            handleClose();
         }
     };
     overlay.removeEventListener('click', handleOverlayClick);
     overlay.addEventListener('click', handleOverlayClick);
 
-    // Button redirects to contact page
+    // Button redirects to support page
     const newBtn = btnEl.cloneNode(true);
     btnEl.parentNode.replaceChild(newBtn, btnEl);
     newBtn.textContent = 'Resolve';
     newBtn.addEventListener('click', () => {
-        window.location.href = '/contact';
+        window.location.href = '/support';
     });
 
-    // ESC key refreshes page
+    // ESC key closes popup
     const handleEsc = (e) => {
         if (e.key === 'Escape' && overlay.classList.contains('active')) {
-            location.reload();
+            handleClose();
         }
     };
     document.addEventListener('keydown', handleEsc);

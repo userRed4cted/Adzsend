@@ -19,6 +19,7 @@ from .discord_accounts import (
     DEFAULT_ACCOUNT_LIMIT, ACCOUNT_LIMIT_OVERRIDES,
     get_account_limit, can_link_more_accounts
 )
+from .support import SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS
 
 # Import site-wide settings
 from .site import (

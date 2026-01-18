@@ -100,7 +100,7 @@
 
                 isSubmitting = true;
                 signupBtn.disabled = true;
-                signupBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinner" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2 A10 10 0 0 1 22 12" stroke-linecap="round"></path></svg> Sending Code...';
+                signupBtn.innerHTML = '<div class="loading-dots" style="display: inline-flex; gap: 4px;"><span class="dot" style="background-color: #121215;"></span><span class="dot" style="background-color: #121215;"></span><span class="dot" style="background-color: #121215;"></span></div>';
                 signupBtn.style.opacity = '0.7';
                 signupBtn.style.cursor = 'not-allowed';
             });

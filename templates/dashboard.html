@@ -2023,18 +2023,21 @@
 
             // Show popup on page load if user has no Discord account linked
             if (!discordLinked) {
-                await customAlert(
+                // Show alert and always redirect to Discord accounts page when closed
+                customAlert(
                     'Link a Discord account',
                     'In order to use all dashboard features you need a linked Discord account.'
-                );
-                // Open settings popup and navigate to Discord accounts page
-                openSettings();
-                setTimeout(() => {
-                    const discordAccountsBtn = document.querySelector('[data-settings-page="discord-accounts"]');
-                    if (discordAccountsBtn) {
-                        discordAccountsBtn.click();
-                    }
-                }, 100);
+                ).then(() => {
+                    // Open settings popup and navigate to Discord accounts page
+                    openSettings();
+                    setTimeout(() => {
+                        const discordAccountsBtn = document.querySelector('[data-settings-page="discord-accounts"]');
+                        if (discordAccountsBtn) {
+                            discordAccountsBtn.click();
+                        }
+                    }, 100);
+                });
+                return; // Stop execution here
             } else if (!hasGuilds) {
                 // User has account linked but no servers
                 await customAlert(
@@ -2474,6 +2477,12 @@
                         if (data.selected_channels && Array.isArray(data.selected_channels)) {
                             selectedChannels = data.selected_channels;
                             localStorage.setItem('selectedChannels', JSON.stringify(selectedChannels));
+                        }
+
+                        // Load business selected channels if available
+                        if (data.business_selected_channels && Array.isArray(data.business_selected_channels)) {
+                            teamSelectedChannels = data.business_selected_channels;
+                            localStorage.setItem('teamSelectedChannels', JSON.stringify(teamSelectedChannels));
                         }
 
                         // Load draft message if available
@@ -3197,6 +3206,18 @@
                                     await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
                                     window.location.href = '/settings#billing';
                                     return; // Stop execution
+                                } else if (result.user_flagged) {
+                                    // User was flagged for inappropriate content
+                                    if (result.user_banned) {
+                                        // Auto-banned on 3rd flag - show suspend popup
+                                        await customAlert('Account Suspended', 'Your account has been suspended due to multiple violations. You have been automatically banned after 3 flags.');
+                                    } else {
+                                        // Just flagged - show warning
+                                        await customAlert('Content Violation', result.error || 'Your message contains prohibited content and your account has been flagged.');
+                                    }
+                                    // Reload to update account status in UI
+                                    window.location.reload();
+                                    return; // Stop execution
                                 } else if (response.status === 429) {
                                     // Rate limited by Discord - mark and skip (don't retry)
                                     const channelKey = `${channel.guildId}-${channel.id}`;
@@ -3542,9 +3563,24 @@
                 }
             }
 
-            // Save team selected channels to localStorage
-            function teamSaveSelectedChannels() {
+            // Save team selected channels to localStorage and database
+            async function teamSaveSelectedChannels() {
                 localStorage.setItem('teamSelectedChannels', JSON.stringify(teamSelectedChannels));
+                // Also save to database
+                try {
+                    await fetch('/api/save-user-data', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({
+                            business_selected_channels: teamSelectedChannels
+                        })
+                    });
+                } catch (error) {
+                    console.warn('Failed to save team channels to database:', error);
+                }
             }
 
             // Add team search tag
@@ -4103,6 +4139,18 @@
                                 } else if (result.limit_reached) {
                                     await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
                                     window.location.href = '/settings#billing';
+                                    return;
+                                } else if (result.user_flagged) {
+                                    // User was flagged for inappropriate content
+                                    if (result.user_banned) {
+                                        // Auto-banned on 3rd flag - show suspend popup
+                                        await customAlert('Account Suspended', 'Your account has been suspended due to multiple violations. You have been automatically banned after 3 flags.');
+                                    } else {
+                                        // Just flagged - show warning
+                                        await customAlert('Content Violation', result.error || 'Your message contains prohibited content and your account has been flagged.');
+                                    }
+                                    // Reload to update account status in UI
+                                    window.location.reload();
                                     return;
                                 } else if (response.status === 429) {
                                     const channelKey = `${channel.guildId}-${channel.id}`;
@@ -4783,34 +4831,32 @@
                 count: d.count
             }));
 
-            // Draw gradient fill
+            // Draw solid fill with opacity
             if (points.length > 1) {
-                const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
-                gradient.addColorStop(0, 'rgba(21, 216, 188, 0.3)');
-                gradient.addColorStop(1, 'rgba(21, 216, 188, 0)');
-
                 ctx.beginPath();
                 ctx.moveTo(points[0].x, height - padding.bottom);
                 points.forEach(p => ctx.lineTo(p.x, p.y));
                 ctx.lineTo(points[points.length - 1].x, height - padding.bottom);
                 ctx.closePath();
-                ctx.fillStyle = gradient;
+                ctx.fillStyle = 'rgba(21, 216, 188, 0.15)';
                 ctx.fill();
             }
 
-            // Draw line
+            // Draw line with round caps
             ctx.beginPath();
             ctx.strokeStyle = '#15d8bc';
             ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
             points.forEach((p, i) => {
                 if (i === 0) ctx.moveTo(p.x, p.y);
                 else ctx.lineTo(p.x, p.y);
             });
             ctx.stroke();
 
-            // Draw points (stroke first, then fill for perfect centering)
+            // Draw points (circles cover line completely)
             points.forEach(p => {
-                // Draw background circle (stroke)
+                // Draw background circle (border/stroke)
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
                 ctx.fillStyle = '#121215';
@@ -5170,34 +5216,32 @@
                 count: d.count
             }));
 
-            // Draw gradient fill
+            // Draw solid fill with opacity
             if (points.length > 1) {
-                const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
-                gradient.addColorStop(0, 'rgba(21, 216, 188, 0.3)');
-                gradient.addColorStop(1, 'rgba(21, 216, 188, 0)');
-
                 ctx.beginPath();
                 ctx.moveTo(points[0].x, height - padding.bottom);
                 points.forEach(p => ctx.lineTo(p.x, p.y));
                 ctx.lineTo(points[points.length - 1].x, height - padding.bottom);
                 ctx.closePath();
-                ctx.fillStyle = gradient;
+                ctx.fillStyle = 'rgba(21, 216, 188, 0.15)';
                 ctx.fill();
             }
 
-            // Draw line
+            // Draw line with round caps
             ctx.beginPath();
             ctx.strokeStyle = '#15d8bc';
             ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
             points.forEach((p, i) => {
                 if (i === 0) ctx.moveTo(p.x, p.y);
                 else ctx.lineTo(p.x, p.y);
             });
             ctx.stroke();
 
-            // Draw points (stroke first, then fill for perfect centering)
+            // Draw points (circles cover line completely)
             points.forEach(p => {
-                // Draw background circle (stroke)
+                // Draw background circle (border/stroke)
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
                 ctx.fillStyle = '#121215';

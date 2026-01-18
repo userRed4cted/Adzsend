@@ -26,9 +26,7 @@ BLACKLISTED_WORDS = [
 # Format: { 'blacklisted_word': ['exception1', 'exception2', ...] }
 PHRASE_EXCEPTIONS = {
     'cp': ['scp', 'scpf'],
-    'sex': [],
     'teen': ['canteen', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'],
-    'porn': [],  # No exceptions
     'rapist': ['therapist'],
 }
 

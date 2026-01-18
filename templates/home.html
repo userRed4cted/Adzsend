@@ -83,19 +83,8 @@
                         </div>
                     </div>
 
-                    <!-- Scroll Indicator -->
-                    <div class="scroll-indicator hero-fade-in" id="scroll-indicator" style="animation-delay: 1.2s;">
-                        <span class="scroll-text">{{ scroll_indicator_text }}</span>
-                        <div class="scroll-arrow">&#8595;</div>
-                    </div>
                 </div>
             </div>
-
-            <!-- About Section -->
-            <section class="about-section">
-                <h2 class="about-title">{{ about_title }}</h2>
-                <p class="about-description">{{ about_description }}</p>
-            </section>
 
             <!-- Why Discord Section -->
             <section class="why-discord-section">
@@ -222,63 +211,6 @@
                 rafId = requestAnimationFrame(slideshowLoop);
             }
         }, { passive: true });
-
-        // Single optimized scroll handler with batched updates
-        const scrollIndicator = document.getElementById('scroll-indicator');
-        const aboutSection = document.querySelector('.about-section');
-        const panelContainer = document.querySelector('.panel-container');
-
-        if (panelContainer) {
-            let scrollTicking = false;
-            let aboutVisible = false;
-
-            const handleScroll = () => {
-                if (scrollTicking) return;
-                scrollTicking = true;
-
-                requestAnimationFrame(() => {
-                    const scrollTop = panelContainer.scrollTop;
-
-                    // Update scroll indicator
-                    if (scrollTop > 50) {
-                        scrollIndicator.classList.add('hidden');
-                    } else {
-                        scrollIndicator.classList.remove('hidden');
-                    }
-
-                    scrollTicking = false;
-                });
-            };
-
-            panelContainer.addEventListener('scroll', handleScroll, { passive: true });
-        }
-
-        // About section fade-in - only when actually visible on screen
-        if (aboutSection && panelContainer) {
-            const aboutObserver = new IntersectionObserver(
-                (entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            requestAnimationFrame(() => {
-                                entry.target.classList.add('visible');
-                                // Remove will-change after animation completes
-                                setTimeout(() => {
-                                    entry.target.style.willChange = 'auto';
-                                }, 1000);
-                            });
-                            aboutObserver.unobserve(entry.target);
-                        }
-                    });
-                },
-                {
-                    root: panelContainer,
-                    threshold: 0.3,
-                    rootMargin: '0px'
-                }
-            );
-
-            aboutObserver.observe(aboutSection);
-        }
 
         // Lightbox for hero panel images
         const images = [

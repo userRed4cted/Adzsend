@@ -226,7 +226,7 @@
                     </div>
 
                     <!-- Standing Section -->
-                    <div class="settings-subheader" style="margin-top: 1.5rem;">Standing</div>
+                    <div class="settings-subheader" style="margin-top: 2rem;">Standing</div>
                     <div class="settings-text">Thanks for upholding the Adzsend Terms of Service and Community Guidelines. If you break the rules, it will show up here.</div>
 
                     <div class="standing-bar">
@@ -1100,20 +1100,22 @@
     .standing-bar {
         display: flex;
         align-items: flex-start;
-        justify-content: space-between;
-        margin-top: 1.5rem;
+        justify-content: center;
+        margin-top: 0;
         padding: 0;
         gap: 0;
         width: 100%;
         min-height: 80px;
+        position: relative;
     }
 
     .standing-step {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0;
         flex: 0 0 auto;
+        position: relative;
     }
 
     .standing-circle {
@@ -1130,8 +1132,6 @@
     }
 
     .standing-step.active .standing-circle {
-        width: 40px;
-        height: 40px;
         background: #15d8bc;
         border-color: #15d8bc;
     }
@@ -1147,9 +1147,15 @@
     }
 
     .standing-icon {
-        width: 18px;
-        height: 18px;
-        filter: brightness(0) invert(1);
+        width: 14px;
+        height: 14px;
+        filter: brightness(0) saturate(100%) invert(7%) sepia(8%) saturate(1188%) hue-rotate(186deg) brightness(95%) contrast(93%);
+    }
+
+    /* Make tick icon bigger (24px * 0.8 = 19.2px) */
+    .standing-icon[alt="All good"] {
+        width: 19px;
+        height: 19px;
     }
 
     .standing-label {
@@ -1159,16 +1165,16 @@
         font-family: 'gg sans Medium', sans-serif;
         white-space: nowrap;
         line-height: 1.2;
+        position: absolute;
+        top: 32px;
     }
 
     .standing-line {
         flex: 1;
-        height: 2px;
+        height: 3px;
         background: #1A1A1E;
-        margin-top: 20px;
-        margin-left: 8px;
-        margin-right: 8px;
-        min-width: 30px;
+        margin-top: 10.5px;
+        min-width: 40px;
     }
 
     /* Profile Photo Picker Popup */

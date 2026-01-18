@@ -324,7 +324,7 @@
 
         resendBtn.addEventListener('click', async () => {
             resendBtn.disabled = true;
-            resendBtn.textContent = 'Sending...';
+            resendBtn.innerHTML = '<div class="loading-dots" style="display: inline-flex; gap: 4px;"><span class="dot" style="background-color: #121215;"></span><span class="dot" style="background-color: #121215;"></span><span class="dot" style="background-color: #121215;"></span></div>';
 
             try {
                 // SECURITY: Email is retrieved from session server-side

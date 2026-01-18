@@ -31,7 +31,8 @@ from database import (
 from config import (
     BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, TEXT, get_all_config, is_admin,
     DATABASE_VERSION, DATABASE_WIPE_MESSAGE, SITE,
-    get_page_description, get_page_embed
+    get_page_description, get_page_embed,
+    SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS
 )
 
 # Security imports
@@ -288,6 +289,15 @@ def login_page():
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
 
+        # Store referrer if it's a valid page to return to after login
+        # Only store on first visit (not when redirected from verify)
+        referrer = request.referrer
+        if referrer and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
+            if 'login_referrer' not in session:
+                session['login_referrer'] = referrer
+                session.modified = True  # Force session save
+                print(f"[LOGIN] Stored referrer: {referrer}")
+
         response = app.make_response(render_template('login.html', error=error, csrf_token=csrf_token))
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response.headers['Pragma'] = 'no-cache'
@@ -531,10 +541,7 @@ def verify_code_page():
                                  code_rate_limited=False,
                                  error='Account not found')
 
-    # Check if user is banned
-    if user.get('banned'):
-        session.clear()
-        return redirect(url_for('home'))
+    # Banned users can still log in - they just can't access panels (handled in dashboard)
 
     # Create session
     session_id = str(uuid.uuid4())
@@ -578,7 +585,12 @@ def support():
 
     return render_template('support.html',
                          user=user,
-                         user_data=user_data)
+                         user_data=user_data,
+                         support_hero_title=SUPPORT_HERO_TITLE,
+                         support_faq_title=SUPPORT_FAQ_TITLE,
+                         support_contact_text=SUPPORT_CONTACT_TEXT,
+                         faq_items=FAQ_ITEMS,
+                         discord_server_url=HOMEPAGE['hero']['discord_server_url'])
 
 @app.route('/purchase')
 def purchase():
@@ -786,10 +798,7 @@ def verify_code_api():
         if not user:
             return jsonify({'success': False, 'error': 'Account not found'}), 400
 
-    # Check if user is banned
-    if user.get('banned'):
-        session.clear()
-        return jsonify({'success': False, 'error': 'Account is banned'}), 403
+    # Banned users can still log in - they just can't access panels (handled in dashboard)
 
     # Create session
     session_id = str(uuid.uuid4())
@@ -807,13 +816,20 @@ def verify_code_api():
     session.permanent = True
 
     # Return success with redirect URL
-    # Signup goes to purchase page, login stays on same page (no redirect)
+    # Signup goes to purchase page, login redirects back to the referring page
     if purpose == 'signup':
         redirect_url = url_for('purchase')
         return jsonify({'success': True, 'redirect': redirect_url})
     else:
-        # Login - stay on same page, just reload to update navbar
-        return jsonify({'success': True, 'reload': True})
+        # Login - get the page they were on before login (stored in session)
+        redirect_url = session.pop('login_referrer', None)
+        print(f"[LOGIN SUCCESS] Retrieved referrer from session: {redirect_url}")
+        if not redirect_url:
+            redirect_url = url_for('dashboard')
+            print(f"[LOGIN SUCCESS] No referrer, defaulting to dashboard")
+        else:
+            print(f"[LOGIN SUCCESS] Redirecting to: {redirect_url}")
+        return jsonify({'success': True, 'redirect': redirect_url})
 
 @app.route('/api/set-plan', methods=['POST'])
 @rate_limit('api')
@@ -1050,6 +1066,7 @@ def dashboard():
     # Fetch guilds from ALL linked accounts and merge them
     all_guilds = []
     guild_to_account = {}  # Map guild_id -> account_id for token lookup
+    suspended_accounts = []  # Track suspended/deleted accounts for popup
 
     if discord_linked:
         # Use the first account as primary for discord_info (don't filter by is_valid)
@@ -1073,7 +1090,6 @@ def dashboard():
                 }
 
         # Fetch guilds from ALL linked accounts
-        suspended_accounts = []  # Track suspended/deleted accounts for popup
         for acc in linked_accounts:
             print(f"[DASHBOARD] Checking account {acc['id']}, is_valid: {acc.get('is_valid')}")
 
@@ -1461,7 +1477,11 @@ def send_message_single():
     # Check content filter and flag user if needed
     is_valid, filter_reason = check_message_content(message_content, user['id'])
     if not is_valid:
-        return {'error': filter_reason}, 400
+        # Get updated user status after flagging to check if they were auto-banned
+        user = get_user_by_id(user['id'])
+        user_banned = user.get('banned', 0) == 1
+        # Return error with flags to trigger UI update
+        return {'error': filter_reason, 'user_flagged': True, 'user_banned': user_banned}, 400
 
     if not channel:
         return {'error': 'No channel provided'}, 400
@@ -1640,7 +1660,11 @@ def send_message():
     # Check content filter and flag user if needed
     is_valid, filter_reason = check_message_content(message_content, user['id'])
     if not is_valid:
-        return {'error': filter_reason}, 400
+        # Get updated user status after flagging to check if they were auto-banned
+        user = get_user_by_id(user['id'])
+        user_banned = user.get('banned', 0) == 1
+        # Return error with flags to trigger UI update
+        return {'error': filter_reason, 'user_flagged': True, 'user_banned': user_banned}, 400
 
     if not channels:
         return {'error': 'No channels selected'}, 400
@@ -2139,6 +2163,7 @@ def api_save_user_data():
 
         data = request.get_json()
         selected_channels = data.get('selected_channels')
+        business_selected_channels = data.get('business_selected_channels')
         draft_message = data.get('draft_message')
         message_delay = data.get('message_delay')
         date_format = data.get('date_format')
@@ -2151,7 +2176,7 @@ def api_save_user_data():
                 return jsonify({'success': False, 'error': filter_reason}), 400
 
         # Save to database
-        save_user_data(user['id'], selected_channels, draft_message, message_delay, date_format, profile_photo)
+        save_user_data(user['id'], selected_channels, draft_message, message_delay, date_format, profile_photo, business_selected_channels)
 
         return jsonify({'success': True}), 200
 
@@ -3915,6 +3940,17 @@ def logout():
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+
+# Global error handler for API routes - return JSON instead of HTML
+@app.errorhandler(Exception)
+def handle_error(e):
+    import traceback
+    traceback.print_exc()
+    # For API routes, return JSON
+    if request.path.startswith('/api/'):
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+    # For regular routes, let Flask handle it normally
+    raise e
 
 if __name__ == '__main__':
     # Use environment variable for debug mode (default: False for production safety)

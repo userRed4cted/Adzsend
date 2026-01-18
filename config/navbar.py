@@ -14,6 +14,7 @@ NAVBAR = {
         'messages': [
             "Hello.",
             "Welcome!",
+            "Greetings.",
             "Hi :D"
         ],
 

@@ -979,8 +979,16 @@
                         <div class="detail-value ${user.banned ? 'banned' : ''}">${user.banned ? 'Yes' : 'No'}</div>
                     </div>
                     <div class="detail-row">
-                        <div class="detail-label">Flagged</div>
-                        <div class="detail-value ${user.flagged ? 'flagged' : ''}">${user.flagged ? 'Yes' : 'No'} (${user.flag_count || 0} time${(user.flag_count || 0) !== 1 ? 's' : ''})</div>
+                        <div class="detail-label">Currently Flagged</div>
+                        <div class="detail-value ${user.flagged ? 'flagged' : ''}">${user.flagged ? 'Yes' : 'No'}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Current Flag Streak</div>
+                        <div class="detail-value ${user.flag_count > 0 ? 'flagged' : ''}">${user.flag_count || 0} (auto-bans at 3)</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">All-Time Flags</div>
+                        <div class="detail-value">${user.total_flags || 0}</div>
                     </div>
                     <div class="detail-row">
                         <div class="detail-label">Last flagged (mm/dd/yy)</div>

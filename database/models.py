@@ -138,6 +138,15 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Add total_flags column if it doesn't exist (migration for all-time flag tracking)
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN total_flags INTEGER DEFAULT 0')
+        # Migrate existing flag_count values to total_flags for users who were flagged before this column existed
+        cursor.execute('UPDATE users SET total_flags = flag_count WHERE flag_count > 0 AND total_flags = 0')
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Add session_id column if it doesn't exist (migration for session management)
     try:
         cursor.execute('ALTER TABLE users ADD COLUMN session_id TEXT')
@@ -666,8 +675,8 @@ def validate_user_session(discord_id, session_id):
     stored_session_id = user[0] if user[0] else None
     return stored_session_id == session_id
 
-def save_user_data(user_id, selected_channels=None, draft_message=None, message_delay=None, date_format=None, profile_photo=None):
-    """Save or update user's selected channels, draft message, message delay, date format, and profile photo."""
+def save_user_data(user_id, selected_channels=None, draft_message=None, message_delay=None, date_format=None, profile_photo=None, business_selected_channels=None):
+    """Save or update user's selected channels, draft message, message delay, date format, profile photo, and business selected channels."""
     # Input validation
     if not isinstance(user_id, int) or user_id <= 0:
         raise ValueError("user_id must be a positive integer")
@@ -691,6 +700,7 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
 
     # Convert channels list to JSON string
     channels_json = json.dumps(selected_channels) if selected_channels is not None else None
+    business_channels_json = json.dumps(business_selected_channels) if business_selected_channels is not None else None
 
     # Check if user_data exists
     cursor.execute('SELECT id FROM user_data WHERE user_id = ?', (user_id,))
@@ -721,6 +731,10 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
             update_parts.append('profile_photo = ?')
             params.append(profile_photo)
 
+        if business_selected_channels is not None:
+            update_parts.append('business_selected_channels = ?')
+            params.append(business_channels_json)
+
         if update_parts:
             update_parts.append('updated_at = ?')
             params.append(datetime.now().isoformat())
@@ -740,15 +754,15 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
     conn.close()
 
 def get_user_data(user_id):
-    """Get user's selected channels, draft message, message delay, date format, and profile photo."""
+    """Get user's selected channels, draft message, message delay, date format, profile photo, and business selected channels."""
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT selected_channels, draft_message, message_delay, date_format, profile_photo FROM user_data WHERE user_id = ?', (user_id,))
+    cursor.execute('SELECT selected_channels, draft_message, message_delay, date_format, profile_photo, business_selected_channels FROM user_data WHERE user_id = ?', (user_id,))
     data = cursor.fetchone()
     conn.close()
 
     if not data:
-        return {'selected_channels': [], 'draft_message': '', 'message_delay': 1000, 'date_format': 'mm/dd/yy', 'profile_photo': 'Light_Blue.jpg'}
+        return {'selected_channels': [], 'draft_message': '', 'message_delay': 1000, 'date_format': 'mm/dd/yy', 'profile_photo': 'Light_Blue.jpg', 'business_selected_channels': []}
 
     # Parse JSON channels
     channels = json.loads(data[0]) if data[0] else []
@@ -756,13 +770,15 @@ def get_user_data(user_id):
     delay = data[2] if data[2] is not None else 1000
     date_fmt = data[3] if data[3] else 'mm/dd/yy'
     profile_photo = data[4] if data[4] else 'Light_Blue.jpg'
+    business_channels = json.loads(data[5]) if data[5] else []
 
     return {
         'selected_channels': channels,
         'draft_message': message,
         'message_delay': delay,
         'date_format': date_fmt,
-        'profile_photo': profile_photo
+        'profile_photo': profile_photo,
+        'business_selected_channels': business_channels
     }
 
 def delete_user(discord_id):
@@ -1904,18 +1920,20 @@ def flag_user(user_id, reason=None):
     cursor = conn.cursor()
     flagged_at = datetime.now().isoformat()
 
-    # Get current flag count
-    cursor.execute('SELECT flag_count FROM users WHERE id = ?', (user_id,))
+    # Get current flag count and total flags
+    cursor.execute('SELECT flag_count, total_flags FROM users WHERE id = ?', (user_id,))
     row = cursor.fetchone()
     current_count = row[0] if row and row[0] is not None else 0
+    total_flags = row[1] if row and row[1] is not None else 0
     new_count = current_count + 1
+    new_total = total_flags + 1
 
-    # Increment flag_count each time user is flagged
+    # Increment both flag_count (for auto-ban) and total_flags (all-time tracking)
     cursor.execute('''
         UPDATE users
-        SET flagged = 1, flag_reason = ?, flagged_at = ?, flag_count = ?
+        SET flagged = 1, flag_reason = ?, flagged_at = ?, flag_count = ?, total_flags = ?
         WHERE id = ?
-    ''', (reason, flagged_at, new_count, user_id))
+    ''', (reason, flagged_at, new_count, new_total, user_id))
 
     # Auto-ban if this is the 3rd flag
     if new_count >= 3:
@@ -1943,9 +1961,10 @@ def flag_user(user_id, reason=None):
 
 
 def unflag_user(user_id):
-    """Remove flag from a user and reset flag count."""
+    """Remove flag from a user and reset flag count (but keep total_flags for historical record)."""
     conn = get_db()
     cursor = conn.cursor()
+    # Only reset current flag status and flag_count, keep total_flags intact
     cursor.execute('UPDATE users SET flagged = 0, flag_reason = NULL, flagged_at = NULL, flag_count = 0 WHERE id = ?', (user_id,))
     conn.commit()
     conn.close()

@@ -39,6 +39,12 @@
                 <button class="settings-menu-item" data-settings-page="date-format">Date format</button>
             </div>
             <div class="settings-menu-divider"></div>
+            <div class="settings-menu-section">
+                <div class="settings-menu-category">Rules</div>
+                <button class="settings-menu-item" data-settings-page="terms-of-service">Terms of service</button>
+                <button class="settings-menu-item" data-settings-page="community-guidelines">Community guidelines</button>
+            </div>
+            <div class="settings-menu-divider"></div>
             <button class="settings-logout-btn" onclick="window.location.href='{{ url_for('logout') }}'">Logout</button>
         </div>
         <!-- Settings Content -->
@@ -93,6 +99,26 @@
                             <span>yy/mm/dd</span>
                         </label>
                     </div>
+                </div>
+
+                <!-- Terms of Service Page -->
+                <div class="settings-page" id="settings-page-terms-of-service" style="display: none;">
+                    {% for section in tos_sections %}
+                    <div class="settings-section">
+                        <div class="settings-subheader">{{ section.subheader }}</div>
+                        <div class="settings-text">{{ section.descriptor }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Community Guidelines Page -->
+                <div class="settings-page" id="settings-page-community-guidelines" style="display: none;">
+                    {% for section in guidelines_sections %}
+                    <div class="settings-section">
+                        <div class="settings-subheader">{{ section.subheader }}</div>
+                        <div class="settings-text">{{ section.descriptor }}</div>
+                    </div>
+                    {% endfor %}
                 </div>
 
                 <!-- Usage Page -->
@@ -257,6 +283,12 @@
                             <span class="standing-label">Suspended</span>
                         </div>
                     </div>
+
+                    <!-- Delete Account Section -->
+                    <div class="settings-subheader" style="margin-top: 2rem;">Delete account</div>
+                    <div class="settings-text">Delete your Adzsend account, erase all data and purchases on your account. Irreversable.</div>
+
+                    <button class="delete-account-btn" onclick="openDeleteAccountPopup()">Delete account</button>
                 </div>
 
                 <!-- Discord Accounts Page -->
@@ -1264,8 +1296,30 @@
 
 <script>
     // Open settings popup
-    function openSettings() {
+    async function openSettings() {
         document.getElementById('settings-popup-overlay').classList.add('show');
+
+        // Fetch fresh account status
+        try {
+            const response = await fetch('/api/user/status');
+            const data = await response.json();
+            if (data.success) {
+                // Update standing bar based on fresh data
+                const steps = document.querySelectorAll('.standing-step');
+                if (steps && steps.length >= 3) {
+                    steps.forEach(step => step.classList.remove('active'));
+                    if (data.banned) {
+                        steps[2].classList.add('active');
+                    } else if (data.flagged) {
+                        steps[1].classList.add('active');
+                    } else {
+                        steps[0].classList.add('active');
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching account status:', error);
+        }
     }
 
     // Close settings popup
@@ -2049,3 +2103,54 @@
 
 <!-- Discord Accounts Management Script -->
 <script src="{{ url_for('static', filename='discord_accounts.js') }}"></script>
+
+<!-- Delete Account Confirmation Popup -->
+<div class="custom-popup-overlay" id="delete-account-popup">
+    <div class="custom-popup">
+        <button class="custom-popup-close" onclick="closeDeleteAccountPopup()">&times;</button>
+        <h2 class="custom-popup-title">Are you sure?</h2>
+        <p class="custom-popup-text">This action is irreversable, you wont have access to any paid services anymore.</p>
+        <button class="custom-popup-btn" id="confirm-delete-account-btn" onclick="deleteAccount()">Delete account</button>
+    </div>
+</div>
+
+<script>
+function openDeleteAccountPopup() {
+    document.getElementById('delete-account-popup').classList.add('active');
+}
+
+function closeDeleteAccountPopup() {
+    document.getElementById('delete-account-popup').classList.remove('active');
+}
+
+function deleteAccount() {
+    const btn = document.getElementById('confirm-delete-account-btn');
+    btn.disabled = true;
+    btn.textContent = 'Deleting...';
+
+    fetch('/api/delete-account', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': window.csrfToken
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Account deleted, redirect to home
+            window.location.href = '/';
+        } else {
+            alert(data.error || 'Failed to delete account');
+            btn.disabled = false;
+            btn.textContent = 'Delete account';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while deleting your account');
+        btn.disabled = false;
+        btn.textContent = 'Delete account';
+    });
+}
+</script>

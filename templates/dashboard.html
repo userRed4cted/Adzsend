@@ -2130,6 +2130,7 @@
             let guilds = [];
             let serverChannels = {}; // Cache for channels by guild ID
             let selectedChannels = []; // Array for multiple channel selection
+            let teamSelectedChannels = []; // Team panel selected channels - declare early so DB load works
             let selectedGuild = null; // Currently selected guild
             let searchTags = []; // Search filter tags
             let currentServerColor = 'rgba(21, 216, 188, 0.6)'; // Current server's dominant color
@@ -2698,8 +2699,17 @@
                 updateSendButton();
                 updateCharCount(); // Initialize character count display
 
-                // Preload all channels in background for faster channel-only mode
-                preloadAllChannels();
+                // Preload all channels in background (don't await - let it run async)
+                preloadAllChannels().catch(err => console.error('Error preloading channels:', err));
+
+                // Hide loading and show content for personal message box
+                const personalMsgLoadingEl = document.getElementById('personal-message-loading');
+                const personalMsgContentEl = document.getElementById('personal-message-content');
+                if (personalMsgLoadingEl) personalMsgLoadingEl.style.display = 'none';
+                if (personalMsgContentEl) {
+                    personalMsgContentEl.style.opacity = '1';
+                    personalMsgContentEl.style.pointerEvents = 'auto';
+                }
             }
 
             // Extract dominant color from image
@@ -3207,16 +3217,31 @@
                                     window.location.href = '/settings#billing';
                                     return; // Stop execution
                                 } else if (result.user_flagged) {
-                                    // User was flagged for inappropriate content
+                                    // User was flagged - update UI immediately
                                     if (result.user_banned) {
-                                        // Auto-banned on 3rd flag - show suspend popup
+                                        // Auto-banned - BLOCK EVERYTHING IMMEDIATELY
+                                        // Disable send button and message input
+                                        if (sendBtn) sendBtn.disabled = true;
+                                        if (messageInput) {
+                                            messageInput.disabled = true;
+                                            messageInput.value = '';
+                                            messageInput.placeholder = 'Account suspended - cannot send messages';
+                                        }
+
+                                        // Update status bar to show suspended
+                                        updateAccountStatus('banned');
+
+                                        // Show ban popup
                                         await customAlert('Account Suspended', 'Your account has been suspended due to multiple violations. You have been automatically banned after 3 flags.');
+
+                                        // Force redirect to analytics
+                                        window.location.href = '/dashboard?page=analytics';
                                     } else {
-                                        // Just flagged - show warning
+                                        // Just flagged - update status bar to show flagged
+                                        updateAccountStatus('flagged');
+                                        // Show warning
                                         await customAlert('Content Violation', result.error || 'Your message contains prohibited content and your account has been flagged.');
                                     }
-                                    // Reload to update account status in UI
-                                    window.location.reload();
                                     return; // Stop execution
                                 } else if (response.status === 429) {
                                     // Rate limited by Discord - mark and skip (don't retry)
@@ -3277,7 +3302,7 @@
 
             let teamGuilds = [];
             let teamServerChannels = {}; // Cache for channels by guild ID
-            let teamSelectedChannels = []; // Array for multiple channel selection
+            // teamSelectedChannels already declared at top // Array for multiple channel selection
             let teamSelectedGuild = null; // Currently selected guild
             let teamSearchTags = []; // Search filter tags
             let teamCurrentServerColor = 'rgba(21, 216, 188, 0.6)';
@@ -3722,6 +3747,15 @@
                 setTimeout(teamUpdateSendButton, 100);
 
                 teamPreloadAllChannels();
+
+                // Hide loading and show content for team message box
+                const teamMsgLoadingEl = document.getElementById('team-message-loading');
+                const teamMsgContentEl = document.getElementById('team-message-content');
+                if (teamMsgLoadingEl) teamMsgLoadingEl.style.display = 'none';
+                if (teamMsgContentEl) {
+                    teamMsgContentEl.style.opacity = '1';
+                    teamMsgContentEl.style.pointerEvents = 'auto';
+                }
             }
 
             // Extract dominant color from image (team version)
@@ -4141,16 +4175,32 @@
                                     window.location.href = '/settings#billing';
                                     return;
                                 } else if (result.user_flagged) {
-                                    // User was flagged for inappropriate content
+                                    // User was flagged - update UI immediately
                                     if (result.user_banned) {
-                                        // Auto-banned on 3rd flag - show suspend popup
+                                        // Auto-banned - BLOCK EVERYTHING IMMEDIATELY
+                                        // Disable team send button and message
+                                        if (teamSendBtn) teamSendBtn.disabled = true;
+                                        const teamMessageEl = document.getElementById('team-message');
+                                        if (teamMessageEl) {
+                                            teamMessageEl.disabled = true;
+                                            teamMessageEl.value = '';
+                                            teamMessageEl.placeholder = 'Account suspended - cannot send messages';
+                                        }
+
+                                        // Update status bar to show suspended
+                                        updateAccountStatus('banned');
+
+                                        // Show ban popup
                                         await customAlert('Account Suspended', 'Your account has been suspended due to multiple violations. You have been automatically banned after 3 flags.');
+
+                                        // Force redirect to analytics
+                                        window.location.href = '/dashboard?page=analytics';
                                     } else {
-                                        // Just flagged - show warning
+                                        // Just flagged - update status bar to show flagged
+                                        updateAccountStatus('flagged');
+                                        // Show warning
                                         await customAlert('Content Violation', result.error || 'Your message contains prohibited content and your account has been flagged.');
                                     }
-                                    // Reload to update account status in UI
-                                    window.location.reload();
                                     return;
                                 } else if (response.status === 429) {
                                     const channelKey = `${channel.guildId}-${channel.id}`;
@@ -4568,6 +4618,8 @@
 
     <!-- Analytics Dialog Script -->
     <script>
+// Global variable to store current status        window.userAccountStatus = null;        // Update account status in settings popup without page reload        function updateAccountStatus(status) {            // Store globally so it persists            window.userAccountStatus = status;            // Update the DOM            const updateSteps = () => {                const steps = document.querySelectorAll(".standing-step");                if (!steps || steps.length < 3) return false;                // Remove active class from all steps                steps.forEach(step => step.classList.remove("active"));                // Set active based on status                if (status === "banned") {                    steps[2].classList.add("active"); // Suspended                } else if (status === "flagged") {                    steps[1].classList.add("active"); // Flagged                } else {                    steps[0].classList.add("active"); // All good                }                return true;            };            updateSteps();        }        // Apply stored status when settings opens        document.addEventListener("click", function(e) {            // Check if settings was opened            if (e.target.closest("[onclick*=openSettings]") || e.target.id === "open-settings") {                setTimeout(() => {                    if (window.userAccountStatus) {                        updateAccountStatus(window.userAccountStatus);                    }                }, 100);            }        });
+
         // Analytics Dialog Variables
         let currentMemberId = null;
         let currentMemberName = null;
@@ -4968,27 +5020,19 @@
         let personalChartData = [];
         let personalAccountCreated = null;
         let personalServerDate = null;
-        let personalSummaryLoaded = false;
-        let personalChartLoaded = false;
 
-        function checkAndShowPersonalContent() {
-            if (personalSummaryLoaded && personalChartLoaded) {
-                const loadingEl = document.getElementById('personal-analytics-loading');
-                const contentEl = document.getElementById('personal-analytics-content');
-                if (loadingEl) loadingEl.style.display = 'none';
-                if (contentEl) {
-                    contentEl.style.opacity = '1';
-                    contentEl.style.pointerEvents = 'auto';
-                }
+        function hidePersonalAnalyticsLoading() {
+            const loadingEl = document.getElementById('personal-analytics-loading');
+            const contentEl = document.getElementById('personal-analytics-content');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (contentEl) {
+                contentEl.style.opacity = '1';
+                contentEl.style.pointerEvents = 'auto';
             }
         }
 
         // Initialize personal analytics when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            initPersonalAnalytics();
-            setupPersonalDateHandlers();
-            loadPersonalAnalyticsSummary();
-
+        document.addEventListener('DOMContentLoaded', async function() {
             // Team analytics is server-rendered, just show it
             const teamLoadingEl = document.getElementById('team-analytics-loading');
             const teamContentEl = document.getElementById('team-analytics-content');
@@ -4998,22 +5042,16 @@
                 teamContentEl.style.pointerEvents = 'auto';
             }
 
-            // Personal panel message is server-rendered, just show it
-            const personalMsgLoadingEl = document.getElementById('personal-message-loading');
-            const personalMsgContentEl = document.getElementById('personal-message-content');
-            if (personalMsgLoadingEl) personalMsgLoadingEl.style.display = 'none';
-            if (personalMsgContentEl) {
-                personalMsgContentEl.style.opacity = '1';
-                personalMsgContentEl.style.pointerEvents = 'auto';
-            }
+            setupPersonalDateHandlers();
 
-            // Team panel message is server-rendered, just show it
-            const teamMsgLoadingEl = document.getElementById('team-message-loading');
-            const teamMsgContentEl = document.getElementById('team-message-content');
-            if (teamMsgLoadingEl) teamMsgLoadingEl.style.display = 'none';
-            if (teamMsgContentEl) {
-                teamMsgContentEl.style.opacity = '1';
-                teamMsgContentEl.style.pointerEvents = 'auto';
+            // Load analytics - init must complete before loading stats
+            try {
+                await loadPersonalAnalyticsSummary();
+                await initPersonalAnalytics();
+            } catch (error) {
+                console.error('Error loading personal analytics:', error);
+            } finally {
+                hidePersonalAnalyticsLoading();
             }
         });
 
@@ -5033,16 +5071,11 @@
                     // Format dates using user's preferred format
                     document.getElementById('stat-peak-date-personal').textContent = formatDateWithUserFormat(summary.personal_peak_date);
                     document.getElementById('stat-peak-date-all').textContent = formatDateWithUserFormat(summary.all_peak_date);
-
-                    personalSummaryLoaded = true;
-                    checkAndShowPersonalContent();
                 } else {
                     console.error('Failed to load personal analytics summary:', data.error);
                 }
             } catch (error) {
                 console.error('Error loading personal analytics summary:', error);
-                personalSummaryLoaded = true;
-                checkAndShowPersonalContent();
             }
         }
 
@@ -5051,8 +5084,7 @@
             const endInput = document.getElementById('personal-end-date');
 
             if (!startInput || !endInput) {
-                console.log('Personal analytics inputs not found');
-                return;
+                throw new Error('Personal analytics inputs not found');
             }
 
             try {
@@ -5098,7 +5130,7 @@
                     }
 
                     // Load initial data
-                    loadPersonalDailyStats();
+                    await loadPersonalDailyStats();
                 } else {
                     console.error('Personal analytics API error:', data.error);
                 }
@@ -5163,16 +5195,11 @@
 
                     // Draw chart
                     drawPersonalChart();
-
-                    personalChartLoaded = true;
-                    checkAndShowPersonalContent();
                 } else {
                     console.error('Failed to load personal daily stats:', data.error);
                 }
             } catch (error) {
                 console.error('Error loading personal daily stats:', error);
-                personalChartLoaded = true;
-                checkAndShowPersonalContent();
             }
         }
 

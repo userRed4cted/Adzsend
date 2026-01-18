@@ -32,7 +32,8 @@ from config import (
     BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, TEXT, get_all_config, is_admin,
     DATABASE_VERSION, DATABASE_WIPE_MESSAGE, SITE,
     get_page_description, get_page_embed,
-    SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS
+    SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS,
+    TOS_SECTIONS, GUIDELINES_SECTIONS
 )
 
 # Security imports
@@ -277,7 +278,9 @@ def home():
                          has_business=has_business,
                          is_owner=is_owner,
                          is_admin_user=is_admin_user,
-                         user=user)
+                         user=user,
+                         tos_sections=TOS_SECTIONS,
+                         guidelines_sections=GUIDELINES_SECTIONS)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
@@ -296,7 +299,6 @@ def login_page():
             if 'login_referrer' not in session:
                 session['login_referrer'] = referrer
                 session.modified = True  # Force session save
-                print(f"[LOGIN] Stored referrer: {referrer}")
 
         response = app.make_response(render_template('login.html', error=error, csrf_token=csrf_token))
         response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -573,7 +575,9 @@ def discover():
 
     return render_template('discover.html',
                          user=user,
-                         user_data=user_data)
+                         user_data=user_data,
+                         tos_sections=TOS_SECTIONS,
+                         guidelines_sections=GUIDELINES_SECTIONS)
 
 @app.route('/support')
 def support():
@@ -590,6 +594,8 @@ def support():
                          support_faq_title=SUPPORT_FAQ_TITLE,
                          support_contact_text=SUPPORT_CONTACT_TEXT,
                          faq_items=FAQ_ITEMS,
+                         tos_sections=TOS_SECTIONS,
+                         guidelines_sections=GUIDELINES_SECTIONS,
                          discord_server_url=HOMEPAGE['hero']['discord_server_url'])
 
 @app.route('/purchase')
@@ -619,7 +625,9 @@ def purchase():
                          is_owner=is_owner,
                          is_admin_user=is_admin_user,
                          user=session.get('user'),
-                         user_data=user_data)
+                         user_data=user_data,
+                         tos_sections=TOS_SECTIONS,
+                         guidelines_sections=GUIDELINES_SECTIONS)
 
 @app.route('/api/resend-code', methods=['POST'])
 @rate_limit('api')
@@ -823,12 +831,8 @@ def verify_code_api():
     else:
         # Login - get the page they were on before login (stored in session)
         redirect_url = session.pop('login_referrer', None)
-        print(f"[LOGIN SUCCESS] Retrieved referrer from session: {redirect_url}")
         if not redirect_url:
             redirect_url = url_for('dashboard')
-            print(f"[LOGIN SUCCESS] No referrer, defaulting to dashboard")
-        else:
-            print(f"[LOGIN SUCCESS] Redirecting to: {redirect_url}")
         return jsonify({'success': True, 'redirect': redirect_url})
 
 @app.route('/api/set-plan', methods=['POST'])
@@ -1249,7 +1253,9 @@ def dashboard():
         BLACKLISTED_WORDS=BLACKLISTED_WORDS,
         PHRASE_EXCEPTIONS=PHRASE_EXCEPTIONS,
         csrf_token=csrf_token,
-        suspended_accounts=suspended_accounts
+        suspended_accounts=suspended_accounts,
+        tos_sections=TOS_SECTIONS,
+        guidelines_sections=GUIDELINES_SECTIONS
     ))
     # Prevent caching
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -1274,7 +1280,9 @@ def bridge():
     response = app.make_response(render_template('bridge.html',
         user=session.get('user'),
         user_data=user_data,
-        csrf_token=csrf_token
+        csrf_token=csrf_token,
+        tos_sections=TOS_SECTIONS,
+        guidelines_sections=GUIDELINES_SECTIONS
     ))
     # Prevent caching
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -1394,13 +1402,11 @@ def send_message_single():
     channel = data.get('channel', {})
     guild_id = channel.get('guildId')
 
-    print(f"[SEND] Attempting to send to guild {guild_id}, channel {channel.get('id')}, channel name: {channel.get('name')}")
 
     # Get token from linked Discord accounts based on which account has this guild
     from database import get_linked_discord_accounts, get_linked_discord_account_by_id
     linked_accounts = get_linked_discord_accounts(user['id'])
 
-    print(f"[SEND] Found {len(linked_accounts)} linked accounts")
 
     if not linked_accounts:
         return {'error': 'No Discord account linked'}, 401
@@ -1410,7 +1416,6 @@ def send_message_single():
     account_used = None
 
     for acc in linked_accounts:
-        print(f"[SEND] Checking account {acc['id']}, is_valid: {acc.get('is_valid')}")
 
         # Don't skip based on is_valid - try all accounts
         # if not acc.get('is_valid', True):
@@ -1419,10 +1424,8 @@ def send_message_single():
 
         account_details = get_linked_discord_account_by_id(acc['id'])
         if not account_details or not account_details.get('discord_token'):
-            print(f"[SEND] Account {acc['id']} has no token")
             continue
 
-        print(f"[SEND] Account {acc['id']} has token, checking guilds...")
 
         # Fetch guilds for this account to check if it has the target guild
         try:
@@ -1434,25 +1437,18 @@ def send_message_single():
                 account_guilds = guilds_resp.json()
                 guild_ids = [g['id'] for g in account_guilds]
 
-                print(f"[SEND] Account {acc['id']} has {len(account_guilds)} guilds")
-                print(f"[SEND] Looking for guild {guild_id} in account {acc['id']}")
 
                 if guild_id in guild_ids:
                     user_token = token
                     account_used = acc
-                    print(f"[SEND] ✓ MATCH! Using account {acc['id']} for guild {guild_id}")
                     break
-                else:
-                    print(f"[SEND] Guild {guild_id} NOT found in account {acc['id']}")
             else:
-                print(f"[SEND] Failed to fetch guilds for account {acc['id']}: HTTP {guilds_resp.status_code}")
+                pass
         except Exception as e:
-            print(f"[SEND] Error checking account {acc['id']}: {e}")
             continue
 
     if not user_token:
         # Fallback to first account if guild not found
-        print(f"[SEND] Guild {guild_id} not found in any account, using first account")
         primary_account = linked_accounts[0] if linked_accounts else None
         if primary_account:
             account_details = get_linked_discord_account_by_id(primary_account['id'])
@@ -1475,11 +1471,8 @@ def send_message_single():
         return {'error': error_msg}, 400
 
     # Check content filter and flag user if needed
-    is_valid, filter_reason = check_message_content(message_content, user['id'])
+    is_valid, filter_reason, user_banned = check_message_content(message_content, user['id'])
     if not is_valid:
-        # Get updated user status after flagging to check if they were auto-banned
-        user = get_user_by_id(user['id'])
-        user_banned = user.get('banned', 0) == 1
         # Return error with flags to trigger UI update
         return {'error': filter_reason, 'user_flagged': True, 'user_banned': user_banned}, 400
 
@@ -1658,11 +1651,8 @@ def send_message():
         return {'error': 'User not found'}, 404
 
     # Check content filter and flag user if needed
-    is_valid, filter_reason = check_message_content(message_content, user['id'])
+    is_valid, filter_reason, user_banned = check_message_content(message_content, user['id'])
     if not is_valid:
-        # Get updated user status after flagging to check if they were auto-banned
-        user = get_user_by_id(user['id'])
-        user_banned = user.get('banned', 0) == 1
         # Return error with flags to trigger UI update
         return {'error': filter_reason, 'user_flagged': True, 'user_banned': user_banned}, 400
 
@@ -1691,7 +1681,6 @@ def send_message():
                 timeout=10
             )
 
-            print(f"[SEND] Channel: {channel_name}, Status: {resp.status_code}")
             if resp.status_code == 200 or resp.status_code == 201:
                 results['success'].append(channel_name)
                 # Track successful send in database
@@ -1716,10 +1705,8 @@ def send_message():
                 try:
                     error_data = resp.json()
                     error_msg = error_data.get('message', 'Unknown error')
-                    print(f"[SEND ERROR] Channel: {channel_name}, Status: {resp.status_code}, Response: {error_data}")
                 except:
                     error_msg = f'HTTP {resp.status_code}'
-                    print(f"[SEND ERROR] Channel: {channel_name}, Status: {resp.status_code}, Could not parse response")
                 results['failed'].append(f'{channel_name} ({error_msg})')
         except requests.exceptions.Timeout:
             results['failed'].append(f'{channel_name} (Request timeout)')
@@ -1901,6 +1888,38 @@ def team_panel():
 def settings():
     # Settings are now a popup in the panel, so redirect to panel
     return redirect(url_for('dashboard'))
+
+@app.route('/api/delete-account', methods=['POST'])
+@rate_limit('api')
+def api_delete_account():
+    """Delete user account and all associated data."""
+    from flask import jsonify
+    from api_delete_account import delete_user_account
+
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    try:
+        user_id = session.get('user_id')
+
+        # Delete the account
+        success, error = delete_user_account(user_id)
+
+        if success:
+            # Clear session
+            session.clear()
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': error or 'Failed to delete account'}), 500
+
+    except Exception as e:
+        print(f"[DELETE ACCOUNT API] Error: {str(e)}")
+        return jsonify({'success': False, 'error': 'An error occurred'}), 500
 
 @app.route('/api/change-email', methods=['POST'])
 @rate_limit('api')
@@ -2110,6 +2129,32 @@ def dev_cancel_plan():
         print(f"[DEV ERROR] Cancel error: {str(e)}")
         return redirect(url_for('dashboard'))
 
+@app.route('/clear')
+def dev_clear_account():
+    """DEV ONLY: Clear all bans and flags from your own account."""
+    from database import unban_user, unflag_user
+
+    if 'user' not in session:
+        return redirect(url_for('home'))
+
+    try:
+        user = get_user_by_id(session.get('user_id'))
+        if user:
+            # Unban if banned
+            if user.get('banned'):
+                unban_user(user['id'])
+
+            # Unflag if flagged
+            if user.get('flagged'):
+                unflag_user(user['id'])
+
+            print(f"[DEV] Cleared bans/flags for {session['user']['username']}")
+
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        print(f"[DEV ERROR] Clear error: {str(e)}")
+        return redirect(url_for('dashboard'))
+
 @app.route('/api/flag-self', methods=['POST'])
 @rate_limit('api')
 def api_flag_self():
@@ -2171,7 +2216,7 @@ def api_save_user_data():
 
         # Check content filter for draft message and flag user if needed
         if draft_message and draft_message.strip():
-            is_valid, filter_reason = check_message_content(draft_message, user['id'])
+            is_valid, filter_reason, user_banned = check_message_content(draft_message, user['id'])
             if not is_valid:
                 return jsonify({'success': False, 'error': filter_reason}), 400
 
@@ -2442,7 +2487,7 @@ def set_team_message():
 
         # Check content filter and flag user if needed (only if message is not empty)
         if message and message.strip():
-            is_valid, filter_reason = check_message_content(message, user['id'])
+            is_valid, filter_reason, user_banned = check_message_content(message, user['id'])
             if not is_valid:
                 return {'success': False, 'error': filter_reason}, 400
 
@@ -2603,6 +2648,29 @@ def get_personal_analytics_summary_endpoint():
         import traceback
         print(f"[ERROR] Get personal analytics summary error: {str(e)}")
         traceback.print_exc()
+        return {'success': False, 'error': str(e)}, 500
+
+
+@app.route('/api/user/status', methods=['GET'])
+@rate_limit('api')
+def get_user_status():
+    """Get current user's flagged/banned status."""
+    if 'user' not in session:
+        return {'success': False, 'error': 'Not logged in'}, 401
+
+    try:
+        user = get_user_by_id(session.get('user_id'))
+        if not user:
+            return {'success': False, 'error': 'User not found'}, 404
+
+        return {
+            'success': True,
+            'flagged': bool(user.get('flagged', 0)),
+            'banned': bool(user.get('banned', 0))
+        }, 200
+
+    except Exception as e:
+        print(f"[ERROR] Get user status error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 

@@ -1915,17 +1915,25 @@ def unban_user(user_id):
 
 
 def flag_user(user_id, reason=None):
-    """Flag a user for inappropriate content. Auto-bans on 3rd flag."""
+    """Flag a user for inappropriate content. Auto-bans on 3rd flag. Returns (new_count, was_banned)."""
     conn = get_db()
     cursor = conn.cursor()
     flagged_at = datetime.now().isoformat()
 
     # Get current flag count and total flags
-    cursor.execute('SELECT flag_count, total_flags FROM users WHERE id = ?', (user_id,))
+    cursor.execute('SELECT flag_count, total_flags, flagged FROM users WHERE id = ?', (user_id,))
     row = cursor.fetchone()
     current_count = row[0] if row and row[0] is not None else 0
     total_flags = row[1] if row and row[1] is not None else 0
-    new_count = current_count + 1
+    currently_flagged = row[2] if row and row[2] is not None else 0
+
+    # If user is not currently flagged, this is a new flag streak - start from 1
+    # If they are currently flagged, increment their existing count
+    if currently_flagged == 0:
+        new_count = 1  # Fresh start
+    else:
+        new_count = current_count + 1  # Continue streak
+
     new_total = total_flags + 1
 
     # Increment both flag_count (for auto-ban) and total_flags (all-time tracking)
@@ -1935,9 +1943,11 @@ def flag_user(user_id, reason=None):
         WHERE id = ?
     ''', (reason, flagged_at, new_count, new_total, user_id))
 
+    was_banned = False
     # Auto-ban if this is the 3rd flag
     if new_count >= 3:
         cursor.execute('UPDATE users SET banned = 1 WHERE id = ?', (user_id,))
+        was_banned = True
 
         # Get user's discord_id and remove from teams
         cursor.execute('SELECT discord_id FROM users WHERE id = ?', (user_id,))
@@ -1958,6 +1968,8 @@ def flag_user(user_id, reason=None):
 
     conn.commit()
     conn.close()
+
+    return new_count, was_banned
 
 
 def unflag_user(user_id):

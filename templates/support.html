@@ -21,16 +21,16 @@
             <div class="support-content">
                 <!-- Hero Section -->
                 <div class="support-hero">
-                    <h1 class="support-hero-title">{{ support_hero_title }}</h1>
+                    <h1 class="support-hero-title hero-fade-in">{{ support_hero_title }}</h1>
                 </div>
 
                 <!-- FAQ Section -->
                 <div class="support-faq-section">
-                    <h2 class="support-faq-title">{{ support_faq_title }}</h2>
+                    <h2 class="support-faq-title hero-fade-in" style="animation-delay: 0.3s;">{{ support_faq_title }}</h2>
 
                     <div class="faq-list">
                         {% for faq in faq_items %}
-                        <div class="faq-item">
+                        <div class="faq-item hero-fade-in" style="animation-delay: {{ 0.6 + loop.index0 * 0.3 }}s;">
                             <div class="faq-question" onclick="toggleFaq(this)">
                                 <span class="faq-question-text">{{ faq.question }}</span>
                                 <img src="{{ url_for('static', filename='openorclose.png') }}" alt="Toggle" class="faq-toggle-icon">
@@ -44,7 +44,7 @@
                     </div>
 
                     <!-- Contact Support -->
-                    <div class="support-contact">
+                    <div class="support-contact hero-fade-in" style="animation-delay: {{ 0.6 + faq_items|length * 0.3 }}s;">
                         <p class="support-contact-text">{{ support_contact_text }}</p>
                         <a href="{{ discord_server_url }}" target="_blank" class="discord-btn">
                             <img src="{{ url_for('static', filename='discordlogo.png') }}" alt="Discord" class="discord-btn-icon">

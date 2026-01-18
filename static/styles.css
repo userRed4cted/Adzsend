@@ -2909,7 +2909,6 @@ input:checked + .toggle-slider:before {
 .support-faq-section {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
 }
 
 .support-faq-title {
@@ -2917,7 +2916,7 @@ input:checked + .toggle-slider:before {
     font-weight: 400;
     color: #ffffff;
     text-align: center;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 /* FAQ List */
@@ -2994,8 +2993,8 @@ input:checked + .toggle-slider:before {
     flex-direction: column;
     align-items: center;
     gap: 1.5rem;
-    margin-top: 3rem;
-    padding-top: 3rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
     border-top: 1px solid #222225;
 }
 

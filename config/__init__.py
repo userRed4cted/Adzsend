@@ -20,6 +20,7 @@ from .discord_accounts import (
     get_account_limit, can_link_more_accounts
 )
 from .support import SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS
+from .tos_rules import TOS_SECTIONS, GUIDELINES_SECTIONS
 
 # Import site-wide settings
 from .site import (

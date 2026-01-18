@@ -99,11 +99,12 @@ def check_message_content(message, user_id=None):
         prohibited_list = "', '".join(found_words)
         reason = f"Prohibited content: '{prohibited_list}'\n\nFull message:\n{message}"
 
-        # Flag the user if user_id is provided
+        # Flag the user if user_id is provided and get ban status
+        was_banned = False
         if user_id:
             try:
                 from database import flag_user
-                flag_user(user_id, reason)
+                flag_count, was_banned = flag_user(user_id, reason)
             except Exception as e:
                 print(f"[WARNING] Failed to flag user {user_id}: {e}")
 
@@ -112,9 +113,9 @@ def check_message_content(message, user_id=None):
             error_msg = f"Message contains prohibited content: '{found_words[0]}'"
         else:
             error_msg = f"Message contains prohibited content: '{prohibited_list}'"
-        return False, error_msg
+        return False, error_msg, was_banned
 
-    return True, None
+    return True, None, False
 
 
 def get_blacklist_count():

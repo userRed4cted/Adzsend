@@ -21,6 +21,7 @@ from .discord_accounts import (
 from .support import SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS
 from .terms import TERMS_SECTIONS
 from .guidelines import GUIDELINES_SECTIONS
+from .paid_services_terms import PAID_SERVICES_TERMS_SECTIONS
 
 # Import site-wide settings
 from .site import (

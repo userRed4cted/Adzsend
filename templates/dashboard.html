@@ -697,7 +697,7 @@
 
                         <div class="menu-category">Management</div>
 
-                        <button class="menu-item{% if not discord_linked or not is_team_owner %} disabled{% endif %}" data-page="team-management"{% if not discord_linked or not is_team_owner %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
+                        <button class="menu-item{% if not is_team_owner %} disabled{% endif %}" data-page="team-management"{% if not is_team_owner %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
                             Team management
                         </button>
 
@@ -957,7 +957,7 @@
 
                     <!-- Page: Team Management -->
                     <div id="page-team-management" class="page-content" style="height: 100%; display: none; flex-direction: row;">
-                        {% if is_team_owner and team %}
+                        {% if is_team_owner %}
                         <!-- Left Half: Team Members Management -->
                         <div style="flex: 1; display: flex; flex-direction: column; height: 100%; position: relative;">
                             <!-- Radio Toggle -->
@@ -2023,11 +2023,15 @@
 
             // Show popup on page load if user has no Discord account linked
             if (!discordLinked) {
-                // Show alert and always redirect to Discord accounts page when closed
-                customAlert(
+                // Show confirm dialog with custom button text
+                const shouldLinkAccount = await customConfirm(
                     'Link a Discord account',
-                    'In order to use all dashboard features you need a linked Discord account.'
-                ).then(() => {
+                    'In order to use all dashboard features you need a linked Discord account.',
+                    'Link an account'
+                );
+
+                // Only redirect to Discord settings if user clicked the button (not X or outside)
+                if (shouldLinkAccount) {
                     // Open settings popup and navigate to Discord accounts page
                     openSettings();
                     setTimeout(() => {
@@ -2036,8 +2040,8 @@
                             discordAccountsBtn.click();
                         }
                     }, 100);
-                });
-                return; // Stop execution here
+                }
+                // Continue to set up menu handlers even if no Discord account linked
             } else if (!hasGuilds) {
                 // User has account linked but no servers
                 await customAlert(
@@ -2085,7 +2089,10 @@
                     // Show/hide pages
                     pageContents.forEach(page => {
                         if (page.id === `page-${targetPage}`) {
+                            // Set display to flex and restore appropriate flex-direction
                             page.style.display = 'flex';
+                            // Team management and analytics use row layout, panels use column
+                            page.style.flexDirection = (targetPage === 'team-management' || targetPage === 'analytics') ? 'row' : 'column';
                         } else {
                             page.style.display = 'none';
                         }

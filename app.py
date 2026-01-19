@@ -566,8 +566,9 @@ def discover():
     user = None
     user_data = None
     if 'user' in session:
-        user = session.get('user')
-        user_data = get_user_data(session.get('user_id'))
+        user = get_user_by_id(session.get('user_id'))
+        if user:
+            user_data = get_user_data(user['id'])
 
     return render_template('discover.html',
                          user=user,
@@ -578,8 +579,9 @@ def support():
     user = None
     user_data = None
     if 'user' in session:
-        user = session.get('user')
-        user_data = get_user_data(session.get('user_id'))
+        user = get_user_by_id(session.get('user_id'))
+        if user:
+            user_data = get_user_data(user['id'])
 
     return render_template('support.html',
                          user=user,
@@ -601,6 +603,7 @@ def purchase():
     is_admin_user = False
     is_owner = False
     user_data = None
+    user = None
     if 'user' in session:
         user = get_user_by_id(session.get('user_id'))
         if user:
@@ -617,7 +620,7 @@ def purchase():
                          has_business=has_business,
                          is_owner=is_owner,
                          is_admin_user=is_admin_user,
-                         user=session.get('user'),
+                         user=user,
                          user_data=user_data)
 
 @app.route('/api/resend-code', methods=['POST'])
@@ -1267,7 +1270,7 @@ def bridge():
 
     csrf_token = generate_csrf_token()
     response = app.make_response(render_template('bridge.html',
-        user=session.get('user'),
+        user=user,
         user_data=user_data,
         csrf_token=csrf_token
     ))
@@ -1285,7 +1288,7 @@ def parse_markdown_links(text):
     import re
     # Pattern: [link text](url)
     pattern = r'\[([^\]]+)\]\(([^\)]+)\)'
-    return re.sub(pattern, r'<a href="\2" class="navbar-auth-link">\1</a>', text)
+    return re.sub(pattern, r'<a href="\2" class="content-link">\1</a>', text)
 
 
 @app.route('/guidelines')
@@ -1297,8 +1300,9 @@ def guidelines():
     user = None
     user_data = None
     if 'authenticated' in session and 'user_id' in session:
-        user = session.get('user')
-        user_data = get_user_data(session.get('user_id'))
+        user = get_user_by_id(session.get('user_id'))
+        if user:
+            user_data = get_user_data(user['id'])
 
     return render_template('guidelines.html',
         sections=GUIDELINES_SECTIONS,
@@ -1320,14 +1324,39 @@ def terms():
     user = None
     user_data = None
     if 'authenticated' in session and 'user_id' in session:
-        user = session.get('user')
-        user_data = get_user_data(session.get('user_id'))
+        user = get_user_by_id(session.get('user_id'))
+        if user:
+            user_data = get_user_data(user['id'])
 
     return render_template('terms.html',
         sections=TERMS_SECTIONS,
         page_title=TERMS_TITLE,
         effective_date=TERMS_EFFECTIVE_DATE,
         last_updated=TERMS_LAST_UPDATED,
+        user=user,
+        user_data=user_data,
+        parse_links=parse_markdown_links
+    )
+
+
+@app.route('/terms/paid-services-terms')
+def paid_services_terms():
+    """Paid Services Terms page"""
+    from config.paid_services_terms import PAID_SERVICES_TERMS_SECTIONS, PAID_SERVICES_TERMS_TITLE, PAID_SERVICES_TERMS_EFFECTIVE_DATE, PAID_SERVICES_TERMS_LAST_UPDATED
+
+    # Get user data if logged in
+    user = None
+    user_data = None
+    if 'authenticated' in session and 'user_id' in session:
+        user = get_user_by_id(session.get('user_id'))
+        if user:
+            user_data = get_user_data(user['id'])
+
+    return render_template('paid_services_terms.html',
+        sections=PAID_SERVICES_TERMS_SECTIONS,
+        page_title=PAID_SERVICES_TERMS_TITLE,
+        effective_date=PAID_SERVICES_TERMS_EFFECTIVE_DATE,
+        last_updated=PAID_SERVICES_TERMS_LAST_UPDATED,
         user=user,
         user_data=user_data,
         parse_links=parse_markdown_links

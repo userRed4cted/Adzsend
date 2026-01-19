@@ -7,33 +7,40 @@ TERMS_LAST_UPDATED = "January 19 2026"
 
 TERMS_SECTIONS = [
     {
-        "title": "Terms of Service",
         "paragraphs": [
-            "Welcome to Adzsend. By using our service, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use Adzsend.",
+            "These terms set forth our legal obligations to each other. They apply to your use of our services.",
 
-            "You must be at least 13 years old to use Adzsend. By using our service, you represent that you meet this age requirement.",
+            "When we say 'Adzsend', 'we', 'us' and 'our' in these terms, we mean Adzsend, its subsidiaries and its related companies.",
 
-            "You are responsible for maintaining the security of your account and password. Adzsend cannot and will not be liable for any loss or damage from your failure to comply with this security obligation.",
+            "When we say 'services' in these terms, we mean Adzsend's services, apps, websites and other products.",
 
-            "You may not use Adzsend for any illegal or unauthorized purpose. You must not, in the use of the Service, violate any laws in your jurisdiction.",
+            "When we say 'you' or 'your', we mean you. If you're accessing our services on behalf of a legal entity (like your employer), you agree that you have the authority to bind that entity to these terms, and 'you' and 'your' will refer to that entity."
 
-            "You are solely responsible for your conduct and any content that you submit, post, or display on or via the Service.",
+           "We also have [Community Guidelines](http://127.0.0.1:5000/guidelines) and other policies (as listed here or as otherwise made available to you) that apply to your use of our services and are incorporated into these terms. You should read these policies, they contain important information about your use of our services. Adzsend's [Paid Services Terms](http://127.0.0.1:5000/terms/paid-services-terms) apply to any purchase you make through Adzsend. By using Adzsend's services, you agree to these terms."
+           
+            "Together, these rules make Adzsend possible and they matter to us. If you believe others aren't following them, please let us know [by reporting it to us](http://127.0.0.1:5000/support)."
+        ]
+    },
+    {
+        "title": "WHAT YOU CAN EXPECT FROM US",
+        "paragraphs": [
+            "We're actively developing new features and products to improve Adzsend. As part of these efforts, we may add or remove features, start offering new services or stop offering some services entirely (or just in some places or for some users) if they no longer make sense from a business perspective or create risk for Adzsend or our users. While we try to avoid disruptions, we cannot guarantee that there will not be an outage or change to the services, and your content may not be retrievable due to such outages or changes. We are not liable for any such outages or service changes."
+        ]
+    },
+    {
+        "title": "YOUR ADZSEND ACCOUNT",
+        "paragraphs": [
+            "You are responsible for the security of your account and you agree to [notify us](http://127.0.0.1:5000/support) immediately if you believe your account has been compromised."
 
-            "We reserve the right to modify or terminate the Service for any reason, without notice at any time.",
+            "You must always provide accurate information to Adzsend and maintain the accuracy of the information associated with your account. We may assume that any communications we've received from your account or the associated contact information have been made by you and that any purchases made using your account were made by you."
 
-            "We reserve the right to refuse service to anyone for any reason at any time.",
-
-            "We may, but have no obligation to, remove content and accounts containing content that we determine in our sole discretion are unlawful, offensive, threatening, libelous, defamatory, pornographic, obscene or otherwise objectionable or violates any party's intellectual property or these Terms of Service.",
-
-            "Your use of the Service is at your sole risk. The service is provided on an 'as is' and 'as available' basis.",
-
-            "Adzsend does not warrant that the service will be uninterrupted, timely, secure, or error-free.",
-
-            "We reserve the right to update and change the Terms of Service from time to time without notice. Continued use of the Service after any such changes shall constitute your consent to such changes.",
-
-            "Violation of any of the terms below will result in the termination of your Account.",
-
-            "Questions about the Terms of Service should be sent to our support team."
+            "If you get locked out of your account, we'll need to contact you at the email or phone number associated with your account. If your account is compromised or you no longer have access to your email account, we may not be able to restore your access to your account."
+        ]
+    },
+        {
+        "title": "YOUR ADZSEND ACCOUNT",
+        "paragraphs": [
+            ""
         ]
     }
 ]

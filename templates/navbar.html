@@ -70,26 +70,6 @@
     });
 })();
 
-// Logo retry on fail - retry every 100ms until loads
-(function() {
-    const logoImg = document.querySelector('.navbar-left img[src*="favicon.png"]');
-    if (logoImg) {
-        let retryCount = 0;
-        const maxRetries = 100; // Stop after 10 seconds (100 * 100ms)
-
-        logoImg.addEventListener('error', function retryLoad() {
-            if (retryCount >= maxRetries) return;
-            retryCount++;
-
-            setTimeout(() => {
-                const currentSrc = logoImg.src.split('?')[0]; // Remove old retry param
-                logoImg.src = '';
-                logoImg.src = currentSrc + '?retry=' + Date.now();
-            }, 100);
-        });
-    }
-})();
-
 // Welcome text slideshow - uses setInterval with requestAnimationFrame fallback
 {% if user %}
 (function() {
@@ -151,3 +131,6 @@
 })();
 {% endif %}
 </script>
+
+<!-- Centralized Image Loader -->
+<script src="{{ url_for('static', filename='image_loader.js') }}"></script>

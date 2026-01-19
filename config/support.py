@@ -26,7 +26,7 @@ FAQ_ITEMS = [
     },
     {
         'question': 'Account mistakenly flagged or suspended?',
-        'answer': 'If the system detects content in violation of the community guidelines multiple times then your account will be automatically suspended, to appeal contact our support team. Account standing can be found in settings.'
+        'answer': 'If the system detects content in violation of the Community Guidelines multiple times then your account will be automatically suspended, to appeal contact our support team. Account standing can be found in settings.'
     },
         {
         'question': 'Question 4',

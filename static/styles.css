@@ -700,12 +700,17 @@ body {
     padding: 0;
     font-size: 0.85rem;
     font-weight: 500;
-    text-decoration: underline;
+    text-decoration: none;
     cursor: pointer;
     line-height: 1;
     white-space: nowrap;
     flex-shrink: 0;
     margin: auto;
+    transition: text-decoration 0.2s;
+}
+
+.navbar-auth-link:hover {
+    text-decoration: underline;
 }
 
 /* Navbar left section with menu icon */
@@ -2904,14 +2909,18 @@ input:checked + .toggle-slider:before {
     margin-bottom: 2rem;
 }
 
+@font-face {
+    font-family: 'ABC Ginto Nord';
+    src: url('/static/fonts/ABCGintoNord-Black-Trial.otf') format('opentype');
+}
+
 .support-hero-title {
-    font-size: 2.1rem;
-    font-weight: 700;
-    font-family: 'gg sans Bold', sans-serif;
+    font-size: 48px;
+    font-family: 'ABC Ginto Nord', 'gg sans Bold', sans-serif !important;
     color: #ffffff;
     text-align: center;
     line-height: 1.4;
-    letter-spacing: 0.5px;
+    letter-spacing: -0.5px;
     white-space: pre-line;
 }
 

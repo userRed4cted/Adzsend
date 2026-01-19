@@ -2348,11 +2348,6 @@ input:checked + .toggle-slider:before {
     filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
 }
 
-.plan-card:hover {
-    transform: scale(1.02);
-    transform-origin: center center;
-}
-
 .plan-card.fade-out {
     opacity: 0;
 }
@@ -2372,6 +2367,7 @@ input:checked + .toggle-slider:before {
     margin-bottom: 1.5rem;
     text-transform: uppercase;
     letter-spacing: 1px;
+    font-family: 'ABC Ginto Nord', 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
 }
 
 .plan-price-section {
@@ -2401,6 +2397,7 @@ input:checked + .toggle-slider:before {
     font-weight: 900;
     color: #ffffff;
     line-height: 1;
+    font-family: 'ABC Ginto Nord', 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
 }
 
 .period {

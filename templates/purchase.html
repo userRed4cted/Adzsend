@@ -74,7 +74,7 @@
 
                     <div class="plans-grid">
                         {% for plan_id, plan in subscription_plans.items() %}
-                        <div class="plan-card" data-plan-id="{{ plan_id }}" data-glow="{{ plan.glow_color }}">
+                        <div class="plan-card" data-plan-id="{{ plan_id }}">
                             <div class="plan-header">
                                 <h3 class="plan-name">{{ plan.name }}</h3>
                                 <div class="plan-price-section">
@@ -141,7 +141,7 @@
 
                     <div class="plans-grid">
                         {% for plan_id, plan in business_plans.items() %}
-                        <div class="plan-card" data-plan-id="{{ plan_id }}" data-glow="{{ plan.glow_color }}">
+                        <div class="plan-card" data-plan-id="{{ plan_id }}">
                             <div class="plan-header">
                                 <h3 class="plan-name">{{ plan.name }}</h3>
                                 <div class="plan-price-section">
@@ -438,22 +438,6 @@
             });
         }
 
-        // Plan card glow effect - always on
-        const planCards = document.querySelectorAll('.plan-card');
-        planCards.forEach(card => {
-            const glowColor = card.dataset.glow;
-            // Set initial glow
-            card.style.boxShadow = `0 0 30px ${glowColor}`;
-
-            // Enhance glow on hover
-            card.addEventListener('mouseenter', () => {
-                card.style.boxShadow = `0 0 50px ${glowColor}`;
-            });
-            card.addEventListener('mouseleave', () => {
-                card.style.boxShadow = `0 0 30px ${glowColor}`;
-            });
-        });
-
         // Check if user is logged in
         const isUserLoggedIn = {{ 'true' if session.get('user') else 'false' }};
 
@@ -535,30 +519,6 @@
             });
         });
 
-        // Apply glow effect on hover using data-glow attribute
-        document.querySelectorAll('.plan-card').forEach(card => {
-            const glowColor = card.getAttribute('data-glow');
-            if (glowColor) {
-                // Parse rgba values from string like "rgba(255, 255, 255, 0.6)"
-                const match = glowColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-                if (match) {
-                    const r = match[1];
-                    const g = match[2];
-                    const b = match[3];
-                    const a = match[4] || '1';
-
-                    card.addEventListener('mouseenter', () => {
-                        card.style.filter = `drop-shadow(0 0 15px rgba(${r}, ${g}, ${b}, ${a * 0.5}))`;
-                        card.style.borderColor = `rgba(${r}, ${g}, ${b}, ${a})`;
-                    });
-
-                    card.addEventListener('mouseleave', () => {
-                        card.style.filter = 'drop-shadow(0 0 0px rgba(255, 255, 255, 0))';
-                        card.style.borderColor = '#222225';
-                    });
-                }
-            }
-        });
 
     </script>
 

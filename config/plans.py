@@ -56,11 +56,6 @@ SUBSCRIPTION_PLANS = {
         # None = not applicable (for 'amount' type)
         'allowance_period': 'daily',
 
-        # GLOW COLOR
-        # Element: Glowing border effect around plan card on hover
-        # Format: 'rgba(R, G, B, opacity)' where opacity is 0-1
-        'glow_color': 'rgba(255, 255, 255, 0.6)',
-
         # BUTTON TEXT
         # Element: Text on the purchase button at bottom of card
         'button_text': 'Select',
@@ -115,11 +110,6 @@ SUBSCRIPTION_PLANS = {
         # None = not applicable (for 'amount' type)
         'allowance_period': 'weekly',
 
-        # GLOW COLOR
-        # Element: Glowing border effect around plan card on hover
-        # Format: 'rgba(R, G, B, opacity)' where opacity is 0-1
-        'glow_color': 'rgba(255, 255, 255, 0.6)',
-
         # SAVINGS TEXT (shown when Yearly is selected)
         # Element: Text below price showing savings info
         # If empty/not set: auto-calculates "SAVING $XX (17% OFF) YEARLY"
@@ -158,7 +148,6 @@ SUBSCRIPTION_PLANS = {
         'message_limit': 2400,  # x5=4000 -1 = unlimited
         'usage_type': 'amount',
         'allowance_period': 'Weekly',
-        'glow_color': 'rgba(21, 216, 188, 0.6)',
         'savings_text': '$12.50 per month',
         'savings_color': '#15d8bc',
         'button_text': 'Subscribe',
@@ -216,10 +205,6 @@ BUSINESS_PLANS = {
         # Maximum number of people who can join this business team
         'max_members': 15,
 
-        # GLOW COLOR
-        # Element: Glowing border effect around plan card on hover
-        'glow_color': 'rgba(255, 255, 255, 0.6)',
-
         # SAVINGS TEXT & COLOR (shown when Yearly selected)
         'savings_text': '$16 per month',
         'savings_color': '#15d8bc',
@@ -253,7 +238,6 @@ BUSINESS_PLANS = {
         'usage_type': 'amount',
         'allowance_period': 'monthly',
         'max_members': 40,
-        'glow_color': 'rgba(21, 216, 188, 0.6)',  # Orange-gold glow
         'savings_text': '$24 per month',
         'savings_color': '#15d8bc',
         'button_text': 'Subscribe',

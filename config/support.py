@@ -29,7 +29,7 @@ FAQ_ITEMS = [
         'answer': 'If the system detects content in violation of the Community Guidelines multiple times then your account will be automatically suspended, to appeal contact our support team. Account standing can be found in settings.'
     },
         {
-        'question': 'Question 4',
-        'answer': '...'
+        'question': 'Want to report someone?',
+        'answer': 'Only report if the user is violating our [Community Guidelines](http://127.0.0.1:5000/guidelines), and [other policies](http://127.0.0.1:5000/terms). Before reporting make sure, with evidence that the user is using our services.'
     },
 ]

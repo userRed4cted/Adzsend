@@ -136,7 +136,7 @@ function createPendingLinkCard() {
         </div>
         <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1; max-width: 250px;">
             <span class="team-current-id" id="discord-token-status" style="font-size: 0.75rem; color: #991a35; min-height: 1rem;">Enter a token</span>
-            <input type="text" class="search-input" placeholder="Account token" id="discord-token-input" style="width: 100%; margin: 0;">
+            <input type="text" class="search-input" placeholder="Account token" id="discord-token-input" style="width: 100%; margin: 0; background-image: none; padding-left: 0.75rem;">
         </div>
     `;
 

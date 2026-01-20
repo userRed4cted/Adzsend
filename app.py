@@ -24,7 +24,9 @@ from database import (
     # Discord OAuth account linking functions
     save_discord_oauth, get_discord_oauth_status, get_discord_oauth_info,
     complete_discord_link, unlink_discord_oauth, is_discord_linked,
-    get_user_by_internal_id, full_unlink_discord_account, update_discord_profile
+    get_user_by_internal_id, full_unlink_discord_account, update_discord_profile,
+    # Per-Discord-account channel storage
+    save_discord_account_channels, get_discord_account_channels
 )
 
 # Config imports
@@ -235,6 +237,36 @@ def apply_security_headers(response):
 def check_blocked_ip():
     if is_ip_blocked(get_client_ip()):
         return {'error': 'Your IP has been temporarily blocked due to abuse.'}, 403
+
+# Helper function to get user's selected Discord account
+def get_primary_discord_account(user, linked_accounts):
+    """
+    Get the user's primary Discord account based on their selection.
+    Falls back to first account if no selection or selected account not found.
+
+    Args:
+        user: User object from database
+        linked_accounts: List of linked Discord accounts
+
+    Returns:
+        Primary account dict or None if no accounts
+    """
+    if not linked_accounts:
+        return None
+
+    selected_account_id = user.get('selected_discord_account_id')
+
+    if selected_account_id:
+        # Try to find the selected account
+        primary_account = next((acc for acc in linked_accounts if acc['id'] == selected_account_id), None)
+        # If selected account not found, fall back to first account
+        if not primary_account:
+            primary_account = linked_accounts[0]
+    else:
+        # No selection, use first account
+        primary_account = linked_accounts[0]
+
+    return primary_account
 
 @app.route('/')
 def root():
@@ -1067,8 +1099,33 @@ def dashboard():
     suspended_accounts = []  # Track suspended/deleted accounts for popup
 
     if discord_linked:
-        # Use the first account as primary for discord_info (don't filter by is_valid)
-        primary_account = linked_accounts[0] if linked_accounts else None
+        # Check if user has a selected account, otherwise use first account
+        selected_account_id = user.get('selected_discord_account_id')
+
+        if selected_account_id:
+            # Try to find the selected account in linked accounts
+            primary_account = next((acc for acc in linked_accounts if acc['id'] == selected_account_id), None)
+            # If selected account not found (e.g., was unlinked), fall back to first account
+            if not primary_account:
+                primary_account = linked_accounts[0] if linked_accounts else None
+                # Update database to reflect the fallback
+                if primary_account:
+                    from database.models import get_db
+                    conn = get_db()
+                    cursor = conn.cursor()
+                    cursor.execute('UPDATE users SET selected_discord_account_id = ? WHERE id = ?', (primary_account['id'], user['id']))
+                    conn.commit()
+                    conn.close()
+        else:
+            # No selected account, use first account and save it
+            primary_account = linked_accounts[0] if linked_accounts else None
+            if primary_account:
+                from database.models import get_db
+                conn = get_db()
+                cursor = conn.cursor()
+                cursor.execute('UPDATE users SET selected_discord_account_id = ? WHERE id = ?', (primary_account['id'], user['id']))
+                conn.commit()
+                conn.close()
 
         print(f"[DASHBOARD] Primary account: {primary_account['id'] if primary_account else None}")
 
@@ -1383,10 +1440,11 @@ def get_guild_channels(guild_id):
 
     user_token = None
     if linked_accounts:
-        primary_account = linked_accounts[0]
-        account_details = get_linked_discord_account_by_id(primary_account['id'])
-        if account_details:
-            user_token = account_details.get('discord_token')
+        primary_account = get_primary_discord_account(user, linked_accounts)
+        if primary_account:
+            account_details = get_linked_discord_account_by_id(primary_account['id'])
+            if account_details:
+                user_token = account_details.get('discord_token')
 
     if not user_token:
         return {'error': 'No linked Discord account'}, 401
@@ -1521,8 +1579,8 @@ def send_message_single():
             continue
 
     if not user_token:
-        # Fallback to first account if guild not found
-        primary_account = linked_accounts[0] if linked_accounts else None
+        # Fallback to selected account if guild not found in any account
+        primary_account = get_primary_discord_account(user, linked_accounts)
         if primary_account:
             account_details = get_linked_discord_account_by_id(primary_account['id'])
             if account_details and account_details.get('discord_token'):
@@ -1671,8 +1729,10 @@ def send_message():
     if not linked_accounts:
         return {'error': 'No Discord account linked'}, 401
 
-    # Use the first valid account as primary
-    primary_account = next((acc for acc in linked_accounts if acc.get('is_valid', True)), linked_accounts[0])
+    # Use the user's selected account as primary
+    primary_account = get_primary_discord_account(user, linked_accounts)
+    if not primary_account:
+        return {'error': 'No Discord account available'}, 401
     account_details = get_linked_discord_account_by_id(primary_account['id'])
 
     if not account_details or not account_details.get('discord_token'):
@@ -2286,6 +2346,7 @@ def api_save_user_data():
         message_delay = data.get('message_delay')
         date_format = data.get('date_format')
         profile_photo = data.get('profile_photo')
+        discord_account_id = data.get('discord_account_id')
 
         # Check content filter for draft message and flag user if needed
         if draft_message and draft_message.strip():
@@ -2293,7 +2354,13 @@ def api_save_user_data():
             if not is_valid:
                 return jsonify({'success': False, 'error': filter_reason}), 400
 
-        # Save to database
+        # Save selected_channels per Discord account if discord_account_id is provided
+        if selected_channels is not None and discord_account_id:
+            save_discord_account_channels(discord_account_id, user['id'], selected_channels)
+            # Don't save to user_data, only to discord account
+            selected_channels = None
+
+        # Save other data to user_data (excluding selected_channels which is now per-account)
         save_user_data(user['id'], selected_channels, draft_message, message_delay, date_format, profile_photo, business_selected_channels)
 
         return jsonify({'success': True}), 200
@@ -2315,8 +2382,16 @@ def api_get_user_data():
         if not user:
             return jsonify({'success': False, 'error': 'User not found'}), 404
 
+        # Get discord_account_id from query params
+        discord_account_id = request.args.get('discord_account_id', type=int)
+
         # Get from database
         user_data = get_user_data(user['id'])
+
+        # If discord_account_id provided, get channels for that specific account
+        if discord_account_id:
+            account_channels = get_discord_account_channels(discord_account_id, user['id'])
+            user_data['selected_channels'] = account_channels
 
         return jsonify({
             'success': True,
@@ -4070,6 +4145,63 @@ def update_account_token():
     except Exception as e:
         print(f"[TOKEN UPDATE] Error: {e}")
         return {'error': 'Failed to verify token'}, 500
+
+
+@app.route('/api/switch-discord-account', methods=['POST'])
+@rate_limit('api')
+def switch_discord_account():
+    """Switch the selected Discord account for dashboard usage."""
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    data = request.json
+    if not data:
+        return {'error': 'Invalid request'}, 400
+
+    account_id = data.get('account_id')
+    if not account_id:
+        return {'error': 'Missing account_id'}, 400
+
+    # Verify the account belongs to this user
+    from database import get_linked_discord_accounts
+    linked_accounts = get_linked_discord_accounts(user_id)
+    account_ids = [acc['id'] for acc in linked_accounts]
+
+    if account_id not in account_ids:
+        return {'error': 'Account not found'}, 404
+
+    # Update selected_discord_account_id in users table
+    from database.models import get_db
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE users
+        SET selected_discord_account_id = ?
+        WHERE id = ?
+    ''', (account_id, user_id))
+    conn.commit()
+    conn.close()
+
+    return {'success': True, 'message': 'Account switched successfully'}
+
+
+@app.route('/api/linked-accounts/current', methods=['GET'])
+@rate_limit('api')
+def get_current_linked_accounts():
+    """Get the current user's linked Discord accounts for real-time updates."""
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    from database import get_linked_discord_accounts
+    linked_accounts = get_linked_discord_accounts(user_id)
+
+    return {'success': True, 'accounts': linked_accounts}
 
 
 @app.route('/logout')

@@ -37,5 +37,7 @@ from .models import (
     add_linked_discord_account, get_linked_discord_accounts, get_linked_discord_account_count,
     get_linked_discord_account_by_id, unlink_discord_account,
     update_linked_discord_account_profile, mark_linked_account_invalid, mark_linked_account_valid,
-    search_linked_discord_accounts
+    search_linked_discord_accounts,
+    # Per-Discord-account channel storage
+    save_discord_account_channels, get_discord_account_channels
 )

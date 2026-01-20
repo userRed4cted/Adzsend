@@ -102,11 +102,13 @@ function showCustomPopup(title, message, buttonText = 'Ok', options = {}) {
             contentEl.style.display = 'block';
         }
 
-        // Hide button if specified
+        // Hide button if specified and remove content margin
         if (options.hideButton) {
             btnEl.style.display = 'none';
+            contentEl.style.marginBottom = '0';
         } else {
             btnEl.textContent = buttonText;
+            contentEl.style.marginBottom = '1rem';
         }
 
         currentPopup = overlay;

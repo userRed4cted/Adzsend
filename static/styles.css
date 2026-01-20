@@ -2798,7 +2798,7 @@ input:checked + .toggle-slider:before {
 
 .custom-popup-input:focus {
     outline: none;
-    border-color: #15d8bc;
+    border-color: #222225;
 }
 
 .custom-popup-input::placeholder {

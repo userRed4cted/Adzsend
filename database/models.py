@@ -147,6 +147,12 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Add selected_discord_account_id column if it doesn't exist (migration for account switching)
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN selected_discord_account_id INTEGER')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Add session_id column if it doesn't exist (migration for session management)
     try:
         cursor.execute('ALTER TABLE users ADD COLUMN session_id TEXT')
@@ -545,6 +551,12 @@ def init_db():
     # Linked Discord accounts indexes
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_linked_discord_user_id ON linked_discord_accounts(user_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_linked_discord_discord_id ON linked_discord_accounts(discord_id)')
+
+    # Migration: Add selected_channels column to linked_discord_accounts for per-account channel storage
+    cursor.execute("PRAGMA table_info(linked_discord_accounts)")
+    linked_accounts_columns = [column[1] for column in cursor.fetchall()]
+    if 'selected_channels' not in linked_accounts_columns:
+        cursor.execute('ALTER TABLE linked_discord_accounts ADD COLUMN selected_channels TEXT')
 
     conn.commit()
     conn.close()
@@ -3065,6 +3077,41 @@ def update_linked_discord_account_profile(account_id, username, avatar, avatar_d
 
     conn.commit()
     conn.close()
+
+
+def save_discord_account_channels(account_id, user_id, selected_channels):
+    """Save selected channels for a specific Discord account."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    channels_json = json.dumps(selected_channels) if selected_channels is not None else '[]'
+
+    cursor.execute('''
+        UPDATE linked_discord_accounts
+        SET selected_channels = ?
+        WHERE id = ? AND user_id = ?
+    ''', (channels_json, account_id, user_id))
+
+    conn.commit()
+    conn.close()
+
+
+def get_discord_account_channels(account_id, user_id):
+    """Get selected channels for a specific Discord account."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT selected_channels FROM linked_discord_accounts
+        WHERE id = ? AND user_id = ?
+    ''', (account_id, user_id))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    if row and row[0]:
+        return json.loads(row[0])
+    return []
 
 
 def mark_linked_account_invalid(account_id):

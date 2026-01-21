@@ -605,61 +605,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-def create_user(discord_id, username, avatar, discord_token, signup_ip):
-    signup_date = datetime.now().isoformat()
-
-    # Encrypt the token before storing
-    encrypted_token = encrypt_token(discord_token)
-    if not encrypted_token:
-        print(f"[ERROR] Failed to encrypt token for user {discord_id}")
-        return None
-
-    # Retry loop to handle race conditions on adzsend_id collision
-    max_retries = MAX_ID_GENERATION_RETRIES
-    for attempt in range(max_retries):
-        conn = get_db()
-        cursor = conn.cursor()
-
-        # Generate unique adzsend_id
-        adzsend_id = generate_adzsend_id()
-        while True:
-            cursor.execute('SELECT id FROM users WHERE adzsend_id = ?', (adzsend_id,))
-            if not cursor.fetchone():
-                break
-            adzsend_id = generate_adzsend_id()
-
-        try:
-            cursor.execute('''
-                INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date, adzsend_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (discord_id, username, avatar, encrypted_token, signup_ip, signup_date, adzsend_id))
-
-            user_id = cursor.lastrowid
-
-            # Initialize usage tracking
-            cursor.execute('''
-                INSERT INTO usage (user_id, messages_sent, last_reset)
-                VALUES (?, 0, ?)
-            ''', (user_id, datetime.now().isoformat()))
-
-            conn.commit()
-            conn.close()
-
-            # Auto-activate free plan for new users
-            activate_free_plan(user_id)
-
-            return user_id
-        except sqlite3.IntegrityError as e:
-            conn.close()
-            # If it's an adzsend_id collision (race condition), retry with new ID
-            if 'adzsend_id' in str(e) or 'idx_users_adzsend_id' in str(e):
-                if attempt < max_retries - 1:
-                    continue  # Retry with new adzsend_id
-            # For other integrity errors (like duplicate discord_id), return None
-            return None
-
-    return None  # Max retries exceeded
-
 def get_user_by_discord_id(discord_id):
     conn = get_db()
     cursor = conn.cursor()

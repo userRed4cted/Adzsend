@@ -1,27 +1,32 @@
 ; Custom NSIS installer script for Adzsend Bridge
 
-!macro customInstall
+!include "LogicLib.nsh"
+
+Var UninstallPath
+
+; Check for existing installation BEFORE installer wizard appears
+!macro customInit
   ; Check if already installed
-  ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINSTALL_APP_KEY}" "UninstallString"
-  StrCmp $0 "" done
+  ReadRegStr $UninstallPath HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{${UNINSTALL_APP_KEY}}" "UninstallString"
 
-  ; Show message box asking what to do
-  MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Adzsend Bridge is already installed.$\n$\nWould you like to:$\n$\n  Yes = Reinstall (update)$\n  No = Uninstall$\n  Cancel = Exit" IDYES reinstall IDNO uninstall
+  ${If} $UninstallPath != ""
+    ; Already installed - show prompt
+    MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\n• Yes = Reinstall (update to this version)$\r$\n• No = Uninstall completely$\r$\n• Cancel = Exit setup" IDYES continueInstall IDNO runUninstall
 
-  ; Cancel - exit installer
-  Quit
+    ; Cancel - exit
+    Abort
 
-  uninstall:
-    ; Run uninstaller
-    ExecWait '"$0" /S'
-    Quit
+    runUninstall:
+      ; Run the uninstaller silently
+      ExecWait '"$UninstallPath" /S'
+      Abort
 
-  reinstall:
-    ; Continue with installation (will overwrite)
-
-  done:
+    continueInstall:
+      ; Continue with reinstall
+  ${EndIf}
 !macroend
 
+; Thorough cleanup on uninstall
 !macro customUnInstall
   ; Clean up installation directory
   RMDir /r "$INSTDIR"

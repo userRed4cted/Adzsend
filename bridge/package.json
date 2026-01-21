@@ -49,8 +49,7 @@
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "Adzsend Bridge",
-      "deleteAppDataOnUninstall": true,
-      "include": "installer.nsh"
+      "deleteAppDataOnUninstall": true
     },
     "mac": {
       "target": ["dmg"],

@@ -49,7 +49,7 @@ function createWindow() {
         resizable: true,
         maximizable: false,
         backgroundColor: '#121215',
-        icon: path.join(__dirname, 'assets', 'icon.ico'),
+        icon: path.join(__dirname, 'assets', 'icon.png'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
@@ -83,7 +83,7 @@ function createWindow() {
 
 // Create system tray
 function createTray() {
-    const iconPath = path.join(__dirname, 'assets', 'icon.ico');
+    const iconPath = path.join(__dirname, 'assets', 'icon.png');
     tray = new Tray(iconPath);
 
     updateTrayMenu();
@@ -108,7 +108,7 @@ function updateTrayMenu() {
         {
             label: 'Adzsend Bridge',
             enabled: false,
-            icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.ico')).resize({ width: 16, height: 16 })
+            icon: nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png')).resize({ width: 16, height: 16 })
         },
         { type: 'separator' },
         {

@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { app, shell } = require('electron');
 
-// Version file URL - update this to your actual GitHub raw URL
-const VERSION_URL = 'https://raw.githubusercontent.com/YOUR_USERNAME/Adzsend/main/bridge/version.json';
+// Version file URL
+const VERSION_URL = 'https://raw.githubusercontent.com/userRed4cted/Adzsend/main/bridge/version.json';
 
 // Check for updates
 function checkForUpdates(currentVersion) {

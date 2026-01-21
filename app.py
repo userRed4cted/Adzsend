@@ -28,7 +28,11 @@ from database import (
     # Per-Discord-account channel storage
     save_discord_account_channels, get_discord_account_channels,
     # Sent message verification
-    check_sent_message, log_sent_message
+    check_sent_message, log_sent_message,
+    # Bridge connection functions
+    generate_bridge_secret_key, validate_bridge_secret_key,
+    create_or_get_bridge_connection, get_bridge_connection,
+    regenerate_bridge_secret_key, get_bridge_status, can_regenerate_bridge_key
 )
 
 # Config imports
@@ -441,6 +445,13 @@ def signup_page():
 
     # POST request handling - email-based signup
     email = request.form.get('email', '').strip().lower()
+    tos_agreed = request.form.get('tos_agreed', '').strip()
+
+    # CRITICAL: Server-side TOS validation - cannot be bypassed via DevTools
+    if tos_agreed != 'true':
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+        return render_template('signup.html', error='You must agree to the Terms of Service to create an account', csrf_token=csrf_token), 400
 
     if not email:
         csrf_token = generate_csrf_token()
@@ -486,8 +497,9 @@ def signup_page():
         session['csrf_token'] = csrf_token
         return render_template('signup.html', error='Too many incorrect attempts. Please wait 5 minutes before trying again.', csrf_token=csrf_token), 429
 
-    # Store email in session for signup completion
+    # Store email and TOS agreement timestamp in session for signup completion
     session['pending_signup_email'] = email
+    session['pending_signup_tos_agreed_at'] = datetime.now().isoformat()
 
     # Only create a new code if there isn't an active one
     if not has_active:
@@ -577,15 +589,19 @@ def verify_code_page():
     # Clear rate limits on successful verification
     clear_rate_limit(email, purpose)
 
+    # Get TOS timestamp before clearing session (for signup)
+    tos_agreed_at = session.get('pending_signup_tos_agreed_at')
+
     # Clear pending email from session
     session.pop('pending_signup_email', None)
     session.pop('pending_login_email', None)
+    session.pop('pending_signup_tos_agreed_at', None)
 
     # Handle based on purpose
     if purpose == 'signup':
         # Create the user account
         client_ip = security_get_client_ip()
-        user_id = create_user_with_email(email, client_ip)
+        user_id = create_user_with_email(email, client_ip, tos_agreed_at)
 
         if not user_id:
             return render_template('verify.html',
@@ -856,9 +872,13 @@ def verify_code_api():
     # Clear rate limits on successful verification
     clear_rate_limit(email, purpose)
 
+    # Get TOS timestamp before clearing session (for signup)
+    tos_agreed_at_api = session.get('pending_signup_tos_agreed_at')
+
     # Clear pending email from session
     session.pop('pending_signup_email', None)
     session.pop('pending_login_email', None)
+    session.pop('pending_signup_tos_agreed_at', None)
 
     # Handle email change purpose
     if purpose == 'email_change':
@@ -887,7 +907,7 @@ def verify_code_api():
     if purpose == 'signup':
         # Create the user account
         client_ip = security_get_client_ip()
-        user_id = create_user_with_email(email, client_ip)
+        user_id = create_user_with_email(email, client_ip, tos_agreed_at_api)
 
         if not user_id:
             return jsonify({'success': False, 'error': 'Failed to create account. Email may already be registered.'}), 400
@@ -4287,6 +4307,97 @@ def get_current_linked_accounts():
     linked_accounts = get_linked_discord_accounts(user_id)
 
     return {'success': True, 'accounts': linked_accounts}
+
+
+# =============================================================================
+# BRIDGE API ENDPOINTS
+# =============================================================================
+
+@app.route('/api/bridge/secret-key', methods=['GET'])
+@rate_limit('api')
+def get_bridge_secret_key():
+    """Get or create the user's bridge secret key."""
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    user = get_user_by_id(user_id)
+    if not user:
+        return {'error': 'User not found'}, 404
+
+    # Get or create bridge connection
+    connection = create_or_get_bridge_connection(user_id)
+    if not connection:
+        return {'error': 'Failed to create bridge connection'}, 500
+
+    # Generate secret key using HMAC
+    secret_key = generate_bridge_secret_key(user['adzsend_id'])
+
+    return {
+        'success': True,
+        'secret_key': secret_key,
+        'created_at': connection.get('created_at')
+    }
+
+
+@app.route('/api/bridge/status', methods=['GET'])
+@rate_limit('api')
+def get_bridge_status_api():
+    """Get the user's bridge connection status."""
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    status = get_bridge_status(user_id)
+
+    return {
+        'success': True,
+        'is_online': status.get('is_online', False),
+        'last_connected': status.get('last_connected'),
+        'last_disconnected': status.get('last_disconnected'),
+        'connection_ip': status.get('connection_ip')
+    }
+
+
+@app.route('/api/bridge/regenerate', methods=['POST'])
+@rate_limit('api')
+def regenerate_bridge_key():
+    """Regenerate the user's bridge secret key (5-minute cooldown)."""
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    user_id = get_session_user_id()
+    if not user_id:
+        return {'error': 'Not logged in'}, 401
+
+    user = get_user_by_id(user_id)
+    if not user:
+        return {'error': 'User not found'}, 404
+
+    # Check if user can regenerate (5-minute cooldown)
+    can_regen, wait_seconds = can_regenerate_bridge_key(user_id)
+    if not can_regen:
+        minutes = int(wait_seconds // 60)
+        seconds = int(wait_seconds % 60)
+        return {
+            'error': f'Please wait {minutes}m {seconds}s before regenerating',
+            'wait_seconds': wait_seconds
+        }, 429
+
+    # Regenerate the key
+    result = regenerate_bridge_secret_key(user_id)
+    if not result['success']:
+        return {'error': result.get('error', 'Failed to regenerate key')}, 500
+
+    # Generate new secret key
+    new_secret_key = generate_bridge_secret_key(user['adzsend_id'])
+
+    return {
+        'success': True,
+        'secret_key': new_secret_key,
+        'message': 'Secret key regenerated successfully'
+    }
 
 
 @app.route('/logout')

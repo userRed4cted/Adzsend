@@ -250,6 +250,14 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column does not exist yet or other error
 
+    # Add tos_agreed_at column if it doesn't exist (timestamp when user agreed to Terms of Service)
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN tos_agreed_at TEXT')
+        conn.commit()
+        print('[DB MIGRATION] Added tos_agreed_at column to users table')
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Verification codes table for email authentication
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS verification_codes (
@@ -2131,12 +2139,14 @@ def update_user_email(user_id, new_email):
     conn.close()
 
 
-def create_user_with_email(email, signup_ip):
+def create_user_with_email(email, signup_ip, tos_agreed_at=None):
     """Create a new user with email (no Discord connection yet)."""
     import hashlib
 
     signup_date = datetime.now().isoformat()
     email_lower = email.lower()
+    # Use provided TOS timestamp or current time as fallback
+    tos_timestamp = tos_agreed_at or signup_date
 
     # Generate a unique placeholder discord_id based on email hash
     # This ensures each email-only user has a unique identifier
@@ -2159,8 +2169,8 @@ def create_user_with_email(email, signup_ip):
 
         try:
             cursor.execute('''
-                INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date, email, adzsend_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (discord_id, username, avatar, discord_token, signup_ip, signup_date, email, adzsend_id, tos_agreed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 placeholder_discord_id,  # Unique placeholder until they connect Discord
                 email_lower.split('@')[0],  # Use email prefix as temporary username
@@ -2169,7 +2179,8 @@ def create_user_with_email(email, signup_ip):
                 signup_ip,
                 signup_date,
                 email_lower,
-                adzsend_id
+                adzsend_id,
+                tos_timestamp
             ))
 
             user_id = cursor.lastrowid
@@ -3449,7 +3460,11 @@ def get_bridge_connection_by_adzsend_id(adzsend_id):
 
 
 def regenerate_bridge_secret_key(user_id):
-    """Regenerate the bridge secret key for a user. Returns new key or None on error."""
+    """Regenerate the bridge secret key for a user.
+
+    Returns:
+        dict: {'success': bool, 'secret_key': str, 'error': str}
+    """
     conn = get_db()
     cursor = conn.cursor()
 
@@ -3461,7 +3476,7 @@ def regenerate_bridge_secret_key(user_id):
         last_regen = datetime.fromisoformat(connection['last_regenerated'])
         if datetime.now() - last_regen < timedelta(minutes=5):
             conn.close()
-            return None  # Rate limited
+            return {'success': False, 'error': 'Rate limited - please wait 5 minutes'}
 
     # Get user's adzsend_id
     cursor.execute('SELECT adzsend_id FROM users WHERE id = ?', (user_id,))
@@ -3469,7 +3484,7 @@ def regenerate_bridge_secret_key(user_id):
 
     if not user or not user['adzsend_id']:
         conn.close()
-        return None
+        return {'success': False, 'error': 'User not found'}
 
     # Generate new secret key
     secret_key = generate_bridge_secret_key(user['adzsend_id'])
@@ -3493,7 +3508,7 @@ def regenerate_bridge_secret_key(user_id):
     conn.commit()
     conn.close()
 
-    return secret_key
+    return {'success': True, 'secret_key': secret_key}
 
 
 def validate_bridge_secret_key(secret_key):
@@ -3607,7 +3622,13 @@ def get_bridge_status(user_id):
 
 
 def can_regenerate_bridge_key(user_id):
-    """Check if user can regenerate their bridge key (5 minute cooldown)."""
+    """Check if user can regenerate their bridge key (5 minute cooldown).
+
+    Returns:
+        tuple: (can_regenerate: bool, wait_seconds: int)
+            - can_regenerate: True if cooldown has passed
+            - wait_seconds: Seconds remaining until regeneration allowed (0 if allowed)
+    """
     conn = get_db()
     cursor = conn.cursor()
 
@@ -3616,10 +3637,17 @@ def can_regenerate_bridge_key(user_id):
     conn.close()
 
     if not connection or not connection['last_regenerated']:
-        return True
+        return (True, 0)
 
     last_regen = datetime.fromisoformat(connection['last_regenerated'])
-    return datetime.now() - last_regen >= timedelta(minutes=5)
+    cooldown = timedelta(minutes=5)
+    time_passed = datetime.now() - last_regen
+
+    if time_passed >= cooldown:
+        return (True, 0)
+    else:
+        wait_seconds = (cooldown - time_passed).total_seconds()
+        return (False, int(wait_seconds))
 
 
 # Initialize database on import

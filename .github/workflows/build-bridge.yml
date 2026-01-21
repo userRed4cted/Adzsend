@@ -1,0 +1,42 @@
+name: Build Bridge Installer
+
+on:
+  workflow_dispatch:  # Manual trigger from GitHub UI
+  push:
+    tags:
+      - 'bridge-v*'   # Auto-trigger on bridge version tags
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./bridge
+        run: npm install
+
+      - name: Build Windows installer
+        working-directory: ./bridge
+        run: npm run build:win
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AdzsendBridgeSetup
+          path: bridge/dist/*.exe
+
+      - name: Upload to Release (if tagged)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: bridge/dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

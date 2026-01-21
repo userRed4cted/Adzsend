@@ -55,6 +55,53 @@
         #signup-btn:hover:not(:disabled) {
             background: linear-gradient(to bottom, #10b89e, #004e40) !important;
         }
+
+        /* TOS Agreement Checkbox */
+        .tos-agreement {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .tos-checkbox {
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            border: 2px solid #222225;
+            border-radius: 4px;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+        .tos-checkbox img {
+            width: 12px;
+            height: 12px;
+            display: none;
+            filter: brightness(0) saturate(100%) invert(6%) sepia(5%) saturate(1000%) hue-rotate(201deg) brightness(95%) contrast(92%);
+        }
+        .tos-agreement.checked .tos-checkbox {
+            background: #15d8bc;
+            border-color: #15d8bc;
+        }
+        .tos-agreement.checked .tos-checkbox img {
+            display: block;
+        }
+        .tos-label {
+            font-size: 0.85rem;
+            color: #81828A;
+            line-height: 1.4;
+        }
+        .tos-label a {
+            color: #15d8bc;
+            text-decoration: none;
+        }
+        .tos-label a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -71,9 +118,16 @@
 
                     <form method="POST" action="{{ url_for('signup_page') }}" id="signup-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="tos_agreed" id="tos-agreed-input" value="">
                         <div class="form-group-login">
                             <input type="email" name="email" class="email-input" placeholder="Enter your email address..." required>
-                            <button type="submit" class="submit-btn" id="signup-btn">Sign Up</button>
+                            <div class="tos-agreement" id="tos-agreement">
+                                <div class="tos-checkbox">
+                                    <img src="{{ url_for('static', filename='tick.png') }}" alt="Checked">
+                                </div>
+                                <span class="tos-label">I agree to <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">Adzsend's Terms of Service</a></span>
+                            </div>
+                            <button type="submit" class="submit-btn" id="signup-btn" disabled>Sign Up</button>
                         </div>
                     </form>
 
@@ -86,13 +140,34 @@
     </div>
 
     <script>
-        // Signup form loading state
-        const signupForm = document.getElementById('signup-form');
+        // TOS Agreement checkbox
+        const tosAgreement = document.getElementById('tos-agreement');
+        const tosInput = document.getElementById('tos-agreed-input');
         const signupBtn = document.getElementById('signup-btn');
+        const signupForm = document.getElementById('signup-form');
+        let tosAgreed = false;
         let isSubmitting = false;
 
+        // Toggle TOS agreement on click
+        tosAgreement.addEventListener('click', function(e) {
+            // Don't toggle if clicking the link
+            if (e.target.tagName === 'A') return;
+
+            tosAgreed = !tosAgreed;
+            tosAgreement.classList.toggle('checked', tosAgreed);
+            tosInput.value = tosAgreed ? 'true' : '';
+            signupBtn.disabled = !tosAgreed;
+        });
+
+        // Form submit handler
         if (signupForm && signupBtn) {
             signupForm.addEventListener('submit', function(e) {
+                // Double-check TOS is agreed (prevents bypass via DevTools enabling button)
+                if (!tosAgreed || tosInput.value !== 'true') {
+                    e.preventDefault();
+                    return false;
+                }
+
                 if (isSubmitting) {
                     e.preventDefault();
                     return false;
@@ -105,7 +180,6 @@
                 signupBtn.style.cursor = 'not-allowed';
             });
         }
-
     </script>
 </body>
 </html>

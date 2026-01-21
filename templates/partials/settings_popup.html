@@ -16,25 +16,26 @@
             </div>
             <div class="settings-menu-divider"></div>
             <div class="settings-menu-section">
-                <div class="settings-menu-category">User settings</div>
+                <div class="settings-menu-category">Account</div>
                 <button class="settings-menu-item active" data-settings-page="my-account">My account</button>
                 <button class="settings-menu-item" data-settings-page="discord-accounts">Discord accounts</button>
             </div>
             <div class="settings-menu-divider"></div>
             <div class="settings-menu-section">
-                <div class="settings-menu-category">Panel settings</div>
+                <div class="settings-menu-category">Dashboard</div>
                 <button class="settings-menu-item" data-settings-page="teams">Teams</button>
                 <button class="settings-menu-item" data-settings-page="interval">Interval</button>
+                <button class="settings-menu-item" data-settings-page="bridge">Bridge</button>
             </div>
             <div class="settings-menu-divider"></div>
             <div class="settings-menu-section">
-                <div class="settings-menu-category">Payment settings</div>
+                <div class="settings-menu-category">Payment</div>
                 <button class="settings-menu-item" data-settings-page="billing">Billing</button>
                 <button class="settings-menu-item" data-settings-page="usage">Usage</button>
             </div>
             <div class="settings-menu-divider"></div>
             <div class="settings-menu-section">
-                <div class="settings-menu-category">Website settings</div>
+                <div class="settings-menu-category">Website</div>
                 <button class="settings-menu-item" data-settings-page="appearance">Appearance</button>
                 <button class="settings-menu-item" data-settings-page="date-format">Date format</button>
             </div>
@@ -286,6 +287,52 @@
                         <!-- List View Container -->
                         <div id="discord-accounts-list-view" style="display: block;">
                         </div>
+                    </div>
+                </div>
+
+                <!-- Bridge Page -->
+                <div class="settings-page" id="settings-page-bridge" style="display: none;">
+                    <!-- Secret Key Section -->
+                    <div class="settings-subheader">Secret key</div>
+                    <div class="settings-text">Your secret key is used to authenticate Adzsend Bridge with your account. Keep it private.</div>
+
+                    <div class="bridge-key-container">
+                        <div class="bridge-key-box">
+                            <input type="password" class="bridge-key-input" id="bridge-secret-key" readonly value="Loading...">
+                            <div class="bridge-key-actions">
+                                <button class="bridge-key-btn" id="bridge-copy-key" title="Copy">
+                                    <img src="{{ url_for('static', filename='copy.png') }}" alt="Copy">
+                                </button>
+                                <button class="bridge-key-btn" id="bridge-toggle-key" title="Show/Hide">
+                                    <img src="{{ url_for('static', filename='view.png') }}" alt="Show" id="bridge-eye-icon">
+                                </button>
+                                <button class="bridge-key-btn bridge-regenerate-btn" id="bridge-regenerate-key" title="Regenerate">
+                                    <img src="{{ url_for('static', filename='openorclose.png') }}" alt="Regenerate">
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bridge Status Section -->
+                    <div class="settings-subheader" style="margin-top: 2rem;">Bridge status</div>
+                    <div class="settings-text">Current connection status of your Adzsend Bridge.</div>
+
+                    <div class="bridge-status-container">
+                        <div class="bridge-status-indicator">
+                            <span class="bridge-status-dot" id="bridge-status-dot"></span>
+                            <span class="bridge-status-text" id="bridge-status-text">Offline</span>
+                        </div>
+                    </div>
+
+                    <!-- Download Section -->
+                    <div class="settings-subheader" style="margin-top: 2rem;">Download</div>
+                    <div class="settings-text">Download Adzsend Bridge for your operating system.</div>
+
+                    <div class="bridge-download-container">
+                        <a href="https://github.com/userRed4cted/Adzsend/releases/latest" target="_blank" class="bridge-download-btn">
+                            <img src="{{ url_for('static', filename='external-link.png') }}" alt="Download">
+                            <span>Download for Windows</span>
+                        </a>
                     </div>
                 </div>
 
@@ -1277,6 +1324,138 @@
         height: 100%;
         object-fit: cover;
     }
+
+    /* Bridge Page Styles */
+    .bridge-key-container {
+        margin-bottom: 1rem;
+    }
+
+    .bridge-key-box {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #1A1A1E;
+        border: 1px solid #222225;
+        border-radius: 6px;
+        padding: 0.5rem;
+    }
+
+    .bridge-key-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: #dcddde;
+        font-family: 'gg sans Medium', monospace;
+        font-size: 0.85rem;
+        padding: 0.5rem;
+        outline: none;
+    }
+
+    .bridge-key-input::placeholder {
+        color: #81828A;
+    }
+
+    .bridge-key-actions {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .bridge-key-btn {
+        width: 32px;
+        height: 32px;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+
+    .bridge-key-btn img {
+        width: 16px;
+        height: 16px;
+        filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(195deg) brightness(93%) contrast(89%);
+        transition: filter 0.2s ease;
+    }
+
+    .bridge-key-btn:hover {
+        background: #222225;
+        border-color: #333333;
+    }
+
+    .bridge-key-btn:hover img {
+        filter: brightness(0) saturate(100%) invert(100%);
+    }
+
+    .bridge-regenerate-btn:hover {
+        background: rgba(153, 26, 53, 0.2);
+        border-color: #991a35;
+    }
+
+    .bridge-regenerate-btn:hover img {
+        filter: brightness(0) saturate(100%) invert(22%) sepia(93%) saturate(1352%) hue-rotate(331deg) brightness(89%) contrast(101%);
+    }
+
+    .bridge-status-container {
+        margin-bottom: 1rem;
+    }
+
+    .bridge-status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .bridge-status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #81828A;
+    }
+
+    .bridge-status-dot.online {
+        background: #15d8bc;
+    }
+
+    .bridge-status-text {
+        color: #81828A;
+        font-family: 'gg sans Medium', sans-serif;
+        font-size: 0.8925rem;
+    }
+
+    .bridge-status-text.online {
+        color: #15d8bc;
+    }
+
+    .bridge-download-container {
+        margin-top: 1rem;
+    }
+
+    .bridge-download-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: linear-gradient(to bottom, #15d8bc, #006e59);
+        color: #121215;
+        padding: 0.75rem 1.25rem;
+        border-radius: 6px;
+        font-family: 'gg sans Medium', sans-serif;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .bridge-download-btn:hover {
+        background: linear-gradient(to bottom, #10b89e, #004e40);
+    }
+
+    .bridge-download-btn img {
+        width: 18px;
+        height: 18px;
+        filter: brightness(0) saturate(100%) invert(7%) sepia(8%) saturate(1188%) hue-rotate(186deg) brightness(95%) contrast(93%);
+    }
 </style>
 
 <script>
@@ -2092,6 +2271,191 @@
             }
         });
     }
+
+    // =============================================================================
+    // BRIDGE PAGE FUNCTIONALITY
+    // =============================================================================
+
+    (function() {
+        let bridgeSecretKey = null;
+        let isKeyVisible = false;
+        let bridgeInitialized = false;
+
+        // Initialize bridge page when it's shown
+        const bridgeBtn = document.querySelector('[data-settings-page="bridge"]');
+        if (bridgeBtn) {
+            bridgeBtn.addEventListener('click', () => {
+                if (!bridgeInitialized) {
+                    initBridgePage();
+                    bridgeInitialized = true;
+                }
+                // Always refresh status when viewing page
+                loadBridgeStatus();
+            });
+        }
+
+        function initBridgePage() {
+            // Load secret key
+            loadBridgeSecretKey();
+
+            // Set up event listeners
+            const copyBtn = document.getElementById('bridge-copy-key');
+            const toggleBtn = document.getElementById('bridge-toggle-key');
+            const regenerateBtn = document.getElementById('bridge-regenerate-key');
+
+            if (copyBtn) {
+                copyBtn.addEventListener('click', copySecretKey);
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', toggleKeyVisibility);
+            }
+
+            if (regenerateBtn) {
+                regenerateBtn.addEventListener('click', regenerateSecretKey);
+            }
+        }
+
+        async function loadBridgeSecretKey() {
+            const keyInput = document.getElementById('bridge-secret-key');
+            if (!keyInput) return;
+
+            try {
+                const response = await fetch('/api/bridge/secret-key');
+                const data = await response.json();
+
+                if (data.success) {
+                    bridgeSecretKey = data.secret_key;
+                    // Show masked version by default
+                    keyInput.value = maskKey(bridgeSecretKey);
+                    keyInput.type = 'password';
+                    isKeyVisible = false;
+                } else {
+                    keyInput.value = 'Error loading key';
+                    console.error('Failed to load secret key:', data.error);
+                }
+            } catch (error) {
+                keyInput.value = 'Error loading key';
+                console.error('Error loading bridge secret key:', error);
+            }
+        }
+
+        async function loadBridgeStatus() {
+            const statusDot = document.getElementById('bridge-status-dot');
+            const statusText = document.getElementById('bridge-status-text');
+
+            if (!statusDot || !statusText) return;
+
+            try {
+                const response = await fetch('/api/bridge/status');
+                const data = await response.json();
+
+                if (data.success) {
+                    if (data.is_online) {
+                        statusDot.classList.add('online');
+                        statusText.classList.add('online');
+                        statusText.textContent = 'Connected';
+                    } else {
+                        statusDot.classList.remove('online');
+                        statusText.classList.remove('online');
+                        statusText.textContent = 'Offline';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading bridge status:', error);
+            }
+        }
+
+        function maskKey(key) {
+            if (!key || key.length < 20) return key;
+            return key.substring(0, 10) + '...' + key.substring(key.length - 10);
+        }
+
+        async function copySecretKey() {
+            if (!bridgeSecretKey) return;
+
+            try {
+                await navigator.clipboard.writeText(bridgeSecretKey);
+
+                // Visual feedback
+                const copyBtn = document.getElementById('bridge-copy-key');
+                if (copyBtn) {
+                    copyBtn.style.background = 'rgba(21, 216, 188, 0.2)';
+                    setTimeout(() => {
+                        copyBtn.style.background = '';
+                    }, 200);
+                }
+            } catch (error) {
+                console.error('Failed to copy secret key:', error);
+            }
+        }
+
+        function toggleKeyVisibility() {
+            const keyInput = document.getElementById('bridge-secret-key');
+            const eyeIcon = document.getElementById('bridge-eye-icon');
+
+            if (!keyInput || !bridgeSecretKey) return;
+
+            isKeyVisible = !isKeyVisible;
+
+            if (isKeyVisible) {
+                keyInput.value = bridgeSecretKey;
+                keyInput.type = 'text';
+                if (eyeIcon) eyeIcon.alt = 'Hide';
+            } else {
+                keyInput.value = maskKey(bridgeSecretKey);
+                keyInput.type = 'password';
+                if (eyeIcon) eyeIcon.alt = 'Show';
+            }
+        }
+
+        async function regenerateSecretKey() {
+            const confirmed = await customConfirm(
+                'Regenerate secret key',
+                'Are you sure you want to regenerate your secret key? Your current Bridge session will be disconnected and you will need to re-enter the new key.',
+                'Regenerate'
+            );
+
+            if (!confirmed) return;
+
+            const regenerateBtn = document.getElementById('bridge-regenerate-key');
+            const keyInput = document.getElementById('bridge-secret-key');
+
+            if (regenerateBtn) regenerateBtn.disabled = true;
+            if (keyInput) keyInput.value = 'Regenerating...';
+
+            try {
+                const response = await fetch('/api/bridge/regenerate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '{{ csrf_token }}'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    bridgeSecretKey = data.secret_key;
+                    keyInput.value = isKeyVisible ? bridgeSecretKey : maskKey(bridgeSecretKey);
+
+                    // Refresh status (will show offline since key changed)
+                    setTimeout(loadBridgeStatus, 1000);
+                } else {
+                    await customAlert('Error', data.error || 'Failed to regenerate secret key');
+                    keyInput.value = isKeyVisible ? bridgeSecretKey : maskKey(bridgeSecretKey);
+                }
+            } catch (error) {
+                console.error('Error regenerating secret key:', error);
+                await customAlert('Error', 'Failed to regenerate secret key');
+                if (bridgeSecretKey) {
+                    keyInput.value = isKeyVisible ? bridgeSecretKey : maskKey(bridgeSecretKey);
+                }
+            } finally {
+                if (regenerateBtn) regenerateBtn.disabled = false;
+            }
+        }
+    })();
 </script>
 
 <!-- Discord Accounts Management Script -->

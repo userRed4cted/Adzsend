@@ -2,7 +2,7 @@
 # Centralized footer settings - sections list from right to left
 
 # Footer logo (relative to static folder)
-FOOTER_LOGO = "favicon.png"
+FOOTER_LOGO = "favicon.ico"
 
 # Footer background gradient (same as view-pricing-btn)
 FOOTER_BACKGROUND = "linear-gradient(to bottom, #15d8bc, #006e59)"

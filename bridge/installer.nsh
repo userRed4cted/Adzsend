@@ -5,7 +5,11 @@
 ; Check for existing installation BEFORE installer wizard appears
 !macro customInit
   ; Check if already installed (use $0 instead of custom var to avoid warning)
-  ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{${UNINSTALL_APP_KEY}}" "UninstallString"
+  ; Check HKLM first (per-machine install), then HKCU as fallback
+  ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{${UNINSTALL_APP_KEY}}" "UninstallString"
+  ${If} $0 == ""
+    ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{${UNINSTALL_APP_KEY}}" "UninstallString"
+  ${EndIf}
 
   ${If} $0 != ""
     ; Already installed - show prompt

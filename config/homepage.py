@@ -19,8 +19,8 @@ HOMEPAGE = {
         # HERO IMAGE
         # Element: Image displayed at the top (e.g., favicon or logo)
         # Image must be placed in: static/ folder
-        # Format: Just the filename (e.g., "favicon.png")
-        'hero_image': "favicon.png",
+        # Format: Just the filename (e.g., "favicon.ico")
+        'hero_image': "favicon.ico",
 
         # SLIDESHOW MESSAGES
         # Element: Large rotating text in center of hero section

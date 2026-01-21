@@ -102,11 +102,6 @@
         .tos-label a:hover {
             text-decoration: underline;
         }
-        /* Ensure error message is always visible */
-        .error-message {
-            display: block !important;
-            visibility: visible !important;
-        }
     </style>
 </head>
 <body>
@@ -117,7 +112,9 @@
             <div class="login-container">
                 <div class="token-form">
                     <h2 class="form-title">Sign Up</h2>
-                    <div class="error-message" id="signup-error" style="{% if not error %}display: none;{% endif %}">{{ error or '' }}</div>
+                    {% if error %}
+                    <div class="error-message">{{ error }}</div>
+                    {% endif %}
 
                     <form method="POST" action="{{ url_for('signup_page') }}" id="signup-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

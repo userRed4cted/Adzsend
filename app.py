@@ -255,8 +255,8 @@ def fetch_discord_user_info(discord_id):
 @app.before_request
 def validate_session():
     """Validate user session before each request (single session enforcement)."""
-    # Skip validation for static files, login, signup, verify, discord callback, and home page
-    if request.endpoint in ['static', 'login_page', 'signup_page', 'verify_page', 'discord_oauth_callback', 'home', 'root']:
+    # Skip validation for static files, login, signup, verify, logout, discord callback, and home page
+    if request.endpoint in ['static', 'login_page', 'signup_page', 'verify_page', 'logout', 'discord_oauth_callback', 'home', 'root']:
         return
 
     # Check if user is logged in
@@ -508,7 +508,7 @@ def signup_page():
         if not can_send and cooldown_seconds > 0:
             csrf_token = generate_csrf_token()
             session['csrf_token'] = csrf_token
-            return render_template('signup.html', error=f'Too many attempts. Please wait {cooldown_seconds} seconds.', csrf_token=csrf_token), 429
+            return render_template('signup.html', error=f'Too many attempts. Please wait {cooldown_seconds} seconds.', csrf_token=csrf_token, email=email, tos_checked=True), 429
 
         # Create verification code and send email
         code = create_verification_code(email, 'signup')
@@ -517,7 +517,7 @@ def signup_page():
         if code is None:
             csrf_token = generate_csrf_token()
             session['csrf_token'] = csrf_token
-            return render_template('signup.html', error='Too many incorrect attempts. Please wait 5 minutes before trying again.', csrf_token=csrf_token), 429
+            return render_template('signup.html', error='Too many incorrect attempts. Please wait 5 minutes before trying again.', csrf_token=csrf_token, email=email, tos_checked=True), 429
 
         # TODO: Send email via Resend API
 

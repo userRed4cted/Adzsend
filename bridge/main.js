@@ -325,6 +325,7 @@ function getDialogParent() {
 }
 
 // Native-style input prompt dialog
+// Note: Windows doesn't have a native input prompt dialog, so we use a minimal BrowserWindow
 ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = '') => {
     return new Promise((resolve) => {
         const parent = getDialogParent();
@@ -340,9 +341,8 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
             frame: false,
             backgroundColor: '#2b2b2b',
             webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true,
-                preload: path.join(__dirname, 'preload.js')
+                nodeIntegration: true,  // Required for IPC in data URL
+                contextIsolation: false  // Required for IPC in data URL
             }
         });
 
@@ -411,6 +411,7 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
         <button class="ok" onclick="submit()">OK</button>
     </div>
     <script>
+        const { ipcRenderer } = require('electron');
         const input = document.getElementById('input');
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') submit();
@@ -421,11 +422,11 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
         function submit() {
             const val = input.value.trim();
             if (val) {
-                require('electron').ipcRenderer.send('prompt-response', val);
+                ipcRenderer.send('prompt-response', val);
             }
         }
         function cancel() {
-            require('electron').ipcRenderer.send('prompt-response', null);
+            ipcRenderer.send('prompt-response', null);
         }
     </script>
 </body>

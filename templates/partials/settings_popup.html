@@ -299,40 +299,23 @@
                     <div class="bridge-key-container">
                         <div class="bridge-key-box">
                             <input type="password" class="bridge-key-input" id="bridge-secret-key" readonly value="Loading...">
-                            <div class="bridge-key-actions">
-                                <button class="bridge-key-btn" id="bridge-copy-key" title="Copy">
-                                    <img src="{{ url_for('static', filename='copy.png') }}" alt="Copy">
-                                </button>
-                                <button class="bridge-key-btn" id="bridge-toggle-key" title="Show/Hide">
-                                    <img src="{{ url_for('static', filename='view.png') }}" alt="Show" id="bridge-eye-icon">
-                                </button>
-                                <button class="bridge-key-btn bridge-regenerate-btn" id="bridge-regenerate-key" title="Regenerate">
-                                    <img src="{{ url_for('static', filename='openorclose.png') }}" alt="Regenerate">
-                                </button>
-                            </div>
+                        </div>
+                        <div class="bridge-key-text-actions">
+                            <button class="bridge-key-text-btn" id="bridge-copy-key">Copy</button>
+                            <button class="bridge-key-text-btn" id="bridge-toggle-key">Show</button>
+                            <button class="bridge-key-text-btn" id="bridge-regenerate-key">Regenerate</button>
                         </div>
                     </div>
 
                     <!-- Bridge Status Section -->
                     <div class="settings-subheader" style="margin-top: 2rem;">Bridge status</div>
-                    <div class="settings-text">Current connection status of your Adzsend Bridge.</div>
+                    <div class="settings-text">Current connection status of your <a href="/bridge" class="bridge-link">Adzsend Bridge</a>.</div>
 
                     <div class="bridge-status-container">
                         <div class="bridge-status-indicator">
                             <span class="bridge-status-dot" id="bridge-status-dot"></span>
                             <span class="bridge-status-text" id="bridge-status-text">Offline</span>
                         </div>
-                    </div>
-
-                    <!-- Download Section -->
-                    <div class="settings-subheader" style="margin-top: 2rem;">Download</div>
-                    <div class="settings-text">Download Adzsend Bridge for your operating system.</div>
-
-                    <div class="bridge-download-container">
-                        <a href="https://github.com/userRed4cted/Adzsend/releases/latest" target="_blank" class="bridge-download-btn">
-                            <img src="{{ url_for('static', filename='external-link.png') }}" alt="Download">
-                            <span>Download for Windows</span>
-                        </a>
                     </div>
                 </div>
 
@@ -1333,11 +1316,10 @@
     .bridge-key-box {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
         background: #1A1A1E;
         border: 1px solid #222225;
         border-radius: 6px;
-        padding: 0.5rem;
+        padding: 0.75rem 1rem;
     }
 
     .bridge-key-input {
@@ -1345,9 +1327,9 @@
         background: transparent;
         border: none;
         color: #dcddde;
-        font-family: 'gg sans Medium', monospace;
+        font-family: monospace;
         font-size: 0.85rem;
-        padding: 0.5rem;
+        letter-spacing: 0.1em;
         outline: none;
     }
 
@@ -1355,47 +1337,34 @@
         color: #81828A;
     }
 
-    .bridge-key-actions {
+    .bridge-key-text-actions {
         display: flex;
-        gap: 0.25rem;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
     }
 
-    .bridge-key-btn {
-        width: 32px;
-        height: 32px;
+    .bridge-key-text-btn {
         background: transparent;
-        border: 1px solid transparent;
-        border-radius: 4px;
+        border: none;
+        color: #15d8bc;
+        font-family: 'gg sans Medium', sans-serif;
+        font-size: 0.85rem;
         cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
+        padding: 0;
+        transition: color 0.2s ease;
     }
 
-    .bridge-key-btn img {
-        width: 16px;
-        height: 16px;
-        filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(195deg) brightness(93%) contrast(89%);
-        transition: filter 0.2s ease;
+    .bridge-key-text-btn:hover {
+        color: #10b89e;
     }
 
-    .bridge-key-btn:hover {
-        background: #222225;
-        border-color: #333333;
+    .bridge-link {
+        color: #15d8bc;
+        text-decoration: none;
     }
 
-    .bridge-key-btn:hover img {
-        filter: brightness(0) saturate(100%) invert(100%);
-    }
-
-    .bridge-regenerate-btn:hover {
-        background: rgba(153, 26, 53, 0.2);
-        border-color: #991a35;
-    }
-
-    .bridge-regenerate-btn:hover img {
-        filter: brightness(0) saturate(100%) invert(22%) sepia(93%) saturate(1352%) hue-rotate(331deg) brightness(89%) contrast(101%);
+    .bridge-link:hover {
+        text-decoration: underline;
     }
 
     .bridge-status-container {
@@ -1427,34 +1396,6 @@
 
     .bridge-status-text.online {
         color: #15d8bc;
-    }
-
-    .bridge-download-container {
-        margin-top: 1rem;
-    }
-
-    .bridge-download-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: linear-gradient(to bottom, #15d8bc, #006e59);
-        color: #121215;
-        padding: 0.75rem 1.25rem;
-        border-radius: 6px;
-        font-family: 'gg sans Medium', sans-serif;
-        font-size: 0.9rem;
-        text-decoration: none;
-        transition: all 0.2s ease;
-    }
-
-    .bridge-download-btn:hover {
-        background: linear-gradient(to bottom, #10b89e, #004e40);
-    }
-
-    .bridge-download-btn img {
-        width: 18px;
-        height: 18px;
-        filter: brightness(0) saturate(100%) invert(7%) sepia(8%) saturate(1188%) hue-rotate(186deg) brightness(95%) contrast(93%);
     }
 </style>
 
@@ -2326,9 +2267,9 @@
 
                 if (data.success) {
                     bridgeSecretKey = data.secret_key;
-                    // Show masked version by default
+                    // Show masked version by default (dots for each character)
                     keyInput.value = maskKey(bridgeSecretKey);
-                    keyInput.type = 'password';
+                    keyInput.type = 'text';
                     isKeyVisible = false;
                 } else {
                     keyInput.value = 'Error loading key';
@@ -2367,8 +2308,9 @@
         }
 
         function maskKey(key) {
-            if (!key || key.length < 20) return key;
-            return key.substring(0, 10) + '...' + key.substring(key.length - 10);
+            if (!key) return '';
+            // Show one dot per character for proper masking
+            return '\u2022'.repeat(key.length);
         }
 
         async function copySecretKey() {
@@ -2376,23 +2318,16 @@
 
             try {
                 await navigator.clipboard.writeText(bridgeSecretKey);
-
-                // Visual feedback
-                const copyBtn = document.getElementById('bridge-copy-key');
-                if (copyBtn) {
-                    copyBtn.style.background = 'rgba(21, 216, 188, 0.2)';
-                    setTimeout(() => {
-                        copyBtn.style.background = '';
-                    }, 200);
-                }
+                alert('Copied to clipboard');
             } catch (error) {
                 console.error('Failed to copy secret key:', error);
+                alert('Failed to copy to clipboard');
             }
         }
 
         function toggleKeyVisibility() {
             const keyInput = document.getElementById('bridge-secret-key');
-            const eyeIcon = document.getElementById('bridge-eye-icon');
+            const toggleBtn = document.getElementById('bridge-toggle-key');
 
             if (!keyInput || !bridgeSecretKey) return;
 
@@ -2401,11 +2336,11 @@
             if (isKeyVisible) {
                 keyInput.value = bridgeSecretKey;
                 keyInput.type = 'text';
-                if (eyeIcon) eyeIcon.alt = 'Hide';
+                if (toggleBtn) toggleBtn.textContent = 'Hide';
             } else {
                 keyInput.value = maskKey(bridgeSecretKey);
-                keyInput.type = 'password';
-                if (eyeIcon) eyeIcon.alt = 'Show';
+                keyInput.type = 'text';  // Keep as text to show the dots properly
+                if (toggleBtn) toggleBtn.textContent = 'Show';
             }
         }
 

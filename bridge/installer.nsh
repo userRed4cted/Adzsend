@@ -1,16 +1,17 @@
 !include "LogicLib.nsh"
 
+; Close the app before install/uninstall
 !macro customInit
-  ; Check if already installed
-  ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{${UNINSTALL_APP_KEY}}" "UninstallString"
-
-  ${If} $0 != ""
-    ; Already installed - silently uninstall old version first
-    ExecWait '"$0" /S'
-  ${EndIf}
+  ; Kill running instance before install
+  nsExec::ExecToStack 'taskkill /F /IM "Adzsend Bridge.exe"'
+  Sleep 500
 !macroend
 
 !macro customUnInstall
+  ; Kill running instance before uninstall
+  nsExec::ExecToStack 'taskkill /F /IM "Adzsend Bridge.exe"'
+  Sleep 500
+
   ; Remove installation directory
   RMDir /r "$INSTDIR"
 

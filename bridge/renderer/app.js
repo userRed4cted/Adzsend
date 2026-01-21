@@ -164,16 +164,14 @@ async function handleConnectionError(error) {
     statusValue.classList.remove('online');
 
     if (error.includes('ENOTFOUND') || error.includes('network') || error.includes('internet')) {
-        // Show native network error dialog
+        // Show network error dialog
         const shouldRetry = await window.bridge.showNetworkErrorDialog();
         if (shouldRetry) {
             handleActivate();
-        } else {
-            window.bridge.close();
         }
     } else {
-        // Show native error dialog
-        await window.bridge.showErrorDialog('Connection Error', error);
+        // Show error dialog
+        await window.bridge.showErrorDialog('Connection error', error + '.');
     }
 }
 
@@ -188,8 +186,8 @@ async function handleAuthFailed(reason) {
     statusValue.textContent = 'offline';
     statusValue.classList.remove('online');
 
-    // Show native error dialog
-    await window.bridge.showErrorDialog('Invalid Secret Key', reason || 'Your secret key is invalid or has been changed. Please enter a new key.');
+    // Show error dialog
+    await window.bridge.showErrorDialog('Invalid secret key', reason || 'Your secret key is invalid or has been changed.');
 }
 
 // Handle logged out elsewhere
@@ -203,10 +201,10 @@ async function handleLoggedOutElsewhere() {
     statusValue.textContent = 'offline';
     statusValue.classList.remove('online');
 
-    // Show native logged out dialog
-    const openDashboard = await window.bridge.showLoggedOutDialog();
-    if (openDashboard) {
-        window.bridge.openExternal('https://adzsend.com/dashboard/settings');
+    // Show logged out dialog - if user clicks button, prompt for new secret key
+    const updateKey = await window.bridge.showLoggedOutDialog();
+    if (updateKey) {
+        promptForSecretKey();
     }
 }
 
@@ -215,12 +213,13 @@ function updateUI() {
     activateBtn.textContent = 'Activate';
 }
 
-// Prompt for secret key using native dialog
+// Prompt for secret key using styled dialog
 async function promptForSecretKey() {
     const key = await window.bridge.showInputDialog(
-        'Enter Secret Key',
-        'Get your key from adzsend.com/dashboard/settings',
-        'Paste your secret key'
+        'Secret key',
+        'Input your Adzsend Bridge secret key.',
+        'Paste your secret key',
+        'Update'
     );
 
     if (key) {
@@ -242,7 +241,7 @@ async function handleUpdate(downloadUrl) {
             window.bridge.quitForUpdate();
         }, 1000);
     } else {
-        await window.bridge.showErrorDialog('Update Failed', result.error || 'Failed to download update. Please try again.');
+        await window.bridge.showErrorDialog('Update failed', result.error || 'Failed to download update.');
     }
 }
 

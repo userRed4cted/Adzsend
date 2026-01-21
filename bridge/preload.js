@@ -28,11 +28,11 @@ contextBridge.exposeInMainWorld('bridge', {
     downloadUpdate: (url) => ipcRenderer.invoke('download-update', url),
     quitForUpdate: () => ipcRenderer.send('quit-for-update'),
 
-    // Native OS Dialogs
+    // Custom Styled Dialogs
     showErrorDialog: (title, message) => ipcRenderer.invoke('show-error-dialog', title, message),
     showInfoDialog: (title, message) => ipcRenderer.invoke('show-info-dialog', title, message),
     showConfirmDialog: (title, message, confirmText, cancelText) => ipcRenderer.invoke('show-confirm-dialog', title, message, confirmText, cancelText),
-    showInputDialog: (title, message, placeholder) => ipcRenderer.invoke('show-input-dialog', title, message, placeholder),
+    showInputDialog: (title, message, placeholder, buttonText) => ipcRenderer.invoke('show-input-dialog', title, message, placeholder, buttonText),
     showUpdateDialog: (currentVersion, latestVersion) => ipcRenderer.invoke('show-update-dialog', currentVersion, latestVersion),
     showNetworkErrorDialog: () => ipcRenderer.invoke('show-network-error-dialog'),
     showLoggedOutDialog: () => ipcRenderer.invoke('show-logged-out-dialog'),

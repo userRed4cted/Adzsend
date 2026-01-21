@@ -4,118 +4,13 @@ This guide explains how to build and release new versions of Adzsend Bridge.
 
 ---
 
-## Prerequisites
+## Building with GitHub Actions (Recommended)
 
-Before building, ensure you have installed:
+The easiest way to build the installer is using the GitHub Actions workflow.
 
-1. **Node.js** (v18 or later): https://nodejs.org/
-2. **npm** (comes with Node.js)
+### Step 1: Update version.json
 
----
-
-## First-Time Setup
-
-1. Open a terminal in the `bridge` folder:
-   ```bash
-   cd Adzsend/bridge
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
----
-
-## Building the Installer
-
-### Step 1: Update Version Number
-
-Edit `package.json` and update the `"version"` field:
-```json
-{
-  "name": "adzsend-bridge",
-  "version": "1.0.1",  // <-- Change this
-  ...
-}
-```
-
-### Step 2: Build the Installer
-
-Run the build command:
-
-**For Windows:**
-```bash
-npm run build:win
-```
-
-**For macOS:**
-```bash
-npm run build:mac
-```
-
-**For Linux:**
-```bash
-npm run build:linux
-```
-
-### Step 3: Find the Built File
-
-After building, the installer will be in the `dist` folder:
-- Windows: `dist/AdzsendBridgeSetup.exe`
-- macOS: `dist/Adzsend Bridge.dmg`
-- Linux: `dist/Adzsend Bridge.AppImage`
-
----
-
-## Releasing a New Version
-
-### Step 1: Go to GitHub Releases
-
-1. Go to your repository on GitHub
-2. Click **"Releases"** (on the right sidebar)
-3. Click **"Create a new release"** or **"Draft a new release"**
-
-### Step 2: Create the Release Tag
-
-- **Choose a tag:** Create a new tag
-- **Tag name:** `bridge-v1.0.1` (use your new version number)
-- **Target:** `main` (or your default branch)
-
-### Step 3: Fill in Release Details
-
-- **Release title:** `Bridge v1.0.1`
-- **Description:** (Optional) Add release notes:
-  ```
-  ## Changes
-  - Fixed bug with...
-  - Added feature...
-  ```
-
-### Step 4: Attach the Installer
-
-1. Drag and drop the built `.exe` file into the "Attach binaries" area
-2. Or click "Attach binaries by dropping them here or selecting them"
-3. Select `dist/AdzsendBridgeSetup.exe`
-
-### Step 5: Publish the Release
-
-Click **"Publish release"**
-
-### Step 6: Copy the Download URL
-
-1. After publishing, go to the release page
-2. Right-click on `AdzsendBridgeSetup.exe`
-3. Click **"Copy link address"**
-
-The URL will look like:
-```
-https://github.com/YOUR_USERNAME/Adzsend/releases/download/bridge-v1.0.1/AdzsendBridgeSetup.exe
-```
-
-### Step 7: Update version.json
-
-Edit `bridge/version.json`:
+Edit `bridge/version.json` with the new version:
 ```json
 {
     "version": "1.0.1",
@@ -123,13 +18,99 @@ Edit `bridge/version.json`:
 }
 ```
 
-### Step 8: Commit and Push
+### Step 2: Commit and Push
 
 ```bash
-git add bridge/version.json bridge/package.json
-git commit -m "Release bridge v1.0.1"
+git add bridge/version.json
+git commit -m "Bump version to 1.0.1"
 git push
 ```
+
+### Step 3: Run the Workflow
+
+1. Go to your repository on GitHub
+2. Click **"Actions"** tab
+3. Select **"Build Bridge Installer"** from the left sidebar
+4. Click **"Run workflow"** dropdown (top right)
+5. Click the green **"Run workflow"** button
+
+### Step 4: Download the Installer
+
+1. Wait for the workflow to complete (green checkmark)
+2. Click on the completed workflow run
+3. Scroll down to **"Artifacts"**
+4. Download **"AdzsendBridgeSetup"**
+
+### Step 5: Create GitHub Release
+
+1. Go to **"Releases"** on your repository
+2. Click **"Create a new release"**
+3. **Tag name:** `bridge-v1.0.1` (match your version)
+4. **Release title:** `Bridge v1.0.1`
+5. Drag and drop the downloaded `.exe` into attachments
+6. Click **"Publish release"**
+
+---
+
+## Automatic Release (via Tag)
+
+You can also trigger an automatic build + release by pushing a tag:
+
+```bash
+git tag bridge-v1.0.1
+git push origin bridge-v1.0.1
+```
+
+This will:
+1. Trigger the build workflow
+2. Build the Windows installer
+3. Automatically attach the `.exe` to a GitHub release
+
+---
+
+## Building Locally (Alternative)
+
+If you prefer to build on your machine:
+
+### Prerequisites
+
+1. **Node.js** (v18 or later): https://nodejs.org/
+2. **npm** (comes with Node.js)
+
+### Setup
+
+1. Open a terminal in the `bridge` folder
+2. Install dependencies: `npm install`
+
+### Build Commands
+
+- Windows: `npm run build:win`
+- macOS: `npm run build:mac`
+- Linux: `npm run build:linux`
+
+Output: `dist/AdzsendBridgeSetup.exe`
+
+**Note:** The build process automatically syncs version.json → package.json
+
+---
+
+## Resetting to v1.0.0
+
+To reset the version back to 1.0.0 (fresh start):
+
+1. Edit `version.json`:
+   ```json
+   {
+       "version": "1.0.0",
+       "download_url": "https://github.com/YOUR_USERNAME/Adzsend/releases/download/bridge-v1.0.0/AdzsendBridgeSetup.exe"
+   }
+   ```
+
+2. Run `npm run sync-version` (or build, which syncs automatically)
+
+3. Delete old releases from GitHub if desired
+
+That's it - version numbers are just labels in config files, no history to clear.
 
 ---
 
@@ -138,7 +119,7 @@ git push
 1. User opens Adzsend Bridge
 2. Bridge fetches `version.json` from GitHub (raw file)
 3. Compares local version with remote version
-4. If remote is newer, shows forced update modal
+4. If remote is newer, shows forced update dialog
 5. User clicks "Update Now"
 6. Browser opens download URL
 7. User runs new installer
@@ -157,12 +138,12 @@ Use semantic versioning: `MAJOR.MINOR.PATCH`
 
 ### Don't Forget
 
-- [ ] Update version in `package.json`
+- [ ] Update version in `version.json`
+- [ ] Update `download_url` in `version.json` to match the new tag
 - [ ] Build the installer
 - [ ] Create GitHub release with correct tag
 - [ ] Attach the installer file
-- [ ] Update `version.json` with new version and URL
-- [ ] Commit and push `version.json`
+- [ ] Commit and push changes
 
 ### Testing
 
@@ -185,7 +166,7 @@ Before releasing:
 
 - Verify `version.json` is pushed to GitHub
 - Check the raw URL is accessible: `https://raw.githubusercontent.com/YOUR_USERNAME/Adzsend/main/bridge/version.json`
-- Make sure version number in `version.json` is higher than current
+- Make sure version number in `version.json` is higher than user's current version
 
 ### Download URL not working
 
@@ -197,13 +178,12 @@ Before releasing:
 
 ## Quick Reference
 
-| Action | Command/Location |
+| Action | Location/Command |
 |--------|------------------|
-| Install deps | `npm install` |
+| **Set version** | Edit `version.json` |
+| Sync version manually | `npm run sync-version` |
 | Run locally | `npm start` |
 | Build Windows | `npm run build:win` |
 | Build macOS | `npm run build:mac` |
 | Build Linux | `npm run build:linux` |
 | Installer output | `dist/AdzsendBridgeSetup.exe` |
-| Version file | `bridge/version.json` |
-| Package version | `bridge/package.json` → `"version"` |

@@ -16,9 +16,9 @@ const store = new Store({
     encryptionKey: machineKey
 });
 
-// Constants
-const MIN_WIDTH = 380;
-const MIN_HEIGHT = 480;
+// Constants - 4:3 ratio (wider than tall)
+const MIN_WIDTH = 520;
+const MIN_HEIGHT = 390;
 const VERSION = require('./package.json').version;
 
 // Global references
@@ -47,8 +47,8 @@ if (!gotTheLock) {
 // Create the main window
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 420,
-        height: 520,
+        width: 580,
+        height: 420,
         minWidth: MIN_WIDTH,
         minHeight: MIN_HEIGHT,
         frame: false, // Custom title bar
@@ -324,14 +324,14 @@ function getDialogParent() {
     return mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
 }
 
-// Native-style input prompt dialog
+// Native-style input prompt dialog (matches Discord token popup style)
 // Note: Windows doesn't have a native input prompt dialog, so we use a minimal BrowserWindow
-ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = '') => {
+ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = '', buttonText = 'Update') => {
     return new Promise((resolve) => {
         const parent = getDialogParent();
         const promptWindow = new BrowserWindow({
-            width: 400,
-            height: 180,
+            width: 450,
+            height: 200,
             parent: parent,
             modal: true,
             show: false,
@@ -339,10 +339,10 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
             minimizable: false,
             maximizable: false,
             frame: false,
-            backgroundColor: '#2b2b2b',
+            backgroundColor: '#1A1A1E',
             webPreferences: {
-                nodeIntegration: true,  // Required for IPC in data URL
-                contextIsolation: false  // Required for IPC in data URL
+                nodeIntegration: true,
+                contextIsolation: false
             }
         });
 
@@ -351,55 +351,78 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
 <html>
 <head>
     <style>
+        @font-face {
+            font-family: 'gg sans';
+            src: local('Segoe UI'), local('Arial');
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            background: #2b2b2b;
+            font-family: 'gg sans', 'Segoe UI', sans-serif;
+            background: #1A1A1E;
             color: #fff;
-            padding: 20px;
+            padding: 24px;
             -webkit-app-region: drag;
+            border: 1px solid #222225;
+            border-radius: 8px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         .title {
-            font-size: 14px;
+            font-size: 18px;
             font-weight: 600;
             margin-bottom: 8px;
+            color: #ffffff;
         }
         .message {
-            font-size: 12px;
-            color: #aaa;
-            margin-bottom: 15px;
+            font-size: 14px;
+            color: #81838A;
+            margin-bottom: 20px;
         }
         input {
             width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #444;
-            border-radius: 4px;
-            background: #1e1e1e;
+            padding: 12px 16px;
+            border: 1px solid #222225;
+            border-radius: 6px;
+            background: #121215;
             color: #fff;
-            font-size: 13px;
+            font-size: 14px;
+            font-family: 'gg sans', 'Segoe UI', sans-serif;
             outline: none;
             -webkit-app-region: no-drag;
         }
         input:focus { border-color: #15d8bc; }
-        input::placeholder { color: #666; }
+        input::placeholder { color: #81838A; }
         .buttons {
             display: flex;
             justify-content: flex-end;
-            gap: 10px;
-            margin-top: 15px;
+            gap: 12px;
+            margin-top: auto;
+            padding-top: 20px;
             -webkit-app-region: no-drag;
         }
         button {
-            padding: 8px 20px;
+            padding: 10px 24px;
             border: none;
-            border-radius: 4px;
-            font-size: 13px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'gg sans', 'Segoe UI', sans-serif;
             cursor: pointer;
+            transition: all 0.2s ease;
         }
-        .cancel { background: #444; color: #fff; }
-        .cancel:hover { background: #555; }
-        .ok { background: #15d8bc; color: #000; font-weight: 600; }
-        .ok:hover { background: #12c5ab; }
+        .cancel {
+            background: transparent;
+            border: 1px solid #222225;
+            color: #dcddde;
+        }
+        .cancel:hover { background: #222225; }
+        .ok {
+            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            color: #121215;
+            font-weight: 600;
+        }
+        .ok:hover { background: linear-gradient(to bottom, #10b89e, #004e40); }
     </style>
 </head>
 <body>
@@ -408,7 +431,7 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
     <input type="password" id="input" placeholder="${placeholder.replace(/"/g, '&quot;')}" autofocus>
     <div class="buttons">
         <button class="cancel" onclick="cancel()">Cancel</button>
-        <button class="ok" onclick="submit()">OK</button>
+        <button class="ok" onclick="submit()">${buttonText.replace(/</g, '&lt;')}</button>
     </div>
     <script>
         const { ipcRenderer } = require('electron');
@@ -452,72 +475,179 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
     });
 });
 
-// Native OS dialogs
+// Custom styled popup dialog (matches website style)
+function showCustomDialog(title, message, buttonText, showCancel = false) {
+    return new Promise((resolve) => {
+        const parent = getDialogParent();
+        const dialogWindow = new BrowserWindow({
+            width: 450,
+            height: showCancel ? 180 : 160,
+            parent: parent,
+            modal: true,
+            show: false,
+            resizable: false,
+            minimizable: false,
+            maximizable: false,
+            frame: false,
+            backgroundColor: '#1A1A1E',
+            webPreferences: {
+                nodeIntegration: true,
+                contextIsolation: false
+            }
+        });
+
+        const cancelButton = showCancel ? `<button class="cancel" onclick="cancel()">Cancel</button>` : '';
+
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @font-face {
+            font-family: 'gg sans';
+            src: local('Segoe UI'), local('Arial');
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'gg sans', 'Segoe UI', sans-serif;
+            background: #1A1A1E;
+            color: #fff;
+            padding: 24px;
+            -webkit-app-region: drag;
+            border: 1px solid #222225;
+            border-radius: 8px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+        .message {
+            font-size: 14px;
+            color: #81838A;
+            line-height: 1.5;
+            flex: 1;
+        }
+        .buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+            -webkit-app-region: no-drag;
+        }
+        button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'gg sans', 'Segoe UI', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .cancel {
+            background: transparent;
+            border: 1px solid #222225;
+            color: #dcddde;
+        }
+        .cancel:hover { background: #222225; }
+        .ok {
+            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            color: #121215;
+            font-weight: 600;
+        }
+        .ok:hover { background: linear-gradient(to bottom, #10b89e, #004e40); }
+    </style>
+</head>
+<body>
+    <div class="title">${title.replace(/</g, '&lt;')}</div>
+    <div class="message">${message.replace(/</g, '&lt;')}</div>
+    <div class="buttons">
+        ${cancelButton}
+        <button class="ok" onclick="submit()">${buttonText.replace(/</g, '&lt;')}</button>
+    </div>
+    <script>
+        const { ipcRenderer } = require('electron');
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') cancel();
+            if (e.key === 'Enter') submit();
+        });
+        function submit() {
+            ipcRenderer.send('dialog-response', true);
+        }
+        function cancel() {
+            ipcRenderer.send('dialog-response', false);
+        }
+    </script>
+</body>
+</html>`;
+
+        dialogWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+
+        dialogWindow.once('ready-to-show', () => {
+            dialogWindow.show();
+        });
+
+        const responseHandler = (event, value) => {
+            resolve(value);
+            dialogWindow.close();
+        };
+
+        ipcMain.once('dialog-response', responseHandler);
+
+        dialogWindow.on('closed', () => {
+            ipcMain.removeListener('dialog-response', responseHandler);
+            resolve(false);
+        });
+    });
+}
+
+// Error dialog - shows error with Ok button
 ipcMain.handle('show-error-dialog', async (event, title, message) => {
-    return dialog.showMessageBox(getDialogParent(), {
-        type: 'error',
-        buttons: ['OK'],
-        title: title,
-        message: message
-    });
+    await showCustomDialog(title, message, 'Ok');
+    return true;
 });
 
+// Info dialog - shows info with Ok button
 ipcMain.handle('show-info-dialog', async (event, title, message) => {
-    return dialog.showMessageBox(getDialogParent(), {
-        type: 'info',
-        buttons: ['OK'],
-        title: title,
-        message: message
-    });
+    await showCustomDialog(title, message, 'Ok');
+    return true;
 });
 
+// Confirm dialog - shows with custom buttons
 ipcMain.handle('show-confirm-dialog', async (event, title, message, confirmText = 'Yes', cancelText = 'No') => {
-    const result = await dialog.showMessageBox(getDialogParent(), {
-        type: 'question',
-        buttons: [confirmText, cancelText],
-        defaultId: 1,
-        cancelId: 1,
-        title: title,
-        message: message
-    });
-    return result.response === 0; // true if confirmed
+    return await showCustomDialog(title, message, confirmText, true);
 });
 
+// Update dialog
 ipcMain.handle('show-update-dialog', async (event, currentVersion, latestVersion) => {
-    const result = await dialog.showMessageBox(getDialogParent(), {
-        type: 'info',
-        buttons: ['Update Now'],
-        defaultId: 0,
-        title: 'Update Required',
-        message: 'A new version is available',
-        detail: `Current: v${currentVersion}\nLatest: v${latestVersion}\n\nYou must update to continue using Adzsend Bridge.`,
-        noLink: true
-    });
-    return result.response === 0;
+    return await showCustomDialog(
+        'Update',
+        `To continue using Adzsend Bridge you need to update from v${currentVersion} to v${latestVersion}.`,
+        'Update'
+    );
 });
 
+// Network error dialog
 ipcMain.handle('show-network-error-dialog', async () => {
-    const result = await dialog.showMessageBox(getDialogParent(), {
-        type: 'error',
-        buttons: ['Retry', 'Quit'],
-        defaultId: 0,
-        title: 'No Internet Connection',
-        message: 'Unable to connect',
-        detail: 'Please check your internet connection and try again.'
-    });
-    return result.response === 0; // true if retry
+    return await showCustomDialog(
+        'Network issues',
+        'Unable to connect to the internet, make sure your device is connected to the internet and try again.',
+        'Retry'
+    );
 });
 
+// Logged out dialog
 ipcMain.handle('show-logged-out-dialog', async () => {
-    const result = await dialog.showMessageBox(getDialogParent(), {
-        type: 'warning',
-        buttons: ['Open Dashboard', 'Close'],
-        defaultId: 0,
-        title: 'Logged Out',
-        message: 'You have been logged out',
-        detail: 'If this wasn\'t you, don\'t worry, your Adzsend account is safe. Regenerate your secret key to use Adzsend Bridge.'
-    });
-    return result.response === 0; // true if open dashboard
+    return await showCustomDialog(
+        'Logged out',
+        'You have been logged out, this can be due to logging into Adzsend Bridge with your secret key on another device or your Adzsend Bridge secret key has been reset. Your account is NOT at risk if this wasn\'t you.',
+        'Update secret key'
+    );
 });
 
 // Download and install update

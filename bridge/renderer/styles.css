@@ -51,6 +51,7 @@ body {
     align-items: center;
     -webkit-app-region: drag;
     background: #121215;
+    border-bottom: 1px solid #222225;
 }
 
 .title-bar-drag {
@@ -112,20 +113,20 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 32px;
 }
 
 .logo {
-    width: 200px;
+    width: 400px;
     height: auto;
-    margin-bottom: 8px;
+    margin-bottom: 2px;
 }
 
 .bridge-text {
     font-family: 'ABC Ginto Nord', sans-serif;
-    font-size: 24px;
+    font-size: 48px;
     font-weight: 900;
-    letter-spacing: 2px;
+    letter-spacing: 4px;
     color: #ffffff;
 }
 
@@ -175,7 +176,6 @@ body {
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 280px;
     margin-bottom: 20px;
 }
 

@@ -8,7 +8,7 @@
         // Clear all client-side storage on logout
         sessionStorage.clear();
         localStorage.clear();
-        window.location.href = '{{ url_for('home') }}';
+        window.location.href = '{{ redirect_url }}';
     </script>
 </head>
 <body>

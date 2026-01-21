@@ -35,7 +35,8 @@ function makeRequest(method, path, token, body = null) {
             port: 443,
             path: `/api/${API_VERSION}${path}`,
             method: method,
-            headers: getHeaders(token)
+            headers: getHeaders(token),
+            timeout: 15000
         };
 
         const req = https.request(options, (res) => {
@@ -59,6 +60,11 @@ function makeRequest(method, path, token, body = null) {
                     });
                 }
             });
+        });
+
+        req.setTimeout(15000, () => {
+            req.destroy();
+            reject(new Error('Request timeout'));
         });
 
         req.on('error', (error) => {

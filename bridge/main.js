@@ -5,9 +5,15 @@ const WebSocketClient = require('./src/websocket');
 const { checkForUpdates, downloadUpdate } = require('./src/updater');
 
 // Initialize store for persistent data
+// Use machine-specific encryption key derived from app path and user data path
+const crypto = require('crypto');
+const machineKey = crypto.createHash('sha256')
+    .update(app.getPath('userData') + app.getPath('exe'))
+    .digest('hex');
+
 const store = new Store({
     name: 'adzsend-bridge-config',
-    encryptionKey: 'adzsend-bridge-local-encryption-key'
+    encryptionKey: machineKey
 });
 
 // Constants
@@ -253,6 +259,7 @@ ipcMain.handle('connect', async (event, secretKey) => {
                 connectionStatus = 'disconnected';
                 updateTrayMenu();
                 store.delete('secretKey');
+                wsClient = null;
                 if (mainWindow) {
                     mainWindow.webContents.send('auth-failed', reason);
                 }
@@ -312,9 +319,14 @@ ipcMain.on('open-external', (event, url) => {
     shell.openExternal(url);
 });
 
+// Helper to get dialog parent window (null-safe)
+function getDialogParent() {
+    return mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+}
+
 // Native OS dialogs
 ipcMain.handle('show-error-dialog', async (event, title, message) => {
-    return dialog.showMessageBox(mainWindow, {
+    return dialog.showMessageBox(getDialogParent(), {
         type: 'error',
         buttons: ['OK'],
         title: title,
@@ -323,7 +335,7 @@ ipcMain.handle('show-error-dialog', async (event, title, message) => {
 });
 
 ipcMain.handle('show-info-dialog', async (event, title, message) => {
-    return dialog.showMessageBox(mainWindow, {
+    return dialog.showMessageBox(getDialogParent(), {
         type: 'info',
         buttons: ['OK'],
         title: title,
@@ -332,20 +344,20 @@ ipcMain.handle('show-info-dialog', async (event, title, message) => {
 });
 
 ipcMain.handle('show-confirm-dialog', async (event, title, message, confirmText = 'Yes', cancelText = 'No') => {
-    const result = await dialog.showMessageBox(mainWindow, {
+    const result = await dialog.showMessageBox(getDialogParent(), {
         type: 'question',
         buttons: [confirmText, cancelText],
         defaultId: 1,
         cancelId: 1,
         title: title,
-        message: title,
+        message: message,
         detail: message
     });
     return result.response === 0; // true if confirmed
 });
 
 ipcMain.handle('show-update-dialog', async (event, currentVersion, latestVersion) => {
-    const result = await dialog.showMessageBox(mainWindow, {
+    const result = await dialog.showMessageBox(getDialogParent(), {
         type: 'info',
         buttons: ['Update Now'],
         defaultId: 0,
@@ -358,7 +370,7 @@ ipcMain.handle('show-update-dialog', async (event, currentVersion, latestVersion
 });
 
 ipcMain.handle('show-network-error-dialog', async () => {
-    const result = await dialog.showMessageBox(mainWindow, {
+    const result = await dialog.showMessageBox(getDialogParent(), {
         type: 'error',
         buttons: ['Retry', 'Quit'],
         defaultId: 0,
@@ -370,7 +382,7 @@ ipcMain.handle('show-network-error-dialog', async () => {
 });
 
 ipcMain.handle('show-logged-out-dialog', async () => {
-    const result = await dialog.showMessageBox(mainWindow, {
+    const result = await dialog.showMessageBox(getDialogParent(), {
         type: 'warning',
         buttons: ['Open Dashboard', 'Close'],
         defaultId: 0,

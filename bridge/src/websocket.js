@@ -16,12 +16,22 @@ class WebSocketClient {
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 1000;
         this.heartbeatInterval = null;
+        this.connectionTimeout = null;
         this.messagesSentThisSession = 0;
     }
 
     connect() {
         try {
             this.ws = new WebSocket(SERVER_URL);
+
+            // Set connection timeout (15 seconds)
+            this.connectionTimeout = setTimeout(() => {
+                if (!this.isConnectedFlag && this.ws) {
+                    console.log('Connection timeout');
+                    this.ws.terminate();
+                    this.callbacks.onError('Connection timeout - server not responding');
+                }
+            }, 15000);
 
             this.ws.on('open', () => {
                 console.log('WebSocket connection opened');
@@ -84,6 +94,7 @@ class WebSocketClient {
                 console.log('Authentication successful');
                 this.isConnectedFlag = true;
                 this.reconnectAttempts = 0;
+                this.clearConnectionTimeout();
                 this.startHeartbeat();
                 this.callbacks.onConnected();
                 break;
@@ -115,7 +126,27 @@ class WebSocketClient {
     async handleSendCommand(command) {
         const results = [];
 
+        // Validate command structure
+        if (!command || !Array.isArray(command.tasks) || command.tasks.length === 0) {
+            console.error('Invalid command structure received');
+            this.send({
+                type: 'send_result',
+                id: command?.id || 'unknown',
+                results: [{ success: false, error: 'Invalid command structure' }]
+            });
+            return;
+        }
+
         for (const task of command.tasks) {
+            // Validate task has required fields
+            if (!task.discord_token || !task.channel_id || !task.message) {
+                results.push({
+                    channel_id: task?.channel_id || 'unknown',
+                    success: false,
+                    error: 'Missing required task fields'
+                });
+                continue;
+            }
             try {
                 // Add random delay variation
                 const baseDelay = task.delay || 0;
@@ -189,6 +220,13 @@ class WebSocketClient {
         }
     }
 
+    clearConnectionTimeout() {
+        if (this.connectionTimeout) {
+            clearTimeout(this.connectionTimeout);
+            this.connectionTimeout = null;
+        }
+    }
+
     attemptReconnect() {
         this.reconnectAttempts++;
         const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
@@ -216,6 +254,7 @@ class WebSocketClient {
     }
 
     disconnect() {
+        this.clearConnectionTimeout();
         this.stopHeartbeat();
         if (this.ws) {
             this.ws.close(1000, 'User disconnected');

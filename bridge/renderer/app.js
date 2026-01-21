@@ -230,13 +230,9 @@ async function handleLoggedOutElsewhere() {
     }
 }
 
-// Update UI based on state
+// Update UI based on initial state
 function updateUI() {
-    if (secretKey) {
-        activateBtn.textContent = 'Activate';
-    } else {
-        activateBtn.textContent = 'Activate';
-    }
+    activateBtn.textContent = 'Activate';
 }
 
 // Modal functions

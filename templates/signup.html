@@ -127,7 +127,7 @@
                                 </div>
                                 <span class="tos-label">I agree to <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">Adzsend's Terms of Service</a></span>
                             </div>
-                            <button type="submit" class="submit-btn" id="signup-btn"{% if not tos_checked %} disabled{% endif %}>Sign Up</button>
+                            <button type="submit" class="submit-btn" id="signup-btn">Sign Up</button>
                         </div>
                     </form>
 
@@ -157,18 +157,11 @@
             tosAgreed = !tosAgreed;
             tosAgreement.classList.toggle('checked', tosAgreed);
             tosInput.value = tosAgreed ? 'true' : '';
-            signupBtn.disabled = !tosAgreed;
         });
 
-        // Form submit handler
+        // Form submit handler - prevent double submission
         if (signupForm && signupBtn) {
             signupForm.addEventListener('submit', function(e) {
-                // Double-check TOS is agreed (prevents bypass via DevTools enabling button)
-                if (!tosAgreed || tosInput.value !== 'true') {
-                    e.preventDefault();
-                    return false;
-                }
-
                 if (isSubmitting) {
                     e.preventDefault();
                     return false;

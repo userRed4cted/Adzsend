@@ -9,7 +9,7 @@ const VERSION_URL = 'https://raw.githubusercontent.com/userRed4cted/Adzsend/main
 // Check for updates
 function checkForUpdates(currentVersion) {
     return new Promise((resolve, reject) => {
-        https.get(VERSION_URL, (res) => {
+        const req = https.get(VERSION_URL, (res) => {
             let data = '';
 
             res.on('data', (chunk) => {
@@ -31,7 +31,15 @@ function checkForUpdates(currentVersion) {
                     reject(new Error('Failed to parse version info'));
                 }
             });
-        }).on('error', (error) => {
+        });
+
+        // Set 10 second timeout
+        req.setTimeout(10000, () => {
+            req.destroy();
+            reject(new Error('Connection timeout'));
+        });
+
+        req.on('error', (error) => {
             reject(new Error('No internet connection'));
         });
     });

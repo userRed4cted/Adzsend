@@ -40,7 +40,7 @@
                 <button class="settings-menu-item" data-settings-page="date-format">Date format</button>
             </div>
             <div class="settings-menu-divider"></div>
-            <button class="settings-logout-btn" onclick="window.location.href='{{ url_for('logout') }}';">Logout</button>
+            <button class="settings-logout-btn" onclick="event.stopPropagation(); window.location.href='{{ url_for('logout') }}';">Logout</button>
         </div>
         <!-- Settings Content -->
         <div class="settings-content">

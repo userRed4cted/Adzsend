@@ -451,7 +451,7 @@ def signup_page():
     if tos_agreed != 'true':
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
-        return render_template('signup.html', error='You must agree to our Terms of Service to use Adzsend', csrf_token=csrf_token), 400
+        return render_template('signup.html', error='You must agree to our Terms of Service to use Adzsend', csrf_token=csrf_token, email=email), 400
 
     if not email:
         csrf_token = generate_csrf_token()
@@ -643,10 +643,15 @@ def verify_code_page():
     session['user_session_id'] = session_id
     session.permanent = True
 
-    # Redirect - signup goes to purchase, login goes to settings
+    # Redirect - signup goes to purchase, login returns to original page
     if purpose == 'signup':
         return redirect(url_for('purchase'))
-    return redirect(url_for('settings'))
+
+    # Login - get the page they were on before login (stored in session)
+    redirect_url = session.pop('login_referrer', None)
+    if not redirect_url:
+        redirect_url = url_for('home')
+    return redirect(redirect_url)
 
 @app.route('/discover')
 def discover():
@@ -4402,8 +4407,21 @@ def regenerate_bridge_key():
 
 @app.route('/logout')
 def logout():
+    # Determine where to redirect after logout
+    # Private pages (require login) should redirect to home
+    # Public pages should stay on the same page
+    referrer = request.referrer
+    private_pages = ['/dashboard', '/admin', '/bridge', '/settings', '/purchase']
+
+    redirect_url = url_for('home')  # Default to home
+    if referrer:
+        # Check if referrer is a public page (not private)
+        is_private = any(private in referrer for private in private_pages)
+        if not is_private and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
+            redirect_url = referrer
+
     session.clear()
-    response = app.make_response(render_template('logout.html'))
+    response = app.make_response(render_template('logout.html', redirect_url=redirect_url))
     # Prevent caching to avoid going back to personal panel after logout
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'

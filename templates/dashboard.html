@@ -351,10 +351,6 @@
             position: relative;
         }
 
-        .server-sidebar::-webkit-scrollbar {
-            width: 0;
-        }
-
         .server-icon-wrapper {
             position: relative;
             width: 48px;
@@ -550,10 +546,10 @@
             filter: brightness(0) saturate(100%);
         }
 
-        /* Keep x.png at smaller size */
+        /* X icon same size as tick */
         .channels-list .channel-item .channel-tick[alt="x"] {
-            width: 11px;
-            height: 11px;
+            width: 22px;
+            height: 22px;
         }
 
         /* Failed channel status tag */
@@ -2008,6 +2004,7 @@
             const hasGuilds = {{ 'true' if guilds else 'false' }};
             const hasTeam = {{ 'true' if has_team else 'false' }};
             const isTeamOwner = {{ 'true' if is_team_owner else 'false' }};
+            const currentDiscordAccountId = {{ primary_account.id if primary_account else 'null' }};
 
             // Check for suspended/deleted accounts detected during page load
             const suspendedAccounts = {{ suspended_accounts | tojson | safe }};
@@ -2191,6 +2188,7 @@
             const channelSearch = document.getElementById('channel-search');
             const searchTagsContainer = document.getElementById('search-tags');
             const MESSAGE_LIMIT = 2000; // Character limit for messages
+            const currentDiscordAccountId = {{ primary_account.id if primary_account else 'null' }};
 
             let guilds = [];
             let serverChannels = {}; // Cache for channels by guild ID
@@ -2316,6 +2314,7 @@
                         );
 
                         saveSelectedChannels();
+                        saveUserDataToDB();
                         renderSelectedChannelsMode();
                         updateServerCount(guildId);
                         updateSendButton();
@@ -2508,8 +2507,13 @@
             });
 
             // Load saved data from localStorage (persists across sessions)
+            // Uses per-account storage key when account ID is available
             function loadSelectedChannels() {
-                const saved = localStorage.getItem('selectedChannels');
+                // Use account-specific key if we have an account ID
+                const storageKey = currentDiscordAccountId
+                    ? `selectedChannels_${currentDiscordAccountId}`
+                    : 'selectedChannels';
+                const saved = localStorage.getItem(storageKey);
                 if (saved) {
                     try {
                         selectedChannels = JSON.parse(saved);
@@ -2535,15 +2539,27 @@
             // Load user data from database
             async function loadUserDataFromDB() {
                 try {
-                    const response = await fetch('/api/get-user-data');
+                    // Include discord_account_id to get per-account selected channels
+                    const url = currentDiscordAccountId
+                        ? `/api/get-user-data?discord_account_id=${currentDiscordAccountId}`
+                        : '/api/get-user-data';
+                    const response = await fetch(url);
                     if (response.ok) {
-                        const data = await response.json();
+                        const result = await response.json();
+                        const data = result.data || result;
 
-                        // Load selected channels if available
+                        // Load selected channels for this Discord account (always use DB data, clear if empty)
                         if (data.selected_channels && Array.isArray(data.selected_channels)) {
                             selectedChannels = data.selected_channels;
-                            localStorage.setItem('selectedChannels', JSON.stringify(selectedChannels));
+                        } else {
+                            // No channels saved for this account - start fresh
+                            selectedChannels = [];
                         }
+                        // Use account-specific localStorage key
+                        const storageKey = currentDiscordAccountId
+                            ? `selectedChannels_${currentDiscordAccountId}`
+                            : 'selectedChannels';
+                        localStorage.setItem(storageKey, JSON.stringify(selectedChannels));
 
                         // Load business selected channels if available
                         if (data.business_selected_channels && Array.isArray(data.business_selected_channels)) {
@@ -2575,16 +2591,23 @@
             // Save user data to database
             async function saveUserDataToDB() {
                 try {
+                    const payload = {
+                        selected_channels: selectedChannels,
+                        draft_message: messageInput ? messageInput.value : ''
+                    };
+
+                    // Include discord_account_id to save channels per-account
+                    if (currentDiscordAccountId) {
+                        payload.discord_account_id = currentDiscordAccountId;
+                    }
+
                     const response = await fetch('/api/save-user-data', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRF-Token': '{{ csrf_token }}'
                         },
-                        body: JSON.stringify({
-                            selected_channels: selectedChannels,
-                            draft_message: messageInput ? messageInput.value : ''
-                        })
+                        body: JSON.stringify(payload)
                     });
 
                     if (!response.ok) {
@@ -2600,8 +2623,13 @@
             }
 
             // Save data to localStorage (persists across sessions)
+            // Uses per-account storage key when account ID is available
             function saveSelectedChannels() {
-                localStorage.setItem('selectedChannels', JSON.stringify(selectedChannels));
+                // Use account-specific key if we have an account ID
+                const storageKey = currentDiscordAccountId
+                    ? `selectedChannels_${currentDiscordAccountId}`
+                    : 'selectedChannels';
+                localStorage.setItem(storageKey, JSON.stringify(selectedChannels));
                 // Also save to database
                 saveUserDataToDB();
             }
@@ -2994,8 +3022,9 @@
                     );
                 }
 
-                // Save to localStorage
+                // Save to localStorage and database
                 saveSelectedChannels();
+                saveUserDataToDB();
 
                 // Update UI
                 updateServerCount(channel.guildId);
@@ -3040,8 +3069,9 @@
                     );
                 }
 
-                // Save to localStorage
+                // Save to localStorage and database
                 saveSelectedChannels();
+                saveUserDataToDB();
 
                 // Update UI
                 renderChannels();

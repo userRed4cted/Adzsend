@@ -26,7 +26,9 @@ from database import (
     complete_discord_link, unlink_discord_oauth, is_discord_linked,
     get_user_by_internal_id, full_unlink_discord_account, update_discord_profile,
     # Per-Discord-account channel storage
-    save_discord_account_channels, get_discord_account_channels
+    save_discord_account_channels, get_discord_account_channels,
+    # Sent message verification
+    check_sent_message, log_sent_message
 )
 
 # Config imports
@@ -35,6 +37,10 @@ from config import (
     DATABASE_VERSION, DATABASE_WIPE_MESSAGE, SITE,
     get_page_description, get_page_embed,
     SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS
+)
+from config.footer import (
+    FOOTER_LOGO, FOOTER_BACKGROUND, FOOTER_SECTION_TITLE_COLOR,
+    FOOTER_LINK_COLOR, FOOTER_LINK_HOVER_UNDERLINE, FOOTER_SECTIONS
 )
 
 # Security imports
@@ -95,7 +101,40 @@ def inject_site_config():
         # Page metadata helper functions
         'get_page_embed': get_page_embed,
         'get_page_description': get_page_description,
+        # Footer configuration
+        'footer_config': {
+            'logo': FOOTER_LOGO,
+            'background': FOOTER_BACKGROUND,
+            'section_title_color': FOOTER_SECTION_TITLE_COLOR,
+            'link_color': FOOTER_LINK_COLOR,
+            'link_hover_underline': FOOTER_LINK_HOVER_UNDERLINE,
+            'sections': FOOTER_SECTIONS,
+        },
     }
+
+# Template filter for processing footer links (~/path -> relative URL)
+@app.template_filter('process_footer_link')
+def process_footer_link(url):
+    """Convert ~/path to relative URL using current domain"""
+    if url and url.startswith('~/'):
+        return url[1:]  # Remove ~ to get /path
+    return url
+
+# Template filter for processing content links (~/path -> relative URL)
+@app.template_filter('process_content_link')
+def process_content_link(text):
+    """Process markdown-style links in text, supporting ~/path syntax"""
+    import re
+    def replace_link(match):
+        link_text = match.group(1)
+        link_url = match.group(2)
+        # Convert ~/path to /path
+        if link_url.startswith('~/'):
+            link_url = link_url[1:]
+        return f'<a href="{link_url}" class="content-link">{link_text}</a>'
+
+    # Match [text](url) pattern
+    return re.sub(r'\[([^\]]+)\]\(([^)]+)\)', replace_link, text)
 
 # Custom Jinja filter for formatting dates
 @app.template_filter('format_date')
@@ -625,6 +664,35 @@ def support():
                          discord_server_url=HOMEPAGE['hero']['discord_server_url'])
 
 
+@app.route('/api/check-message', methods=['POST'])
+def api_check_message():
+    """Check if a Discord message was sent via Adzsend."""
+    import re
+
+    data = request.get_json()
+    if not data or 'message_link' not in data:
+        return jsonify({'status': 'error', 'message': 'Invalid Discord message link'}), 400
+
+    message_link = data['message_link'].strip()
+
+    # Discord message link format: https://discord.com/channels/SERVER_ID/CHANNEL_ID/MESSAGE_ID
+    # or https://discordapp.com/channels/SERVER_ID/CHANNEL_ID/MESSAGE_ID
+    # or https://ptb.discord.com/channels/... or https://canary.discord.com/channels/...
+    pattern = r'^https?://(?:(?:ptb|canary)\.)?discord(?:app)?\.com/channels/(\d+)/(\d+)/(\d+)$'
+    match = re.match(pattern, message_link)
+
+    if not match:
+        return jsonify({'status': 'invalid', 'message': 'Invalid Discord message link'}), 200
+
+    message_id = match.group(3)
+
+    # Check if message exists in our database
+    if check_sent_message(message_id):
+        return jsonify({'status': 'found', 'message': 'Message sent using Adzsend'}), 200
+    else:
+        return jsonify({'status': 'not_found', 'message': "We can't find this message, this either means it was not sent with Adzsend or is over 5 days old"}), 200
+
+
 @app.route('/purchase')
 def purchase():
     from config import SUBSCRIPTION_PLANS, BUSINESS_PLANS
@@ -1144,75 +1212,63 @@ def dashboard():
                     } if account_details.get('avatar_decoration') else None
                 }
 
-        # Fetch guilds from ALL linked accounts
-        for acc in linked_accounts:
-            print(f"[DASHBOARD] Checking account {acc['id']}, is_valid: {acc.get('is_valid')}")
-
-            # Don't skip based on is_valid - try all accounts
-            # The is_valid field might be NULL/None for newly linked accounts
-            # if not acc.get('is_valid', True):
-            #     print(f"[DASHBOARD] Skipping invalid account {acc['id']}")
-            #     continue
+        # Fetch guilds ONLY from the selected/primary account
+        if primary_account:
+            acc = primary_account
+            print(f"[DASHBOARD] Fetching guilds for selected account {acc['id']}")
 
             account_details = get_linked_discord_account_by_id(acc['id'])
-            if not account_details:
-                print(f"[DASHBOARD] No details found for account {acc['id']}")
-                continue
+            if account_details and account_details.get('discord_token'):
+                print(f"[DASHBOARD] Account {acc['id']} has valid token, fetching guilds...")
 
-            if not account_details.get('discord_token'):
-                print(f"[DASHBOARD] No token found for account {acc['id']}")
-                continue
+                try:
+                    token = account_details['discord_token']
+                    headers = {'Authorization': token}
+                    guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=5)
+                    print(f"[DASHBOARD] Account {acc['id']} guilds API response: {guilds_resp.status_code}")
 
-            print(f"[DASHBOARD] Account {acc['id']} has valid token, fetching guilds...")
+                    if guilds_resp.status_code == 200:
+                        account_guilds = guilds_resp.json()
+                        print(f"[DASHBOARD] Account {acc['id']} guilds fetched: {len(account_guilds)} servers")
 
-            try:
-                token = account_details['discord_token']
-                headers = {'Authorization': token}
-                guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=5)
-                print(f"[DASHBOARD] Account {acc['id']} guilds API response: {guilds_resp.status_code}")
-
-                if guilds_resp.status_code == 200:
-                    account_guilds = guilds_resp.json()
-                    print(f"[DASHBOARD] Account {acc['id']} guilds fetched: {len(account_guilds)} servers")
-
-                    # Add account_id to each guild and track mapping
-                    for guild in account_guilds:
-                        guild['_account_id'] = acc['id']  # Store which account this guild belongs to
-                        guild_to_account[guild['id']] = acc['id']
-                        all_guilds.append(guild)
-                elif guilds_resp.status_code == 401:
-                    # Token is invalid - mark account as needing token update
-                    print(f"[DASHBOARD] Account {acc['id']} has invalid token (401)")
-                    # Set is_valid to 0 so frontend shows update popup
-                    from database import get_db
-                    conn = get_db()
-                    cursor = conn.cursor()
-                    cursor.execute('UPDATE linked_discord_accounts SET is_valid = 0 WHERE id = ?', (acc['id'],))
-                    conn.commit()
-                    conn.close()
-                elif guilds_resp.status_code == 403:
-                    # Check if account is suspended/deleted
-                    try:
-                        error_data = guilds_resp.json()
-                        error_code = error_data.get('code', 0)
-                        if error_code in [40001, 40002]:
-                            print(f"[DASHBOARD] Account {acc['id']} is suspended/disabled (code {error_code})")
-                            # Unlink the account and store info for popup
-                            from database.models import unlink_discord_account
-                            suspended_accounts.append({
-                                'username': acc.get('username', 'Unknown'),
-                                'discord_id': acc.get('discord_id', 'Unknown')
-                            })
-                            unlink_discord_account(user['id'], acc['id'])
-                    except Exception as e:
-                        print(f"[DASHBOARD] Error parsing 403 response: {e}")
-                else:
-                    print(f"[DASHBOARD] Account {acc['id']} failed to fetch guilds: {guilds_resp.status_code}")
-            except Exception as e:
-                print(f"[DASHBOARD] Error fetching guilds for account {acc['id']}: {e}")
+                        # Add account_id to each guild and track mapping
+                        for guild in account_guilds:
+                            guild['_account_id'] = acc['id']  # Store which account this guild belongs to
+                            guild_to_account[guild['id']] = acc['id']
+                            all_guilds.append(guild)
+                    elif guilds_resp.status_code == 401:
+                        # Token is invalid - mark account as needing token update
+                        print(f"[DASHBOARD] Account {acc['id']} has invalid token (401)")
+                        # Set is_valid to 0 so frontend shows update popup
+                        from database import get_db
+                        conn = get_db()
+                        cursor = conn.cursor()
+                        cursor.execute('UPDATE linked_discord_accounts SET is_valid = 0 WHERE id = ?', (acc['id'],))
+                        conn.commit()
+                        conn.close()
+                    elif guilds_resp.status_code == 403:
+                        # Check if account is suspended/deleted
+                        try:
+                            error_data = guilds_resp.json()
+                            error_code = error_data.get('code', 0)
+                            if error_code in [40001, 40002]:
+                                print(f"[DASHBOARD] Account {acc['id']} is suspended/disabled (code {error_code})")
+                                # Unlink the account and store info for popup
+                                from database.models import unlink_discord_account
+                                suspended_accounts.append({
+                                    'username': acc.get('username', 'Unknown'),
+                                    'discord_id': acc.get('discord_id', 'Unknown')
+                                })
+                                unlink_discord_account(user['id'], acc['id'])
+                        except Exception as e:
+                            print(f"[DASHBOARD] Error parsing 403 response: {e}")
+                    else:
+                        print(f"[DASHBOARD] Account {acc['id']} failed to fetch guilds: {guilds_resp.status_code}")
+                except Exception as e:
+                    print(f"[DASHBOARD] Error fetching guilds for account {acc['id']}: {e}")
 
     guilds = all_guilds
-    print(f"[DASHBOARD] Final guilds count from all accounts: {len(guilds)}")
+    print(f"[DASHBOARD] Final guilds count for selected account: {len(guilds)}")
 
     # Fallback to old single-account system if new system found nothing
     if len(guilds) == 0 and user.get('discord_token'):
@@ -1339,13 +1395,24 @@ def bridge():
 
 
 def parse_markdown_links(text):
-    """Parse [text](url) markdown links and convert to HTML"""
+    """Parse [text](url) markdown links and convert to HTML.
+    Supports ~/path syntax for relative links (will be converted to /path)
+    """
     if not text:
         return text
     import re
+
+    def replace_link(match):
+        link_text = match.group(1)
+        link_url = match.group(2)
+        # Convert ~/path to /path for relative links
+        if link_url.startswith('~/'):
+            link_url = link_url[1:]  # Remove ~ to get /path
+        return f'<a href="{link_url}" class="content-link">{link_text}</a>'
+
     # Pattern: [link text](url)
     pattern = r'\[([^\]]+)\]\(([^\)]+)\)'
-    return re.sub(pattern, r'<a href="\2" class="content-link">\1</a>', text)
+    return re.sub(pattern, replace_link, text)
 
 
 @app.route('/guidelines')
@@ -1623,6 +1690,14 @@ def send_message_single():
 
         if resp.status_code == 200 or resp.status_code == 201:
             try:
+                # Log the sent message ID for verification feature
+                try:
+                    message_data = resp.json()
+                    if message_data.get('id'):
+                        log_sent_message(message_data['id'])
+                except:
+                    pass  # Don't fail if we can't log the message
+
                 if is_business and owner_user_id:
                     # For business sends: update owner's and member's business stats
                     from database import increment_business_usage
@@ -1816,6 +1891,15 @@ def send_message():
 
             if resp.status_code == 200 or resp.status_code == 201:
                 results['success'].append(channel_name)
+
+                # Log the sent message ID for verification feature
+                try:
+                    message_data = resp.json()
+                    if message_data.get('id'):
+                        log_sent_message(message_data['id'])
+                except:
+                    pass  # Don't fail if we can't log the message
+
                 # Track successful send in database
                 if is_business and owner_user_id:
                     # For business sends: update owner's and member's business stats

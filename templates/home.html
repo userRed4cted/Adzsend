@@ -44,13 +44,45 @@
         .hero-title.fade-in {
             transition: opacity {{ slideshow_fade_duration }}ms ease !important;
         }
+
+        /* ABC Ginto Nord font for Discord Marketing System */
+        @font-face {
+            font-family: 'ABC Ginto Nord';
+            src: url('{{ url_for("static", filename="fonts/ABCGintoNord-Black-Trial.otf") }}') format('opentype');
+        }
+
+        .hero-tagline .teal-gradient {
+            font-family: 'ABC Ginto Nord', 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121215;
+            color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .page-scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-top: 60px;
+        }
     </style>
 </head>
 <body>
-    <div class="panel">
+    <div class="page-wrapper">
         {% include 'navbar.html' %}
 
-        <div class="panel-container">
+        <div class="page-scroll-container">
             <div class="home-content">
                 <div class="hero-section">
                     <!-- Hero Heading Section -->
@@ -72,13 +104,13 @@
 
                     <!-- Panel Images - 3 images with rotation -->
                     <div class="hero-panel-images hero-fade-in" style="animation-delay: 0.9s;">
-                        <div class="hero-panel-image hero-panel-left" onclick="openLightbox(0)">
+                        <div class="hero-panel-image hero-panel-left" onclick="openPanelLightbox(0)">
                             <img src="{{ url_for('static', filename=hero_panel_images[0]) }}" alt="Panel Preview">
                         </div>
-                        <div class="hero-panel-image hero-panel-center" onclick="openLightbox(1)">
+                        <div class="hero-panel-image hero-panel-center" onclick="openPanelLightbox(1)">
                             <img src="{{ url_for('static', filename=hero_panel_images[1]) }}" alt="Panel Preview">
                         </div>
-                        <div class="hero-panel-image hero-panel-right" onclick="openLightbox(2)">
+                        <div class="hero-panel-image hero-panel-right" onclick="openPanelLightbox(2)">
                             <img src="{{ url_for('static', filename=hero_panel_images[2]) }}" alt="Panel Preview">
                         </div>
                     </div>
@@ -128,26 +160,8 @@
             <!-- Large Wordmark at bottom -->
             <img src="{{ url_for('static', filename='Wordmark.svg') }}" alt="Discord" class="discord-wordmark-bottom">
         </section>
-        </div>
-    </div>
 
-    <!-- Lightbox -->
-    <div class="lightbox" id="lightbox" onclick="closeLightboxOnBackground(event)">
-        <!-- Close button - fixed position at top -->
-        <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
-
-        <!-- Main content wrapper -->
-        <div class="lightbox-content">
-            <button class="lightbox-nav lightbox-prev" onclick="prevImage(event)">&larr;</button>
-            <div class="lightbox-image-wrapper">
-                <img id="lightbox-img" src="" alt="Panel Screenshot">
-            </div>
-            <button class="lightbox-nav lightbox-next" onclick="nextImage(event)">&rarr;</button>
-        </div>
-
-        <!-- Counter - fixed position at bottom center -->
-        <div class="lightbox-counter">
-            <span id="current-index">1</span> / <span id="total-images">3</span>
+            {% include 'partials/footer.html' %}
         </div>
     </div>
 
@@ -170,16 +184,19 @@
         let lastSlideTime = performance.now();
         let rafId;
 
-        // Remove hero-fade-in class after initial animation
+        // Remove hero-fade-in class after initial animation and set up smooth transition
         setTimeout(() => {
             heroTitle.classList.remove('hero-fade-in');
             heroTitle.style.willChange = 'auto';
+            // Set transition dynamically to match configured fade duration (like navbar profile)
+            heroTitle.style.transition = `opacity ${fadeDuration}ms ease`;
         }, 1300); // 0.3s delay + 1s animation
 
         function changeSlide() {
-            // Use CSS opacity transition only (GPU accelerated)
+            // Fade out smoothly
             heroTitle.style.opacity = '0';
 
+            // Wait for fade-out to complete, then change text and fade in
             setTimeout(() => {
                 // Change text during invisible state
                 currentIndex = (currentIndex + 1) % messages.length;
@@ -212,59 +229,16 @@
             }
         }, { passive: true });
 
-        // Lightbox for hero panel images
-        const images = [
+        // Panel images for lightbox - uses unified lightbox system
+        const panelImages = [
             '{{ url_for('static', filename=hero_panel_images[0]) }}',
             '{{ url_for('static', filename=hero_panel_images[1]) }}',
             '{{ url_for('static', filename=hero_panel_images[2]) }}'
         ];
-        let currentImageIndex = 0;
 
-        function openLightbox(index) {
-            currentImageIndex = index;
-            const lightbox = document.getElementById('lightbox');
-            const lightboxImg = document.getElementById('lightbox-img');
-            lightboxImg.src = images[currentImageIndex];
-            document.getElementById('current-index').textContent = currentImageIndex + 1;
-            lightbox.classList.add('active');
-            document.body.style.overflow = 'hidden';
+        function openPanelLightbox(index) {
+            openImageLightbox(panelImages, index);
         }
-
-        function closeLightbox() {
-            const lightbox = document.getElementById('lightbox');
-            lightbox.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-
-        function closeLightboxOnBackground(event) {
-            if (event.target.id === 'lightbox') {
-                closeLightbox();
-            }
-        }
-
-        function prevImage(event) {
-            event.stopPropagation();
-            currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
-            document.getElementById('lightbox-img').src = images[currentImageIndex];
-            document.getElementById('current-index').textContent = currentImageIndex + 1;
-        }
-
-        function nextImage(event) {
-            event.stopPropagation();
-            currentImageIndex = (currentImageIndex + 1) % images.length;
-            document.getElementById('lightbox-img').src = images[currentImageIndex];
-            document.getElementById('current-index').textContent = currentImageIndex + 1;
-        }
-
-        // Keyboard navigation for lightbox
-        document.addEventListener('keydown', function(event) {
-            const lightbox = document.getElementById('lightbox');
-            if (!lightbox.classList.contains('active')) return;
-
-            if (event.key === 'Escape') closeLightbox();
-            if (event.key === 'ArrowLeft') prevImage(event);
-            if (event.key === 'ArrowRight') nextImage(event);
-        });
 
         // Count-up animation for Discord stats - optimized version
         (() => {

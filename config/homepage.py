@@ -44,7 +44,7 @@ HOMEPAGE = {
         #   - 300 = fast fade
         #   - 600 = medium fade (default)
         #   - 1000 = slow fade
-        'slideshow_fade_duration': 600,
+        'slideshow_fade_duration': 1000,
 
         # CTA BUTTON TEXT
         # Element: The main call-to-action button below the slideshow

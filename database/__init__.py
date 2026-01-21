@@ -39,5 +39,7 @@ from .models import (
     update_linked_discord_account_profile, mark_linked_account_invalid, mark_linked_account_valid,
     search_linked_discord_accounts,
     # Per-Discord-account channel storage
-    save_discord_account_channels, get_discord_account_channels
+    save_discord_account_channels, get_discord_account_channels,
+    # Sent message verification
+    log_sent_message, check_sent_message, cleanup_old_sent_messages
 )

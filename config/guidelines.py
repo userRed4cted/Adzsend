@@ -15,7 +15,7 @@ GUIDELINES_SECTIONS = [
                 "content": "Our team reviews reports by users, moderators, or where required by law. When we proactively or reactively discover a violation of these Guidelines, we may take a number of enforcement steps based on the severity of the violation, including issuing warnings, temporarily suspending account access to Adzsend services, or permanently removing violative accounts, and even reporting them to law enforcement. We may also consider relevant off-platform behavior when making assessments for violations of specific Community Guidelines."
             },
             {
-                "content": "If you come across an account, server or content that appears to break these Guidelines, please [report it to us](http://127.0.0.1:5000/support)."
+                "content": "If you come across an account, server or content that appears to break these Guidelines, please [report it to us](~/support)."
             }
         ]
     },
@@ -101,7 +101,7 @@ GUIDELINES_SECTIONS = [
                 "content": "Do not organise, promote or engage in any illegal activity that harms the dignity, safety or well-being of another person. This includes but is not limited to human trafficking and sexual solicitation."
             },
             {
-                "content": "If you see any content or activity that violates these Guidelines, our Terms of Service or any of our other policies, please report it to us. You can learn more about how to report to us [here](http://127.0.0.1:5000/support)."
+                "content": "If you see any content or activity that violates these Guidelines, our Terms of Service or any of our other policies, please report it to us. You can learn more about how to report to us [here](~/support)."
             },
             {
                 "content": "These Guidelines will continue to evolve over time. This means we may take action against an account that violates the spirit of these Guidelines when we encounter a new threat or harm that is not explicitly covered in the current version."

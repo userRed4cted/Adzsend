@@ -1,259 +1,70 @@
-/* ==============================================
-   RESPONSIVE STYLES
-   Borz Marketing Panel
+/* Responsive Styles - Adzsend
+   Full-width layout at all resolutions. Mobile layouts coming later. */
 
-   PRINCIPLE: Elements maintain their true size.
-   Only layout, positioning, and spacing change.
-   Scroll containers stay contained.
-   ============================================== */
+/* Remove tap highlight on touch devices */
+* { -webkit-tap-highlight-color: transparent; }
 
-/* Remove default blue tap highlight on touch devices */
-* {
-    -webkit-tap-highlight-color: transparent;
-}
-
-/* ==============================================
-   MOBILE (max-width: 768px)
-   ============================================== */
-
-@media (max-width: 768px) {
-    /* Navbar - just adjust padding */
-    .navbar {
-        padding: 0.75rem 1rem;
-    }
-
-    .navbar-text {
-        display: none;
-    }
-
-    .user-details {
-        display: none;
-    }
-
-    /* Dropdown - position for mobile */
-    .dropdown-menu {
-        left: 0.5rem;
-        right: 0.5rem;
-        max-height: 70vh;
-        overflow-y: auto;
-    }
-
-    /* Panel Container - reduce padding */
-    .panel-container {
-        padding: 0.75rem;
-    }
-
-    /* Main Layout - stack vertically on mobile */
-    .main-layout {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        height: calc(100vh - 80px);
-        overflow: hidden;
-    }
-
-    /* Panels take equal space */
-    .selection-panel,
-    .action-panel {
-        flex: 1;
-        min-height: 0;
-        overflow: hidden;
-    }
-
-    /* CRITICAL: Scroll containers MUST stay contained */
-    .servers-list {
-        max-height: 150px !important;
-        overflow-y: auto !important;
-        flex: none !important;
-    }
-
-    .channels-list {
-        max-height: 150px !important;
-        overflow-y: auto !important;
-        flex: none !important;
-    }
-
-    .selected-channels-tags {
-        max-height: 100px !important;
-        overflow-y: auto !important;
-        flex: none !important;
-    }
-
-    /* Message footer - keep row layout */
-    .message-footer {
-        flex-direction: row;
-        gap: 0.5rem;
-    }
-
-    /* Home page - hero title reserve space */
-    .hero-title {
-        min-height: 5em;
-    }
-
-    /* Gallery - 2 columns */
-    .gallery-grid {
-        gap: 0.75rem;
-    }
-
-    .gallery-item {
-        width: calc(50% - 0.5rem);
-    }
-
-    /* Discord benefits - single column */
-    .discord-benefits-grid {
-        grid-template-columns: 1fr;
-    }
-
-    /* Purchase page - single column */
-    .plans-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
-
-    /* Settings - single column */
-    .settings-panels {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-
-    .settings-container {
-        padding: 1rem;
-        width: 100%;
-        max-width: 100%;
-    }
-
-    .settings-panel {
-        padding: 1.5rem;
-    }
-}
-
-/* ==============================================
-   SMALL MOBILE (max-width: 480px)
-   ============================================== */
-
-@media (max-width: 480px) {
-    /* More compact scroll containers */
-    .servers-list {
-        max-height: 120px !important;
-    }
-
-    .channels-list {
-        max-height: 120px !important;
-    }
-
-    .selected-channels-tags {
-        max-height: 80px !important;
-    }
-
-    .hero-title {
-        min-height: 6em;
-    }
-
-    /* Settings - even more compact */
-    .settings-container {
-        padding: 0.75rem;
-    }
-
-    .settings-panel {
-        padding: 1rem;
-    }
-
-    .settings-panel-header {
-        font-size: 1.25rem;
-    }
-}
-
-/* ==============================================
-   LANDSCAPE MOBILE
-   ============================================== */
-
-@media (max-height: 500px) and (orientation: landscape) {
-    .main-layout {
-        flex-direction: row;
-        height: calc(100vh - 60px);
-    }
-
-    .selection-panel,
-    .action-panel {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .servers-list,
-    .channels-list {
-        max-height: calc(50vh - 60px) !important;
-    }
-
-    .selected-channels-tags {
-        max-height: calc(30vh) !important;
-    }
-
-    .navbar {
-        padding: 0.5rem 1rem;
-    }
-
-    .hero-section {
-        min-height: 50vh;
-    }
-
-    .scroll-indicator {
-        display: none;
-    }
-}
-
-/* ==============================================
-   TABLET (769px - 1024px)
-   ============================================== */
-
-@media (min-width: 769px) and (max-width: 1024px) {
-    .plans-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .settings-panels {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .gallery-item {
-        width: calc(33.333% - 1rem);
-    }
-}
-
-/* ==============================================
-   TOUCH DEVICE OPTIMIZATIONS
-   ============================================== */
-
+/* Touch device optimizations */
 @media (hover: none) and (pointer: coarse) {
-    /* Disable hover transforms on touch */
     .server-item:hover,
     .channel-item:hover,
     .plan-card:hover,
-    .dropdown-item:hover {
-        transform: none;
-    }
+    .dropdown-item:hover,
+    .faq-item:hover,
+    .nav-link:hover::after,
+    .login-btn-nav:hover,
+    .logout-btn:hover,
+    .submit-btn:hover,
+    .return-panel-btn:hover,
+    .tag-remove:hover { transform: none; }
 
-    /* Ensure touch targets are at least 44px */
     .dropdown-item,
     .channel-item,
-    .server-item {
-        min-height: 44px;
-    }
+    .server-item,
+    .faq-question { min-height: 44px; }
 
     .auth-btn,
     .submit-btn,
     .send-button,
-    .purchase-btn {
-        min-height: 44px;
-    }
+    .purchase-btn,
+    .discord-btn,
+    .view-pricing-btn,
+    .adjust-plan-btn,
+    .mode-btn { min-height: 44px; }
+
+    .nav-link { padding: 0.75rem 0.5rem; }
 }
 
-/* ==============================================
-   REDUCED MOTION
-   ============================================== */
-
+/* Reduced motion accessibility */
 @media (prefers-reduced-motion: reduce) {
-    * {
+    *, *::before, *::after {
         animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
+    .wumpus-leaf { animation: none !important; }
+    .hero-fade-in { animation: none !important; opacity: 1 !important; }
+    .scroll-arrow { animation: none !important; }
+}
+
+/* Firefox scrollbar fix */
+@-moz-document url-prefix() {
+    .panel-container,
+    .servers-list,
+    .channels-list,
+    .selected-channels-tags,
+    .page-scroll-container { scrollbar-width: thin; }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    img { image-rendering: -webkit-optimize-contrast; }
+}
+
+/* Print styles */
+@media print {
+    .navbar, .dropdown-menu, .send-button, .scroll-indicator, .navbar-settings-icon { display: none !important; }
+    html { zoom: 1 !important; transform: none !important; }
+    body { background: white !important; color: black !important; }
 }

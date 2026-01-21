@@ -15,6 +15,9 @@
     <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_modals.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
+    <!-- Centralized Scale Manager - handles proportional scaling across all resolutions -->
+    <script src="{{ url_for('static', filename='scale_manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='image_loader.js') }}"></script>
     <style>
         /* Custom radio button styling with #15d8bc accent */
         input[type="radio"] {
@@ -485,25 +488,6 @@
             color: #81828A;
         }
 
-        /* Scrollbar styling */
-        .admin-left-panel::-webkit-scrollbar,
-        .admin-right-panel::-webkit-scrollbar,
-        .users-list::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .admin-left-panel::-webkit-scrollbar-track,
-        .admin-right-panel::-webkit-scrollbar-track,
-        .users-list::-webkit-scrollbar-track {
-            background: #1e1e1e;
-        }
-
-        .admin-left-panel::-webkit-scrollbar-thumb,
-        .admin-right-panel::-webkit-scrollbar-thumb,
-        .users-list::-webkit-scrollbar-thumb {
-            background: #555;
-            border-radius: 4px;
-        }
     </style>
 </head>
 <body>

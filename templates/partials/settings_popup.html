@@ -762,12 +762,15 @@
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        padding: 0.5rem;
+        padding: 0.75rem;
         border-radius: 6px;
+        background: #121215;
+        border: 1px solid #222225;
+        margin-bottom: 0.5rem;
     }
 
-    .team-invitation-item:hover {
-        background: rgba(255, 255, 255, 0.02);
+    .team-invitation-item:last-child {
+        margin-bottom: 0;
     }
 
     .team-invitation-avatar {
@@ -798,10 +801,10 @@
 
     .team-invitation-accept,
     .team-invitation-deny {
-        width: 24px;
-        height: 24px;
+        width: 32px;
+        height: 32px;
         background: transparent;
-        border: none;
+        border: 1px solid transparent;
         border-radius: 4px;
         cursor: pointer;
         display: flex;
@@ -811,25 +814,28 @@
     }
 
     .team-invitation-accept img {
-        width: 14px;
-        height: 14px;
-        filter: invert(76%) sepia(52%) saturate(513%) hue-rotate(118deg) brightness(92%) contrast(91%);
+        width: 24px;
+        height: 24px;
+        filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(195deg) brightness(93%) contrast(89%);
+        transition: filter 0.2s ease;
     }
 
     .team-invitation-deny img {
-        width: 12px;
-        height: 12px;
-        filter: invert(52%) sepia(5%) saturate(368%) hue-rotate(202deg) brightness(92%) contrast(87%);
+        width: 24px;
+        height: 24px;
+        filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(195deg) brightness(93%) contrast(89%);
+        transition: filter 0.2s ease;
     }
 
-    .team-invitation-accept:hover {
-        background: rgba(21, 216, 188, 0.2);
-        transform: scale(1.1);
-    }
-
+    .team-invitation-accept:hover,
     .team-invitation-deny:hover {
-        background: rgba(129, 130, 138, 0.2);
-        transform: scale(1.1);
+        background: #1A1A1E;
+        border-color: #222225;
+    }
+
+    .team-invitation-accept:hover img,
+    .team-invitation-deny:hover img {
+        filter: brightness(0) saturate(100%) invert(100%);
     }
 
     .team-current-box {

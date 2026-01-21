@@ -1,0 +1,100 @@
+<!-- Unified Lightbox (included once per page) -->
+{% include 'partials/lightbox.html' %}
+
+<!-- Centralized Footer -->
+<footer class="site-footer">
+    <div class="footer-content">
+        <!-- Logo on the left (same as navbar logo, but #121215 color) -->
+        <div class="footer-logo">
+            <a href="{{ url_for('home') }}">
+                <img src="{{ url_for('static', filename='AdzsendDiscordTextLogoStyle.png') }}" alt="Adzsend">
+            </a>
+        </div>
+
+        <!-- Sections container (right to left) -->
+        <div class="footer-sections">
+            {% for section in footer_config.sections %}
+            <div class="footer-section">
+                <div class="footer-section-title">{{ section.title }}</div>
+                <div class="footer-section-links">
+                    {% for link in section.links %}
+                    <a href="{{ link.url | process_footer_link }}" class="footer-link" {% if link.lightbox %}onclick="openVideoLightbox('{{ link.lightbox }}'); return false;"{% endif %}>{{ link.text }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</footer>
+
+<style>
+    .site-footer {
+        background: {{ footer_config.background }};
+        padding: 2rem 3rem;
+        margin-top: auto;
+    }
+
+    .footer-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+    }
+
+    .footer-logo {
+        flex-shrink: 0;
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .footer-logo img {
+        height: 84px;
+        object-fit: contain;
+        /* CSS filter to make the logo #121215 color */
+        filter: brightness(0) saturate(100%) invert(6%) sepia(5%) saturate(1000%) hue-rotate(201deg) brightness(95%) contrast(92%);
+        /* Negative margin to align top edge of logo with section titles */
+        margin-top: -12px;
+    }
+
+    .footer-logo a {
+        display: block;
+    }
+
+    .footer-sections {
+        display: flex;
+        gap: 4rem;
+        flex-direction: row-reverse;
+    }
+
+    .footer-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .footer-section-title {
+        color: {{ footer_config.section_title_color }};
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .footer-section-links {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .footer-link {
+        color: {{ footer_config.link_color }};
+        font-size: 0.875rem;
+        text-decoration: none;
+        transition: text-decoration 0.2s;
+    }
+
+    .footer-link:hover {
+        text-decoration: underline;
+    }
+</style>

@@ -12,25 +12,59 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121215;
+            color: #ffffff;
+            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .page-scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-top: 60px;
+        }
+    </style>
 </head>
 <body>
-    <div class="panel">
+    <div class="page-wrapper">
         {% include 'navbar.html' %}
 
-        <div class="panel-container">
+        <div class="page-scroll-container">
             <div class="support-content">
                 <!-- Hero Section -->
                 <div class="support-hero">
                     <h1 class="support-hero-title hero-fade-in">{{ support_hero_title }}</h1>
                 </div>
 
+                <!-- Message Checker Section -->
+                <div class="message-checker-section hero-fade-in" style="animation-delay: 0.3s;">
+                    <input type="text"
+                           id="message-link-input"
+                           class="search-input message-checker-input"
+                           placeholder="Discord message link"
+                           autocomplete="off">
+                    <p id="message-checker-result" class="message-checker-label">Check if a message was sent with Adzsend (no message over 5 days old)</p>
+                </div>
+
                 <!-- FAQ Section -->
                 <div class="support-faq-section">
-                    <h2 class="support-faq-title hero-fade-in" style="animation-delay: 0.3s;">{{ support_faq_title }}</h2>
+                    <h2 class="support-faq-title hero-fade-in" style="animation-delay: 0.6s;">{{ support_faq_title }}</h2>
 
                     <div class="faq-list">
                         {% for faq in faq_items %}
-                        <div class="faq-item hero-fade-in" style="animation-delay: {{ 0.6 + loop.index0 * 0.3 }}s;">
+                        <div class="faq-item hero-fade-in" style="animation-delay: {{ 0.9 + loop.index0 * 0.3 }}s;">
                             <div class="faq-question" onclick="toggleFaq(this)">
                                 <span class="faq-question-text">{{ faq.question }}</span>
                                 <img src="{{ url_for('static', filename='openorclose.png') }}" alt="Toggle" class="faq-toggle-icon">
@@ -44,7 +78,7 @@
                     </div>
 
                     <!-- Contact Support -->
-                    <div class="support-contact hero-fade-in" style="animation-delay: {{ 0.6 + faq_items|length * 0.3 }}s;">
+                    <div class="support-contact hero-fade-in" style="animation-delay: {{ 0.9 + faq_items|length * 0.3 }}s;">
                         <p class="support-contact-text">{{ support_contact_text }}</p>
                         <a href="{{ discord_server_url }}" target="_blank" class="discord-btn">
                             <img src="{{ url_for('static', filename='discordlogo.png') }}" alt="Discord" class="discord-btn-icon">
@@ -52,7 +86,10 @@
                         </a>
                     </div>
                 </div>
+
             </div>
+
+            {% include 'partials/footer.html' %}
         </div>
     </div>
 
@@ -78,6 +115,88 @@
                 answer.style.maxHeight = '0';
             }
         }
+
+        // Message checker functionality
+        (function() {
+            const input = document.getElementById('message-link-input');
+            const result = document.getElementById('message-checker-result');
+            const defaultText = 'Check if a message was sent with Adzsend (no message over 5 days old)';
+
+            // Client-side validation pattern
+            const discordLinkPattern = /^https?:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/channels\/\d+\/\d+\/\d+$/;
+
+            let debounceTimer = null;
+            let lastCheckedLink = '';
+
+            async function checkMessage() {
+                const link = input.value.trim();
+
+                // Don't re-check the same link
+                if (link === lastCheckedLink) return;
+                lastCheckedLink = link;
+
+                if (!link) {
+                    result.textContent = defaultText;
+                    result.className = 'message-checker-label';
+                    return;
+                }
+
+                // Client-side validation first
+                if (!discordLinkPattern.test(link)) {
+                    result.textContent = 'Invalid Discord message link';
+                    result.className = 'message-checker-label';
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/check-message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message_link: link })
+                    });
+
+                    const data = await response.json();
+
+                    // Make sure input hasn't changed during fetch
+                    if (input.value.trim() !== link) return;
+
+                    if (data.status === 'found') {
+                        result.textContent = 'Message sent using Adzsend';
+                        result.className = 'message-checker-label message-checker-found';
+                    } else if (data.status === 'invalid') {
+                        result.textContent = 'Invalid Discord message link';
+                        result.className = 'message-checker-label';
+                    } else {
+                        result.textContent = "We can't find this message, this either means it was not sent with Adzsend or is over 5 days old";
+                        result.className = 'message-checker-label';
+                    }
+                } catch (error) {
+                    result.textContent = 'Error checking message';
+                    result.className = 'message-checker-label';
+                }
+            }
+
+            // Auto-check on input with debounce
+            input.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                const link = input.value.trim();
+
+                if (!link) {
+                    result.textContent = defaultText;
+                    result.className = 'message-checker-label';
+                    lastCheckedLink = '';
+                    return;
+                }
+
+                // Only debounce if it looks like a valid link pattern
+                if (discordLinkPattern.test(link)) {
+                    debounceTimer = setTimeout(checkMessage, 300);
+                } else {
+                    result.textContent = 'Invalid Discord message link';
+                    result.className = 'message-checker-label';
+                }
+            });
+        })();
     </script>
 
     {% include 'partials/settings_popup.html' %}

@@ -1,0 +1,792 @@
+<!-- Unified Lightbox System - Handles both images and videos -->
+<div class="unified-lightbox" id="unified-lightbox">
+    <div class="unified-lightbox-overlay" onclick="closeLightbox()"></div>
+
+    <!-- Main layout: nav-left | media | nav-right -->
+    <div class="unified-lightbox-layout">
+        <!-- Left navigation (prev) -->
+        <div class="unified-lightbox-nav-area unified-lightbox-nav-left">
+            <button class="unified-lightbox-nav-btn" id="lightbox-prev-btn" onclick="lightboxPrev(event)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Media container -->
+        <div class="unified-lightbox-media-container">
+            <!-- Close button -->
+            <button class="unified-lightbox-close-btn" onclick="closeLightbox()">&times;</button>
+
+            <!-- Image display -->
+            <div class="unified-lightbox-image-wrapper" id="lightbox-image-wrapper" style="display: none;">
+                <img id="lightbox-image" src="" alt="Lightbox Image">
+            </div>
+
+            <!-- Video display -->
+            <div class="unified-lightbox-video-wrapper" id="lightbox-video-wrapper" style="display: none;">
+                <video id="lightbox-video" playsinline>
+                    <source src="" type="video/mp4">
+                </video>
+
+                <!-- Video controls -->
+                <div class="unified-lightbox-video-controls" id="lightbox-video-controls">
+                    <button class="unified-lightbox-play-btn" id="lightbox-play-btn" onclick="toggleLightboxVideo(event)">
+                        <img src="{{ url_for('static', filename='play.png') }}" alt="Play" id="lightbox-play-icon">
+                    </button>
+
+                    <!-- Progress bar with preview -->
+                    <div class="unified-lightbox-progress-container" id="lightbox-progress-container">
+                        <div class="unified-lightbox-progress-track">
+                            <div class="unified-lightbox-progress-bar" id="lightbox-progress-bar"></div>
+                            <div class="unified-lightbox-progress-handle" id="lightbox-progress-handle"></div>
+                        </div>
+
+                        <!-- Video preview thumbnail -->
+                        <div class="unified-lightbox-preview" id="lightbox-preview" style="display: none;">
+                            <canvas id="lightbox-preview-canvas"></canvas>
+                            <span class="unified-lightbox-preview-time" id="lightbox-preview-time">0:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Counter (for image galleries) -->
+            <div class="unified-lightbox-counter" id="lightbox-counter" style="display: none;">
+                <span id="lightbox-current-index">1</span> / <span id="lightbox-total-count">1</span>
+            </div>
+        </div>
+
+        <!-- Right navigation (next) -->
+        <div class="unified-lightbox-nav-area unified-lightbox-nav-right">
+            <button class="unified-lightbox-nav-btn" id="lightbox-next-btn" onclick="lightboxNext(event)">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .unified-lightbox {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10000;
+    }
+
+    .unified-lightbox.active {
+        display: flex;
+    }
+
+    .unified-lightbox-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+    }
+
+    .unified-lightbox-layout {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    /* Navigation areas - floating beside media */
+    .unified-lightbox-nav-area {
+        flex-shrink: 0;
+        width: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+
+    /* Nav buttons - default state with #121215 background and #222225 border */
+    .unified-lightbox-nav-btn {
+        background: #121215;
+        border: 1px solid #222225;
+        color: #81828A;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .unified-lightbox-nav-btn:hover {
+        background: #1A1A1E;
+        border-color: #333;
+        color: white;
+    }
+
+    .unified-lightbox-nav-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .unified-lightbox-nav-btn:disabled:hover {
+        background: #121215;
+        border-color: #222225;
+        color: #81828A;
+    }
+
+    .unified-lightbox-nav-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* Media container */
+    .unified-lightbox-media-container {
+        position: relative;
+        flex: 1;
+        max-width: calc(100% - 140px);
+        max-height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Close button - positioned to align with right arrow horizontally */
+    .unified-lightbox-close-btn {
+        position: absolute;
+        top: -50px;
+        right: -70px; /* Align with right nav area */
+        background: #121215;
+        border: 1px solid #222225;
+        color: #81828A;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0.25rem;
+        line-height: 1;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+
+    .unified-lightbox-close-btn:hover {
+        background: #1A1A1E;
+        border-color: #333;
+        color: white;
+    }
+
+    /* Image wrapper */
+    .unified-lightbox-image-wrapper {
+        max-width: 100%;
+        max-height: calc(100vh - 120px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .unified-lightbox-image-wrapper img {
+        max-width: 100%;
+        max-height: calc(100vh - 120px);
+        border-radius: 8px;
+        object-fit: contain;
+    }
+
+    /* Video wrapper */
+    .unified-lightbox-video-wrapper {
+        position: relative;
+        background: #000;
+        border-radius: 8px;
+        overflow: hidden;
+        max-width: 100%;
+        max-height: calc(100vh - 120px);
+    }
+
+    .unified-lightbox-video-wrapper video {
+        display: block;
+        max-width: 80vw;
+        max-height: calc(100vh - 180px);
+    }
+
+    /* Video controls */
+    .unified-lightbox-video-controls {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 20px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        opacity: 1;
+        transition: opacity 0.3s ease;
+    }
+
+    .unified-lightbox-video-controls.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .unified-lightbox-play-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        background: #121215;
+        border: 1px solid #222225;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+    }
+
+    .unified-lightbox-play-btn:hover {
+        background: #1A1A1E;
+        border-color: #333;
+    }
+
+    .unified-lightbox-play-btn img {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+        filter: brightness(0) saturate(100%) invert(56%) sepia(6%) saturate(340%) hue-rotate(194deg) brightness(93%) contrast(87%);
+        transition: filter 0.2s ease;
+    }
+
+    .unified-lightbox-play-btn:hover img {
+        filter: brightness(0) saturate(100%) invert(100%);
+    }
+
+    /* Progress bar - YouTube style */
+    .unified-lightbox-progress-container {
+        flex: 1;
+        height: 20px;
+        position: relative;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+    }
+
+    .unified-lightbox-progress-track {
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+        position: relative;
+        transition: height 0.1s ease;
+    }
+
+    .unified-lightbox-progress-container:hover .unified-lightbox-progress-track {
+        height: 6px;
+    }
+
+    .unified-lightbox-progress-bar {
+        height: 100%;
+        background: #fff;
+        border-radius: 2px;
+        width: 0%;
+        pointer-events: none;
+    }
+
+    .unified-lightbox-progress-handle {
+        position: absolute;
+        top: 50%;
+        left: 0%;
+        transform: translate(-50%, -50%);
+        width: 14px;
+        height: 14px;
+        background: #fff;
+        border-radius: 50%;
+        opacity: 0;
+        transition: opacity 0.1s ease;
+        pointer-events: none;
+    }
+
+    .unified-lightbox-progress-container:hover .unified-lightbox-progress-handle,
+    .unified-lightbox-progress-container.dragging .unified-lightbox-progress-handle {
+        opacity: 1;
+    }
+
+    /* Video preview thumbnail */
+    .unified-lightbox-preview {
+        position: absolute;
+        bottom: 30px;
+        transform: translateX(-50%);
+        background: #000;
+        border: 2px solid #222225;
+        border-radius: 4px;
+        padding: 4px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        pointer-events: none;
+        z-index: 100;
+    }
+
+    .unified-lightbox-preview canvas {
+        width: 160px;
+        height: 90px;
+        border-radius: 2px;
+        background: #000;
+    }
+
+    .unified-lightbox-preview-time {
+        color: #fff;
+        font-size: 12px;
+        margin-top: 4px;
+        font-family: 'gg sans', sans-serif;
+    }
+
+    /* Counter */
+    .unified-lightbox-counter {
+        position: absolute;
+        bottom: -40px;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+        color: #ffffff;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .unified-lightbox-nav-area {
+            width: 40px;
+        }
+
+        .unified-lightbox-nav-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0.25rem;
+        }
+
+        .unified-lightbox-nav-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .unified-lightbox-media-container {
+            max-width: calc(100% - 100px);
+        }
+
+        .unified-lightbox-video-wrapper video {
+            max-width: 90vw;
+        }
+
+        .unified-lightbox-preview canvas {
+            width: 120px;
+            height: 68px;
+        }
+    }
+</style>
+
+<script>
+(function() {
+    // Lightbox state
+    let lightboxState = {
+        type: null, // 'image' or 'video'
+        images: [],
+        currentIndex: 0,
+        videoFile: null,
+        isVideoPlaying: false,
+        hideControlsTimeout: null,
+        isDragging: false
+    };
+
+    // Open lightbox for images (gallery)
+    window.openImageLightbox = function(images, startIndex = 0) {
+        lightboxState.type = 'image';
+        lightboxState.images = Array.isArray(images) ? images : [images];
+        lightboxState.currentIndex = startIndex;
+
+        const lightbox = document.getElementById('unified-lightbox');
+        const imageWrapper = document.getElementById('lightbox-image-wrapper');
+        const videoWrapper = document.getElementById('lightbox-video-wrapper');
+        const counter = document.getElementById('lightbox-counter');
+        const prevBtn = document.getElementById('lightbox-prev-btn');
+        const nextBtn = document.getElementById('lightbox-next-btn');
+
+        // Show image, hide video
+        imageWrapper.style.display = 'flex';
+        videoWrapper.style.display = 'none';
+
+        // Show/hide navigation based on image count
+        const showNav = lightboxState.images.length > 1;
+        prevBtn.style.display = showNav ? 'flex' : 'none';
+        nextBtn.style.display = showNav ? 'flex' : 'none';
+        counter.style.display = showNav ? 'block' : 'none';
+
+        // Update counter
+        document.getElementById('lightbox-total-count').textContent = lightboxState.images.length;
+
+        // Load first image
+        updateLightboxImage();
+
+        // Show lightbox
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    };
+
+    // Open lightbox for video
+    window.openVideoLightbox = function(videoFile) {
+        lightboxState.type = 'video';
+        lightboxState.videoFile = videoFile;
+        lightboxState.isVideoPlaying = false;
+
+        const lightbox = document.getElementById('unified-lightbox');
+        const imageWrapper = document.getElementById('lightbox-image-wrapper');
+        const videoWrapper = document.getElementById('lightbox-video-wrapper');
+        const counter = document.getElementById('lightbox-counter');
+        const prevBtn = document.getElementById('lightbox-prev-btn');
+        const nextBtn = document.getElementById('lightbox-next-btn');
+        const video = document.getElementById('lightbox-video');
+        const source = video.querySelector('source');
+
+        // Show video, hide image
+        imageWrapper.style.display = 'none';
+        videoWrapper.style.display = 'block';
+        counter.style.display = 'none';
+
+        // Hide navigation for video
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+
+        // Load video
+        source.src = '{{ url_for("static", filename="") }}' + videoFile;
+        video.load();
+
+        // Reset controls
+        updateVideoPlayIcon(false);
+        document.getElementById('lightbox-progress-bar').style.width = '0%';
+        document.getElementById('lightbox-progress-handle').style.left = '0%';
+        showVideoControls();
+
+        // Show lightbox
+        lightbox.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    };
+
+    // Close lightbox
+    window.closeLightbox = function() {
+        const lightbox = document.getElementById('unified-lightbox');
+        const video = document.getElementById('lightbox-video');
+
+        // Pause video if playing
+        if (lightboxState.type === 'video' && video) {
+            video.pause();
+            lightboxState.isVideoPlaying = false;
+        }
+
+        lightbox.classList.remove('active');
+        document.body.style.overflow = '';
+
+        clearTimeout(lightboxState.hideControlsTimeout);
+    };
+
+    // Navigate to previous image
+    window.lightboxPrev = function(event) {
+        if (event) event.stopPropagation();
+        if (lightboxState.type !== 'image' || lightboxState.images.length <= 1) return;
+
+        lightboxState.currentIndex = (lightboxState.currentIndex - 1 + lightboxState.images.length) % lightboxState.images.length;
+        updateLightboxImage();
+    };
+
+    // Navigate to next image
+    window.lightboxNext = function(event) {
+        if (event) event.stopPropagation();
+        if (lightboxState.type !== 'image' || lightboxState.images.length <= 1) return;
+
+        lightboxState.currentIndex = (lightboxState.currentIndex + 1) % lightboxState.images.length;
+        updateLightboxImage();
+    };
+
+    // Update displayed image
+    function updateLightboxImage() {
+        const img = document.getElementById('lightbox-image');
+        img.src = lightboxState.images[lightboxState.currentIndex];
+        document.getElementById('lightbox-current-index').textContent = lightboxState.currentIndex + 1;
+    }
+
+    // Toggle video playback
+    window.toggleLightboxVideo = function(event) {
+        if (event) event.stopPropagation();
+        const video = document.getElementById('lightbox-video');
+
+        if (video.paused) {
+            video.play();
+            lightboxState.isVideoPlaying = true;
+            updateVideoPlayIcon(true);
+            startHideControlsTimer();
+        } else {
+            video.pause();
+            lightboxState.isVideoPlaying = false;
+            updateVideoPlayIcon(false);
+            showVideoControls();
+        }
+    };
+
+    // Update play/pause icon
+    function updateVideoPlayIcon(playing) {
+        const playIcon = document.getElementById('lightbox-play-icon');
+        if (playing) {
+            playIcon.src = '{{ url_for("static", filename="pause.png") }}';
+            playIcon.alt = 'Pause';
+        } else {
+            playIcon.src = '{{ url_for("static", filename="play.png") }}';
+            playIcon.alt = 'Play';
+        }
+    }
+
+    // Show video controls
+    function showVideoControls() {
+        const controls = document.getElementById('lightbox-video-controls');
+        if (controls) {
+            controls.classList.remove('hidden');
+        }
+        clearTimeout(lightboxState.hideControlsTimeout);
+    }
+
+    // Hide video controls
+    function hideVideoControls() {
+        if (lightboxState.isVideoPlaying && !lightboxState.isDragging) {
+            const controls = document.getElementById('lightbox-video-controls');
+            if (controls) {
+                controls.classList.add('hidden');
+            }
+        }
+    }
+
+    // Start timer to hide controls
+    function startHideControlsTimer() {
+        clearTimeout(lightboxState.hideControlsTimeout);
+        lightboxState.hideControlsTimeout = setTimeout(hideVideoControls, 1000);
+    }
+
+    // Format time for display
+    function formatTime(seconds) {
+        if (isNaN(seconds)) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Initialize on DOM ready
+    document.addEventListener('DOMContentLoaded', function() {
+        const video = document.getElementById('lightbox-video');
+        const videoWrapper = document.getElementById('lightbox-video-wrapper');
+        const progressContainer = document.getElementById('lightbox-progress-container');
+        const progressBar = document.getElementById('lightbox-progress-bar');
+        const progressHandle = document.getElementById('lightbox-progress-handle');
+        const preview = document.getElementById('lightbox-preview');
+        const previewCanvas = document.getElementById('lightbox-preview-canvas');
+        const previewTime = document.getElementById('lightbox-preview-time');
+        const previewCtx = previewCanvas ? previewCanvas.getContext('2d') : null;
+
+        if (video) {
+            // Update progress bar during playback
+            video.addEventListener('timeupdate', function() {
+                if (!lightboxState.isDragging && video.duration) {
+                    const progress = (video.currentTime / video.duration) * 100;
+                    progressBar.style.width = progress + '%';
+                    progressHandle.style.left = progress + '%';
+                }
+            });
+
+            // Video ended
+            video.addEventListener('ended', function() {
+                lightboxState.isVideoPlaying = false;
+                updateVideoPlayIcon(false);
+                showVideoControls();
+            });
+
+            // Click on video to toggle playback
+            video.addEventListener('click', function() {
+                toggleLightboxVideo();
+            });
+        }
+
+        if (videoWrapper) {
+            // Mouse movement shows controls
+            videoWrapper.addEventListener('mousemove', function() {
+                showVideoControls();
+                if (lightboxState.isVideoPlaying) {
+                    startHideControlsTimer();
+                }
+            });
+
+            // Mouse leave hides controls
+            videoWrapper.addEventListener('mouseleave', function() {
+                if (lightboxState.isVideoPlaying && !lightboxState.isDragging) {
+                    startHideControlsTimer();
+                }
+            });
+        }
+
+        if (progressContainer && video) {
+            // Calculate position and time from mouse event
+            function getPositionFromEvent(e) {
+                const rect = progressContainer.getBoundingClientRect();
+                const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+                const percentage = x / rect.width;
+                const time = percentage * (video.duration || 0);
+                return { x, percentage, time, rect };
+            }
+
+            // Update preview position and thumbnail
+            function updatePreview(e) {
+                if (!video.duration) return;
+
+                const { x, percentage, time, rect } = getPositionFromEvent(e);
+
+                // Position preview (clamped to stay within container)
+                const previewWidth = preview.offsetWidth || 168;
+                const minX = previewWidth / 2;
+                const maxX = rect.width - previewWidth / 2;
+                const clampedX = Math.max(minX, Math.min(x, maxX));
+                preview.style.left = clampedX + 'px';
+                preview.style.display = 'flex';
+
+                // Update time display
+                previewTime.textContent = formatTime(time);
+
+                // Draw video frame to canvas
+                if (previewCtx && previewCanvas) {
+                    // Set canvas dimensions
+                    previewCanvas.width = 160;
+                    previewCanvas.height = 90;
+
+                    // Create a temporary video element to seek
+                    // For smoother preview, we draw from the current video
+                    // Note: This shows current frame, not the seek position
+                    // Full YouTube-style preview requires more complex implementation
+                    try {
+                        const aspectRatio = video.videoWidth / video.videoHeight;
+                        let drawWidth = 160;
+                        let drawHeight = 160 / aspectRatio;
+
+                        if (drawHeight > 90) {
+                            drawHeight = 90;
+                            drawWidth = 90 * aspectRatio;
+                        }
+
+                        const offsetX = (160 - drawWidth) / 2;
+                        const offsetY = (90 - drawHeight) / 2;
+
+                        previewCtx.fillStyle = '#000';
+                        previewCtx.fillRect(0, 0, 160, 90);
+                        previewCtx.drawImage(video, offsetX, offsetY, drawWidth, drawHeight);
+                    } catch (err) {
+                        // Canvas drawing may fail due to CORS
+                    }
+                }
+            }
+
+            // Mouse enter - show preview
+            progressContainer.addEventListener('mouseenter', function(e) {
+                if (video.duration) {
+                    updatePreview(e);
+                }
+            });
+
+            // Mouse move - update preview
+            progressContainer.addEventListener('mousemove', function(e) {
+                if (video.duration) {
+                    updatePreview(e);
+                }
+            });
+
+            // Mouse leave - hide preview
+            progressContainer.addEventListener('mouseleave', function() {
+                if (!lightboxState.isDragging) {
+                    preview.style.display = 'none';
+                }
+            });
+
+            // Click to seek
+            progressContainer.addEventListener('click', function(e) {
+                if (lightboxState.isDragging) return;
+                const { time } = getPositionFromEvent(e);
+                video.currentTime = time;
+            });
+
+            // Drag to seek
+            progressContainer.addEventListener('mousedown', function(e) {
+                if (!video.duration) return;
+
+                lightboxState.isDragging = true;
+                progressContainer.classList.add('dragging');
+
+                const { percentage, time } = getPositionFromEvent(e);
+                progressBar.style.width = (percentage * 100) + '%';
+                progressHandle.style.left = (percentage * 100) + '%';
+
+                function onMouseMove(e) {
+                    const { percentage, time } = getPositionFromEvent(e);
+                    progressBar.style.width = (percentage * 100) + '%';
+                    progressHandle.style.left = (percentage * 100) + '%';
+                    updatePreview(e);
+                }
+
+                function onMouseUp(e) {
+                    lightboxState.isDragging = false;
+                    progressContainer.classList.remove('dragging');
+
+                    const { time } = getPositionFromEvent(e);
+                    video.currentTime = time;
+
+                    preview.style.display = 'none';
+
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', function(event) {
+            const lightbox = document.getElementById('unified-lightbox');
+            if (!lightbox || !lightbox.classList.contains('active')) return;
+
+            if (event.key === 'Escape') {
+                closeLightbox();
+            } else if (lightboxState.type === 'image') {
+                if (event.key === 'ArrowLeft') lightboxPrev();
+                if (event.key === 'ArrowRight') lightboxNext();
+            } else if (lightboxState.type === 'video') {
+                if (event.key === ' ' || event.key === 'k') {
+                    event.preventDefault();
+                    toggleLightboxVideo();
+                }
+            }
+        });
+    });
+
+    // Legacy support - map old function names
+    window.openLightbox = function(index) {
+        // This will be overridden by page-specific implementations
+        console.warn('openLightbox called without image array - use openImageLightbox instead');
+    };
+})();
+</script>

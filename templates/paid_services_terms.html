@@ -13,12 +13,27 @@
             background-color: #121215;
             color: #ffffff;
             font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .page-scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-top: 60px;
         }
 
         .terms-container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 80px 40px 40px 40px;
+            padding: 20px 40px 40px 40px;
         }
 
         .terms-header {
@@ -83,28 +98,34 @@
     </style>
 </head>
 <body>
-    {% include 'navbar.html' %}
-    {% include 'partials/settings_popup.html' %}
+    <div class="page-wrapper">
+        {% include 'navbar.html' %}
 
-    <div class="terms-container">
-        <div class="terms-header">
-            <h1 class="terms-main-title">{{ page_title }}</h1>
-            {% if effective_date %}
-            <p class="terms-subtitle">Effective: {{ effective_date }}</p>
-            {% endif %}
-            <p class="terms-subtitle">Last Updated: {{ last_updated }}</p>
-        </div>
+        <div class="page-scroll-container">
+            <div class="terms-container">
+                <div class="terms-header">
+                    <h1 class="terms-main-title">{{ page_title }}</h1>
+                    {% if effective_date %}
+                    <p class="terms-subtitle">Effective: {{ effective_date }}</p>
+                    {% endif %}
+                    <p class="terms-subtitle">Last Updated: {{ last_updated }}</p>
+                </div>
 
-        {% for section in sections %}
-        <div class="terms-section">
-            <h2 class="section-title">{{ section.title }}</h2>
-            {% for paragraph in section.paragraphs %}
-            <p class="section-paragraph">{{ parse_links(paragraph) | safe }}</p>
-            {% endfor %}
+                {% for section in sections %}
+                <div class="terms-section">
+                    <h2 class="section-title">{{ section.title }}</h2>
+                    {% for paragraph in section.paragraphs %}
+                    <p class="section-paragraph">{{ parse_links(paragraph) | safe }}</p>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+
+            {% include 'partials/footer.html' %}
         </div>
-        {% endfor %}
     </div>
 
+    {% include 'partials/settings_popup.html' %}
     <script src="{{ url_for('static', filename='navbar.js') }}"></script>
 </body>
 </html>

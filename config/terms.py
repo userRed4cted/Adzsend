@@ -16,9 +16,9 @@ TERMS_SECTIONS = [
 
             "When we say 'you' or 'your', we mean you. If you're accessing our services on behalf of a legal entity (like your employer), you agree that you have the authority to bind that entity to these terms, and 'you' and 'your' will refer to that entity.",
 
-           "We also have [Community Guidelines](http://127.0.0.1:5000/guidelines) and other policies (as listed here or as otherwise made available to you) that apply to your use of our services and are incorporated into these terms. You should read these policies, they contain important information about your use of our services. Adzsend's [Paid Services Terms](http://127.0.0.1:5000/terms/paid-services-terms) apply to any purchase you make through Adzsend. By using Adzsend's services, you agree to these terms.",
+           "We also have [Community Guidelines](~/guidelines) and other policies (as listed here or as otherwise made available to you) that apply to your use of our services and are incorporated into these terms. You should read these policies, they contain important information about your use of our services. Adzsend's [Paid Services Terms](~/terms/paid-services-terms) apply to any purchase you make through Adzsend. By using Adzsend's services, you agree to these terms.",
            
-            "Together, these rules make Adzsend possible and they matter to us. If you believe others aren't following them, please let us know [by reporting it to us](http://127.0.0.1:5000/support).",
+            "Together, these rules make Adzsend possible and they matter to us. If you believe others aren't following them, please let us know [by reporting it to us](~/support).",
         ]
     },
     {
@@ -30,7 +30,7 @@ TERMS_SECTIONS = [
     {
         "title": "YOUR ADZSEND ACCOUNT",
         "paragraphs": [
-            "You are responsible for the security of your account and you agree to [notify us](http://127.0.0.1:5000/support) immediately if you believe your account has been compromised.",
+            "You are responsible for the security of your account and you agree to [notify us](~/support) immediately if you believe your account has been compromised.",
 
             "You are responsible for maintaining the security of your account and any credentials associated with it, including access granted through third-party authentication providers. Adzsend does not control third-party platforms and is not responsible for unauthorised access resulting from your actions, device security, or third-party service failures." # chatgpt
 
@@ -46,7 +46,7 @@ TERMS_SECTIONS = [
 
             "If you choose to add content to the services, you are responsible for ensuring that you have the right to do so, that you have the right to grant the licences in this section of these terms and that your content is lawful. We take no responsibility for any of your content and we are not responsible for others' use of your content.",
 
-            "Adzsend doesn't endorse or verify the accuracy or reliability of content shared by Adzsend users. We work hard to try to make Adzsend a safe, positive and inclusive place, but cannot always prevent you from encountering content that you may find objectionable or offensive. You agree we will not be liable for any harm caused by that content. You may [report content](http://127.0.0.1:5000/support) that you think violates any of our policies. We have the right, but not the obligation, to review such reports and block or remove content at our discretion.",
+            "Adzsend doesn't endorse or verify the accuracy or reliability of content shared by Adzsend users. We work hard to try to make Adzsend a safe, positive and inclusive place, but cannot always prevent you from encountering content that you may find objectionable or offensive. You agree we will not be liable for any harm caused by that content. You may [report content](~/support) that you think violates any of our policies. We have the right, but not the obligation, to review such reports and block or remove content at our discretion.",
         ]
     },
     {
@@ -68,13 +68,13 @@ TERMS_SECTIONS = [
     {
         "title": "ADZSEND'S PAID SERVICES",
         "paragraphs": [
-            "We won't charge you a fee to use the basic functionality of our services, but you may be able to pay for additional features and products. Adzsend's [Paid Services Terms](http://127.0.0.1:5000/terms/paid-services-terms) also apply to any purchase you make using Adzsend's supported purchase flows.",
+            "We won't charge you a fee to use the basic functionality of our services, but you may be able to pay for additional features and products. Adzsend's [Paid Services Terms](~/terms/paid-services-terms) also apply to any purchase you make using Adzsend's supported purchase flows.",
         ]
     },
         {
         "title": "RESTRICTIONS ON YOUR USE OF ADZSEND'S SERVICES",
         "paragraphs": [
-            "When using our services, you must comply with these terms and all applicable laws, rules and regulations, and you must only use the services for authorised and acceptable purposes. You must also adhere to our [Community Guidelines](http://127.0.0.1:5000/guidelines) and other policies, which contain more detailed rules about your content and behaviour when using Adzsend and how we enforce them on Adzsend.",
+            "When using our services, you must comply with these terms and all applicable laws, rules and regulations, and you must only use the services for authorised and acceptable purposes. You must also adhere to our [Community Guidelines](~/guidelines) and other policies, which contain more detailed rules about your content and behaviour when using Adzsend and how we enforce them on Adzsend.",
 
             "Fundamentally, do not do, try to do or encourage or help others to do any of the following:",
 
@@ -82,7 +82,7 @@ TERMS_SECTIONS = [
 
             "• Don't use the services to do harm to Adzsend. Among other things, this includes trying to gain access to, intentionally overburdening or attacking our systems; scraping our services without our written consent, including by using any robot, spider, crawler, scraper or other automatic device, process or software; selling, licensing or otherwise commercialising content or data obtained from our services; transmitting viruses or other malicious code to our services; abusing or defrauding us or our payment systems; copying, dismantling or reverse-engineering any of our services or using our intellectual property without permission; and misusing our reporting or customer service mechanisms.",
 
-            "We encourage you to [report content](http://127.0.0.1:5000/support) or conduct that you believe violates these restrictions.",
+            "We encourage you to [report content](~/support) or conduct that you believe violates these restrictions.",
         ]
     },
     {
@@ -92,7 +92,7 @@ TERMS_SECTIONS = [
 
             "Subject to applicable law, we reserve the right to suspend or terminate your account and/or your access to some or all of our services with or without notice, at our discretion for any reason or for the following reasons:",
 
-            "• You breach or you encourage, or help others to breach, these terms (including our [Community Guidelines](http://127.0.0.1:5000/guidelines), our other policies or additional terms that apply to specific services).",
+            "• You breach or you encourage, or help others to breach, these terms (including our [Community Guidelines](~/guidelines), our other policies or additional terms that apply to specific services).",
 
             "• We reasonably believe termination is necessary to prevent harm to you, us, other users or third parties.",
 

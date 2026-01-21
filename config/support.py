@@ -30,6 +30,6 @@ FAQ_ITEMS = [
     },
         {
         'question': 'Want to report someone?',
-        'answer': 'Only report if the user is violating our [Community Guidelines](http://127.0.0.1:5000/guidelines), and [other policies](http://127.0.0.1:5000/terms). Before reporting make sure, with evidence that the user is using our services.'
+        'answer': 'Only report if the user is violating our [Community Guidelines](~/guidelines), and [other policies](~/terms). Before reporting make sure, with evidence that the user is using our services. You may use the Discord mesage link search bar above to see if messages were sent via Adzsend.'
     },
 ]

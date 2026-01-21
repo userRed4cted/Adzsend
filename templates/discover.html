@@ -11,16 +11,60 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121215;
+            color: #ffffff;
+            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .page-scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-top: 60px;
+        }
+
+        .discover-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px 40px 40px 40px;
+            min-height: calc(100vh - 200px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .coming-soon-text {
+            font-size: 24px;
+            color: #666;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-    {% include 'partials/settings_popup.html' %}
-
-    <div class="panel">
+    <div class="page-wrapper">
         {% include 'navbar.html' %}
 
-        <div class="panel-container">
-            <!-- Content will be added here in the future -->
+        <div class="page-scroll-container">
+            <div class="discover-container">
+                <p class="coming-soon-text">Coming soon...</p>
+            </div>
+
+            {% include 'partials/footer.html' %}
         </div>
     </div>
+
+    {% include 'partials/settings_popup.html' %}
 </body>
 </html>

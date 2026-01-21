@@ -40,21 +40,35 @@
     <script src="{{ url_for('static', filename='custom_modals.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     <style>
-        html, body {
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121215;
+            color: #ffffff;
+            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
             overflow: hidden;
-            height: 100%;
+            height: 100vh;
         }
-        .panel {
-            height: 100%;
+
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
             overflow: hidden;
+        }
+
+        .page-scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-top: 60px;
         }
     </style>
 </head>
 <body>
-    <div class="panel">
+    <div class="page-wrapper">
         {% include 'navbar.html' %}
 
-        <div class="panel-container">
+        <div class="page-scroll-container">
             <div class="purchase-container">
                 <!-- View Switch Button -->
                 <div class="purchase-view-switch">
@@ -194,6 +208,8 @@
                     </div>
                 </div>
             </div>
+
+            {% include 'partials/footer.html' %}
         </div>
     </div>
 

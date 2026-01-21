@@ -67,6 +67,30 @@ html {
     scroll-behavior: smooth;
 }
 
+/* Native scrollbar with dark theme colors */
+* {
+    scrollbar-color: #5c5c5c #2a2a2a;
+    scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+    background: #2a2a2a;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: #5c5c5c;
+    border-radius: 6px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: #6c6c6c;
+}
+
 body {
     overscroll-behavior-y: none;
 }
@@ -158,6 +182,7 @@ body {
 
 .why-discord-title {
     font-size: 2rem;
+    font-family: 'ABC Ginto Nord', 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-weight: 700;
     text-align: center;
     margin-bottom: 2.5rem;
@@ -230,7 +255,7 @@ body {
 }
 
 .benefit-card {
-    background: #5256B4;
+    background: rgba(255, 255, 255, 0.2);
     border: none;
     border-radius: 12px;
     padding: 1.5rem;
@@ -296,133 +321,6 @@ body {
         transform: translateX(-50%) rotate(8deg);
     }
 }
-
-
-/* Lightbox */
-.lightbox {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.95);
-    z-index: 1000;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.lightbox.active {
-    display: flex;
-}
-
-.lightbox-content {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    width: 100%;
-    height: 100%;
-}
-
-.lightbox-image-wrapper {
-    max-width: 75vw;
-    max-height: 70vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-}
-
-.lightbox-image-wrapper img {
-    max-width: 100%;
-    max-height: 70vh;
-    border-radius: 12px;
-    object-fit: contain;
-}
-
-.lightbox-close {
-    position: fixed;
-    top: 20px;
-    right: 30px;
-    background: none;
-    border: none;
-    color: #ffffff;
-    font-size: 2.5rem;
-    cursor: pointer;
-    padding: 0.5rem;
-    transition: color 0.3s ease;
-    z-index: 1001;
-}
-
-.lightbox-close:hover {
-    color: #cccccc;
-}
-
-.lightbox-nav {
-    position: fixed;
-    top: 50%;
-    transform: translateY(-50%);
-    background: linear-gradient(to bottom, #15d8bc, #006e59);
-    border: none;
-    color: #121215;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 1.5rem 0.75rem;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-    z-index: 1001;
-}
-
-.lightbox-nav:hover {
-    background: linear-gradient(to bottom, #10b89e, #004e40);
-}
-
-.lightbox-prev {
-    left: 30px;
-}
-
-.lightbox-next {
-    right: 30px;
-}
-
-.lightbox-counter {
-    position: fixed;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
-    color: #ffffff;
-    font-size: 1rem;
-    font-weight: 500;
-    z-index: 1001;
-}
-
-@media (max-width: 768px) {
-    .lightbox-image-wrapper {
-        max-width: 85vw;
-    }
-
-    .lightbox-image-wrapper img {
-        max-height: 60vh;
-    }
-
-    .lightbox-prev {
-        left: 10px;
-    }
-
-    .lightbox-next {
-        right: 10px;
-    }
-
-    .lightbox-nav {
-        padding: 1rem 0.5rem;
-        font-size: 1.2rem;
-    }
-}
-
 .panel-container {
     flex: 1;
     padding: 0;
@@ -676,10 +574,15 @@ body {
 }
 
 .navbar-settings-icon {
-    width: 14px;
-    height: 14px;
+    width: 29px;
+    height: 29px;
     cursor: pointer;
     filter: brightness(0) saturate(100%) invert(56%) sepia(6%) saturate(340%) hue-rotate(194deg) brightness(93%) contrast(87%);
+    transition: filter 0.2s ease;
+}
+
+.navbar-settings-icon:hover {
+    filter: brightness(0) saturate(100%) invert(100%);
 }
 
 /* Navbar Bottom Links */
@@ -1317,23 +1220,6 @@ body {
     max-height: 100%;
 }
 
-.servers-list::-webkit-scrollbar {
-    width: 8px;
-}
-
-.servers-list::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.servers-list::-webkit-scrollbar-thumb {
-    background: var(--scroll-color);
-    border-radius: 4px;
-}
-
-.servers-list::-webkit-scrollbar-thumb:hover {
-    background: #8a96a8;
-}
-
 .server-item {
     display: flex;
     align-items: center;
@@ -1418,23 +1304,6 @@ body {
     background: transparent;
     padding: 0.75rem;
     flex: 1;
-}
-
-.channels-list::-webkit-scrollbar {
-    width: 8px;
-}
-
-.channels-list::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.channels-list::-webkit-scrollbar-thumb {
-    background: var(--scroll-color);
-    border-radius: 4px;
-}
-
-.channels-list::-webkit-scrollbar-thumb:hover {
-    background: #8a96a8;
 }
 
 .channel-item {
@@ -1593,19 +1462,6 @@ body {
     border-radius: 8px;
     min-height: 0;
     max-height: 100%;
-}
-
-.selected-channels-tags::-webkit-scrollbar {
-    width: 8px;
-}
-
-.selected-channels-tags::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.selected-channels-tags::-webkit-scrollbar-thumb {
-    background: var(--scroll-color);
-    border-radius: 4px;
 }
 
 .selected-tag {
@@ -1772,19 +1628,6 @@ body {
 
 .message-input::placeholder {
     color: #81828A;
-}
-
-.message-input::-webkit-scrollbar {
-    width: 8px;
-}
-
-.message-input::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.message-input::-webkit-scrollbar-thumb {
-    background: var(--scroll-color);
-    border-radius: 4px;
 }
 
 /* Message Footer */
@@ -2105,66 +1948,8 @@ body {
     cursor: pointer;
 }
 
-@media (max-width: 1024px) {
-    .settings-panels {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Scrollbars */
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--scroll-color);
-    border-radius: 5px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #8a96a8;
-}
-
-/* Responsive Design */
-@media (max-width: 1200px) {
-    .main-layout {
-        grid-template-columns: 1fr;
-        height: auto;
-    }
-}
-
-@media (max-width: 768px) {
-    .panel-container {
-        padding: 1rem;
-    }
-    
-    .header h1 {
-        font-size: 1.8rem;
-    }
-    
-    .navbar {
-        flex-wrap: wrap;
-        gap: 1rem;
-        padding: 1rem 1.5rem;
-    }
-
-    .nav-right {
-        gap: 1rem;
-        flex-wrap: wrap;
-        width: 100%;
-    }
-    
-    .main-layout {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-        height: auto;
-    }
-}
+/* Responsive breakpoints removed - full-width layout at all resolutions
+   Mobile-specific layouts will be added later */
 
 /* Purchase Page Styles */
 .purchase-container {
@@ -2765,23 +2550,6 @@ input:checked + .toggle-slider:before {
     margin-bottom: 1rem;
 }
 
-.custom-popup-content::-webkit-scrollbar {
-    width: 6px;
-}
-
-.custom-popup-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.custom-popup-content::-webkit-scrollbar-thumb {
-    background: #3a3a40;
-    border-radius: 3px;
-}
-
-.custom-popup-content::-webkit-scrollbar-thumb:hover {
-    background: #4a4a50;
-}
-
 /* Token input styling for popup */
 .custom-popup-input {
     width: 100%;
@@ -2902,8 +2670,8 @@ input:checked + .toggle-slider:before {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 40vh;
-    margin-bottom: 2rem;
+    padding: 4rem 0 2rem 0;
+    margin-bottom: 0;
 }
 
 @font-face {
@@ -2932,6 +2700,7 @@ input:checked + .toggle-slider:before {
     font-weight: 400;
     color: #ffffff;
     text-align: center;
+    margin-top: 2rem;
     margin-bottom: 1.5rem;
 }
 
@@ -3110,4 +2879,28 @@ input:checked + .toggle-slider:before {
     color: #dcddde;
     line-height: 1.6;
     margin: 0;
+}
+
+/* Message Checker Section */
+.message-checker-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 2rem 0;
+}
+
+.message-checker-section .message-checker-input {
+    width: 100%;
+}
+
+.message-checker-label {
+    font-size: 0.875rem;
+    color: #72767d;
+    text-align: center;
+    margin: 12px 0 0 0;
+}
+
+.message-checker-label.message-checker-found {
+    color: #15d8bc;
 }

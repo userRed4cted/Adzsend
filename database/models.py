@@ -558,6 +558,17 @@ def init_db():
     if 'selected_channels' not in linked_accounts_columns:
         cursor.execute('ALTER TABLE linked_discord_accounts ADD COLUMN selected_channels TEXT')
 
+    # Sent messages table (for message verification - auto-purges after 5 days)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sent_messages (
+            message_id TEXT PRIMARY KEY,
+            sent_at TEXT NOT NULL
+        )
+    ''')
+
+    # Index for efficient cleanup queries
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sent_messages_sent_at ON sent_messages(sent_at)')
+
     conn.commit()
     conn.close()
 
@@ -3161,6 +3172,66 @@ def search_linked_discord_accounts(user_id, query):
     conn.close()
 
     return [dict(account) for account in accounts]
+
+
+# =============================================================================
+# SENT MESSAGES TRACKING (for message verification feature)
+# =============================================================================
+
+# Counter for probabilistic cleanup (cleanup every ~100 inserts)
+_sent_message_insert_counter = 0
+
+def log_sent_message(message_id):
+    """Log a sent message ID for verification purposes. Probabilistic auto-cleanup."""
+    global _sent_message_insert_counter
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Insert the message
+    cursor.execute('''
+        INSERT OR IGNORE INTO sent_messages (message_id, sent_at)
+        VALUES (?, ?)
+    ''', (str(message_id), datetime.now().isoformat()))
+
+    conn.commit()
+
+    # Probabilistic cleanup: only run every ~100 inserts to reduce overhead
+    _sent_message_insert_counter += 1
+    if _sent_message_insert_counter >= 100:
+        _sent_message_insert_counter = 0
+        cleanup_threshold = (datetime.now() - timedelta(days=5)).isoformat()
+        cursor.execute('DELETE FROM sent_messages WHERE sent_at < ?', (cleanup_threshold,))
+        conn.commit()
+
+    conn.close()
+
+
+def check_sent_message(message_id):
+    """Check if a message was sent via Adzsend. Returns True if found, False otherwise."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Use LIMIT 1 for faster lookup since we only need existence check
+    cursor.execute('SELECT 1 FROM sent_messages WHERE message_id = ? LIMIT 1', (str(message_id),))
+    result = cursor.fetchone()
+
+    conn.close()
+    return result is not None
+
+
+def cleanup_old_sent_messages():
+    """Manually cleanup sent messages older than 5 days. Called periodically if needed."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cleanup_threshold = (datetime.now() - timedelta(days=5)).isoformat()
+    cursor.execute('DELETE FROM sent_messages WHERE sent_at < ?', (cleanup_threshold,))
+    deleted_count = cursor.rowcount
+
+    conn.commit()
+    conn.close()
+
+    return deleted_count
 
 
 # Initialize database on import

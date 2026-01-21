@@ -28,17 +28,10 @@
 
   DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "AdzsendBridge"
   DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Adzsend Bridge"
-  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "AdzsendBridge"
-  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "Adzsend Bridge"
 
   Delete "$DESKTOP\Adzsend Bridge.lnk"
-  Delete "$COMMONDESKTOP\Adzsend Bridge.lnk"
-
   RMDir /r "$SMPROGRAMS\Adzsend Bridge"
-  RMDir /r "$COMMONPROGRAMS\Adzsend Bridge"
 
   DeleteRegKey HKCU "Software\adzsend-bridge"
   DeleteRegKey HKCU "Software\Adzsend Bridge"
-  DeleteRegKey HKLM "Software\adzsend-bridge"
-  DeleteRegKey HKLM "Software\Adzsend Bridge"
 !macroend

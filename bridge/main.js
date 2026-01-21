@@ -478,8 +478,7 @@ ipcMain.handle('show-confirm-dialog', async (event, title, message, confirmText 
         defaultId: 1,
         cancelId: 1,
         title: title,
-        message: message,
-        detail: message
+        message: message
     });
     return result.response === 0; // true if confirmed
 });

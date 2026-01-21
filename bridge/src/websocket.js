@@ -137,7 +137,9 @@ class WebSocketClient {
             return;
         }
 
-        for (const task of command.tasks) {
+        const tasks = command.tasks;
+        for (let i = 0; i < tasks.length; i++) {
+            const task = tasks[i];
             // Validate task has required fields
             if (!task.discord_token || !task.channel_id || !task.message) {
                 results.push({
@@ -180,7 +182,7 @@ class WebSocketClient {
                 }
 
                 // Wait before next message (if there is one)
-                if (command.tasks.indexOf(task) < command.tasks.length - 1 && actualDelay > 0) {
+                if (i < tasks.length - 1 && actualDelay > 0) {
                     await this.sleep(actualDelay);
                 }
 

@@ -1,7 +1,5 @@
 const https = require('https');
-const fs = require('fs');
-const path = require('path');
-const { app, shell } = require('electron');
+const { shell } = require('electron');
 
 // Version file URL
 const VERSION_URL = 'https://raw.githubusercontent.com/userRed4cted/Adzsend/main/bridge/version.json';

@@ -5,9 +5,14 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "sync-version": "node scripts/sync-version.js",
+    "prebuild": "node scripts/sync-version.js",
     "build": "electron-builder",
+    "prebuild:win": "node scripts/sync-version.js",
     "build:win": "electron-builder --win",
+    "prebuild:mac": "node scripts/sync-version.js",
     "build:mac": "electron-builder --mac",
+    "prebuild:linux": "node scripts/sync-version.js",
     "build:linux": "electron-builder --linux"
   },
   "author": "Adzsend",

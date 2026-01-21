@@ -324,6 +324,133 @@ function getDialogParent() {
     return mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
 }
 
+// Native-style input prompt dialog
+ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = '') => {
+    return new Promise((resolve) => {
+        const parent = getDialogParent();
+        const promptWindow = new BrowserWindow({
+            width: 400,
+            height: 180,
+            parent: parent,
+            modal: true,
+            show: false,
+            resizable: false,
+            minimizable: false,
+            maximizable: false,
+            frame: false,
+            backgroundColor: '#2b2b2b',
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                preload: path.join(__dirname, 'preload.js')
+            }
+        });
+
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #2b2b2b;
+            color: #fff;
+            padding: 20px;
+            -webkit-app-region: drag;
+        }
+        .title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .message {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 15px;
+        }
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #1e1e1e;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+            -webkit-app-region: no-drag;
+        }
+        input:focus { border-color: #15d8bc; }
+        input::placeholder { color: #666; }
+        .buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+            -webkit-app-region: no-drag;
+        }
+        button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .cancel { background: #444; color: #fff; }
+        .cancel:hover { background: #555; }
+        .ok { background: #15d8bc; color: #000; font-weight: 600; }
+        .ok:hover { background: #12c5ab; }
+    </style>
+</head>
+<body>
+    <div class="title">${title.replace(/</g, '&lt;')}</div>
+    <div class="message">${message.replace(/</g, '&lt;')}</div>
+    <input type="password" id="input" placeholder="${placeholder.replace(/"/g, '&quot;')}" autofocus>
+    <div class="buttons">
+        <button class="cancel" onclick="cancel()">Cancel</button>
+        <button class="ok" onclick="submit()">OK</button>
+    </div>
+    <script>
+        const input = document.getElementById('input');
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submit();
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') cancel();
+        });
+        function submit() {
+            const val = input.value.trim();
+            if (val) {
+                require('electron').ipcRenderer.send('prompt-response', val);
+            }
+        }
+        function cancel() {
+            require('electron').ipcRenderer.send('prompt-response', null);
+        }
+    </script>
+</body>
+</html>`;
+
+        promptWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+
+        promptWindow.once('ready-to-show', () => {
+            promptWindow.show();
+        });
+
+        const responseHandler = (event, value) => {
+            resolve(value);
+            promptWindow.close();
+        };
+
+        ipcMain.once('prompt-response', responseHandler);
+
+        promptWindow.on('closed', () => {
+            ipcMain.removeListener('prompt-response', responseHandler);
+            resolve(null);
+        });
+    });
+});
+
 // Native OS dialogs
 ipcMain.handle('show-error-dialog', async (event, title, message) => {
     return dialog.showMessageBox(getDialogParent(), {

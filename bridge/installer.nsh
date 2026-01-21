@@ -1,37 +1,35 @@
 !include "LogicLib.nsh"
 
 !macro customInit
+  ; Check if already installed
   ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{${UNINSTALL_APP_KEY}}" "UninstallString"
-  ${If} $0 == ""
-    ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\{${UNINSTALL_APP_KEY}}" "UninstallString"
-  ${EndIf}
 
   ${If} $0 != ""
-    MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\n• Yes = Reinstall (update to this version)$\r$\n• No = Uninstall completely$\r$\n• Cancel = Exit setup" IDYES continueInstall IDNO runUninstall
-    Abort
-
-    runUninstall:
-      ExecWait '"$0" /S'
-      Abort
-
-    continueInstall:
+    ; Already installed - silently uninstall old version first
+    ExecWait '"$0" /S'
   ${EndIf}
 !macroend
 
 !macro customUnInstall
+  ; Remove installation directory
   RMDir /r "$INSTDIR"
+
+  ; Remove app data
   RMDir /r "$APPDATA\adzsend-bridge"
   RMDir /r "$APPDATA\Adzsend Bridge"
   RMDir /r "$LOCALAPPDATA\adzsend-bridge"
   RMDir /r "$LOCALAPPDATA\Adzsend Bridge"
   RMDir /r "$LOCALAPPDATA\adzsend-bridge-updater"
 
+  ; Remove auto-start registry entries
   DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "AdzsendBridge"
   DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Adzsend Bridge"
 
+  ; Remove shortcuts
   Delete "$DESKTOP\Adzsend Bridge.lnk"
   RMDir /r "$SMPROGRAMS\Adzsend Bridge"
 
+  ; Remove app registry keys
   DeleteRegKey HKCU "Software\adzsend-bridge"
   DeleteRegKey HKCU "Software\Adzsend Bridge"
 !macroend

@@ -44,16 +44,14 @@
       "icon": "assets/favicon.ico"
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": false,
+      "oneClick": true,
       "perMachine": false,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "Adzsend Bridge",
       "deleteAppDataOnUninstall": true,
       "artifactName": "AdzsendBridgeSetup.exe",
-      "include": "installer.nsh",
-      "menuCategory": true
+      "include": "installer.nsh"
     },
     "mac": {
       "target": ["dmg"],

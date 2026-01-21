@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('bridge', {
     showErrorDialog: (title, message) => ipcRenderer.invoke('show-error-dialog', title, message),
     showInfoDialog: (title, message) => ipcRenderer.invoke('show-info-dialog', title, message),
     showConfirmDialog: (title, message, confirmText, cancelText) => ipcRenderer.invoke('show-confirm-dialog', title, message, confirmText, cancelText),
+    showInputDialog: (title, message, placeholder) => ipcRenderer.invoke('show-input-dialog', title, message, placeholder),
     showUpdateDialog: (currentVersion, latestVersion) => ipcRenderer.invoke('show-update-dialog', currentVersion, latestVersion),
     showNetworkErrorDialog: () => ipcRenderer.invoke('show-network-error-dialog'),
     showLoggedOutDialog: () => ipcRenderer.invoke('show-logged-out-dialog'),

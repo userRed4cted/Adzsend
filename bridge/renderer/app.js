@@ -10,9 +10,6 @@ const messagesCount = document.getElementById('messages-count');
 const openDashboardBtn = document.getElementById('open-dashboard-btn');
 const versionDisplay = document.getElementById('version-display');
 
-// Modals (only keeping ones that need input fields)
-const secretKeyModal = document.getElementById('secret-key-modal');
-
 // State
 let isActivated = false;
 let secretKey = null;
@@ -39,8 +36,8 @@ function setupEventListeners() {
     minimizeBtn.addEventListener('click', () => window.bridge.minimize());
     closeBtn.addEventListener('click', () => window.bridge.close());
 
-    // Modify key button
-    modifyKeyBtn.addEventListener('click', showSecretKeyModal);
+    // Modify key button - use native prompt
+    modifyKeyBtn.addEventListener('click', promptForSecretKey);
 
     // Activate button
     activateBtn.addEventListener('click', handleActivate);
@@ -48,23 +45,6 @@ function setupEventListeners() {
     // Dashboard button - opens ~/dashboard
     openDashboardBtn.addEventListener('click', () => {
         window.bridge.openExternal('https://adzsend.com/dashboard');
-    });
-
-    // Secret Key Modal
-    document.getElementById('modal-close').addEventListener('click', hideSecretKeyModal);
-    document.getElementById('modal-cancel').addEventListener('click', hideSecretKeyModal);
-    document.getElementById('modal-add').addEventListener('click', handleAddSecretKey);
-    document.getElementById('settings-link').addEventListener('click', (e) => {
-        e.preventDefault();
-        window.bridge.openExternal('https://adzsend.com/dashboard/settings');
-    });
-
-
-    // Enter key in secret key input
-    document.getElementById('secret-key-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            handleAddSecretKey();
-        }
     });
 }
 
@@ -124,7 +104,7 @@ async function handleActivate() {
     } else {
         // Check if we have a secret key
         if (!secretKey) {
-            showSecretKeyModal();
+            await promptForSecretKey();
             return;
         }
 
@@ -235,31 +215,20 @@ function updateUI() {
     activateBtn.textContent = 'Activate';
 }
 
-// Modal functions
-function showSecretKeyModal() {
-    document.getElementById('secret-key-input').value = '';
-    secretKeyModal.style.display = 'flex';
-    document.getElementById('secret-key-input').focus();
-}
+// Prompt for secret key using native dialog
+async function promptForSecretKey() {
+    const key = await window.bridge.showInputDialog(
+        'Enter Secret Key',
+        'Get your key from adzsend.com/dashboard/settings',
+        'Paste your secret key'
+    );
 
-function hideSecretKeyModal() {
-    secretKeyModal.style.display = 'none';
-}
-
-async function handleAddSecretKey() {
-    const input = document.getElementById('secret-key-input');
-    const key = input.value.trim();
-
-    if (!key) {
-        return;
+    if (key) {
+        secretKey = key;
+        await window.bridge.saveSecretKey(key);
+        // Automatically try to connect
+        handleActivate();
     }
-
-    secretKey = key;
-    await window.bridge.saveSecretKey(key);
-    hideSecretKeyModal();
-
-    // Automatically try to connect
-    handleActivate();
 }
 
 // Handle update download

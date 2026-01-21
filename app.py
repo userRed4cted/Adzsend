@@ -951,7 +951,7 @@ def verify_code_api():
         # Login - get the page they were on before login (stored in session)
         redirect_url = session.pop('login_referrer', None)
         if not redirect_url:
-            redirect_url = url_for('dashboard')
+            redirect_url = url_for('home')
         return jsonify({'success': True, 'redirect': redirect_url})
 
 @app.route('/api/set-plan', methods=['POST'])
@@ -4420,8 +4420,13 @@ def logout():
         if not is_private and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
             redirect_url = referrer
 
+    # Clear all session data
     session.clear()
+
+    # Create response and explicitly delete the session cookie
     response = app.make_response(render_template('logout.html', redirect_url=redirect_url))
+    response.delete_cookie(app.config.get('SESSION_COOKIE_NAME', 'session'))
+
     # Prevent caching to avoid going back to personal panel after logout
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'

@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logging Out - Adzsend</title>
     <script>
-        // Keep selectedChannels and messageText - they persist across logins
-        // Keep messageDelay setting - it persists across sessions and logins
+        // Clear all client-side storage on logout
         sessionStorage.clear();
+        localStorage.clear();
         window.location.href = '{{ url_for('home') }}';
     </script>
 </head>

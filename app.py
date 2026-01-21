@@ -260,9 +260,9 @@ def validate_session():
         return
 
     # Check if user is logged in
-    if 'user' in session and 'session_id' in session:
+    if 'user' in session and 'user_session_id' in session:
         discord_id = session['user']['id']
-        session_id = session['session_id']
+        session_id = session['user_session_id']
 
         # Validate session ID against database
         if not validate_user_session(discord_id, session_id):

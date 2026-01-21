@@ -46,7 +46,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "perMachine": true,
+      "perMachine": false,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "Adzsend Bridge",
@@ -57,11 +57,11 @@
     },
     "mac": {
       "target": ["dmg"],
-      "icon": "assets/icon.icns"
+      "icon": "assets/favicon.icns"
     },
     "linux": {
       "target": ["AppImage"],
-      "icon": "assets/icon.png"
+      "icon": "assets/favicon.png"
     }
   }
 }

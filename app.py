@@ -451,19 +451,19 @@ def signup_page():
     if tos_agreed != 'true':
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
-        return render_template('signup.html', error='You must agree to the Terms of Service to create an account', csrf_token=csrf_token), 400
+        return render_template('signup.html', error='You must agree to our Terms of Service to use Adzsend', csrf_token=csrf_token), 400
 
     if not email:
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
-        return render_template('signup.html', error='Email is required', csrf_token=csrf_token), 400
+        return render_template('signup.html', error='Email is required', csrf_token=csrf_token, tos_checked=True), 400
 
     # Validate email format and domain
     import re
     if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
-        return render_template('signup.html', error='Invalid email format', csrf_token=csrf_token), 400
+        return render_template('signup.html', error='Invalid email format', csrf_token=csrf_token, email=email, tos_checked=True), 400
 
     # Check against blacklisted domains
     from config import BLACKLISTED_EMAIL_DOMAINS, ALLOWED_EMAIL_TLDS
@@ -471,7 +471,7 @@ def signup_page():
         if email.endswith(blacklisted):
             csrf_token = generate_csrf_token()
             session['csrf_token'] = csrf_token
-            return render_template('signup.html', error=f'Email domain {blacklisted} is not allowed', csrf_token=csrf_token), 400
+            return render_template('signup.html', error=f'Email domain {blacklisted} is not allowed', csrf_token=csrf_token, email=email, tos_checked=True), 400
 
     # Check if email ends with an allowed TLD
     if ALLOWED_EMAIL_TLDS:
@@ -479,14 +479,14 @@ def signup_page():
         if not is_allowed:
             csrf_token = generate_csrf_token()
             session['csrf_token'] = csrf_token
-            return render_template('signup.html', error='Email domain is not supported', csrf_token=csrf_token), 400
+            return render_template('signup.html', error='Email domain is not supported', csrf_token=csrf_token, email=email, tos_checked=True), 400
 
     # Check if email already exists
     existing_user = get_user_by_email(email)
     if existing_user:
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
-        return render_template('signup.html', error='An account with this email already exists. Please login instead.', csrf_token=csrf_token), 400
+        return render_template('signup.html', error='An account with this email already exists. Please login instead.', csrf_token=csrf_token, email=email, tos_checked=True), 400
 
     # Check if there's already an active verification code (prevents bypass by re-submitting signup)
     from database import has_active_verification_code
@@ -495,7 +495,7 @@ def signup_page():
     if is_rate_limited:
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
-        return render_template('signup.html', error='Too many incorrect attempts. Please wait 5 minutes before trying again.', csrf_token=csrf_token), 429
+        return render_template('signup.html', error='Too many incorrect attempts. Please wait 5 minutes before trying again.', csrf_token=csrf_token, email=email, tos_checked=True), 429
 
     # Store email and TOS agreement timestamp in session for signup completion
     session['pending_signup_email'] = email

@@ -118,16 +118,16 @@
 
                     <form method="POST" action="{{ url_for('signup_page') }}" id="signup-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                        <input type="hidden" name="tos_agreed" id="tos-agreed-input" value="">
+                        <input type="hidden" name="tos_agreed" id="tos-agreed-input" value="{% if tos_checked %}true{% endif %}">
                         <div class="form-group-login">
-                            <input type="email" name="email" class="email-input" placeholder="Enter your email address..." required>
-                            <div class="tos-agreement" id="tos-agreement">
+                            <input type="email" name="email" class="email-input" placeholder="Enter your email address..." value="{{ email or '' }}" required>
+                            <div class="tos-agreement{% if tos_checked %} checked{% endif %}" id="tos-agreement">
                                 <div class="tos-checkbox">
                                     <img src="{{ url_for('static', filename='tick.png') }}" alt="Checked">
                                 </div>
                                 <span class="tos-label">I agree to <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">Adzsend's Terms of Service</a></span>
                             </div>
-                            <button type="submit" class="submit-btn" id="signup-btn" disabled>Sign Up</button>
+                            <button type="submit" class="submit-btn" id="signup-btn"{% if not tos_checked %} disabled{% endif %}>Sign Up</button>
                         </div>
                     </form>
 
@@ -145,7 +145,8 @@
         const tosInput = document.getElementById('tos-agreed-input');
         const signupBtn = document.getElementById('signup-btn');
         const signupForm = document.getElementById('signup-form');
-        let tosAgreed = false;
+        // Initialize based on server state (preserved after validation errors)
+        let tosAgreed = tosInput.value === 'true';
         let isSubmitting = false;
 
         // Toggle TOS agreement on click

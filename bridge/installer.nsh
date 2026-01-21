@@ -7,7 +7,6 @@
 Var CreateDesktopShortcut
 Var CreateStartMenuShortcut
 Var PinToTaskbar
-Var ExistingInstallFound
 Var OptionsCheckbox1
 Var OptionsCheckbox2
 Var OptionsCheckbox3
@@ -45,40 +44,36 @@ Var OptionsCheckbox3
     nsExec::ExecToStack 'taskkill /F /IM "Adzsend Bridge.exe"'
     Sleep 500
 
-    ; Check if already installed
-    StrCpy $ExistingInstallFound "0"
-
-    ; Check common install locations
-    IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Adzsend Bridge.exe" 0 +2
-        StrCpy $ExistingInstallFound "1"
-
-    IfFileExists "$PROGRAMFILES\Adzsend Bridge\Adzsend Bridge.exe" 0 +2
-        StrCpy $ExistingInstallFound "1"
-
-    IfFileExists "$PROGRAMFILES64\Adzsend Bridge\Adzsend Bridge.exe" 0 +2
-        StrCpy $ExistingInstallFound "1"
-
-    ; If existing install found, ask what to do
-    ${If} $ExistingInstallFound == "1"
-        MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to:$\r$\n$\r$\nYes - Uninstall the existing version first$\r$\nNo - Update/Reinstall over existing installation$\r$\nCancel - Cancel installation" IDYES uninstall_first IDNO continue_install
+    ; Check if already installed and prompt user
+    IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Adzsend Bridge.exe" 0 check_programfiles
+        MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to:$\r$\n$\r$\nYes - Uninstall the existing version first$\r$\nNo - Update/Reinstall over existing installation$\r$\nCancel - Cancel installation" IDYES uninstall_localappdata IDNO continue_install
         Abort
 
-        uninstall_first:
-            ; Try to run uninstaller
-            IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 +3
-                ExecWait '"$LOCALAPPDATA\Programs\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
-                Goto continue_install
+    check_programfiles:
+    IfFileExists "$PROGRAMFILES\Adzsend Bridge\Adzsend Bridge.exe" 0 check_programfiles64
+        MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to:$\r$\n$\r$\nYes - Uninstall the existing version first$\r$\nNo - Update/Reinstall over existing installation$\r$\nCancel - Cancel installation" IDYES uninstall_programfiles IDNO continue_install
+        Abort
 
-            IfFileExists "$PROGRAMFILES\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 +3
-                ExecWait '"$PROGRAMFILES\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
-                Goto continue_install
+    check_programfiles64:
+    IfFileExists "$PROGRAMFILES64\Adzsend Bridge\Adzsend Bridge.exe" 0 continue_install
+        MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to:$\r$\n$\r$\nYes - Uninstall the existing version first$\r$\nNo - Update/Reinstall over existing installation$\r$\nCancel - Cancel installation" IDYES uninstall_programfiles64 IDNO continue_install
+        Abort
 
-            IfFileExists "$PROGRAMFILES64\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 +2
-                ExecWait '"$PROGRAMFILES64\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
+    uninstall_localappdata:
+        IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 continue_install
+            ExecWait '"$LOCALAPPDATA\Programs\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
+            Goto continue_install
 
-        continue_install:
-    ${EndIf}
+    uninstall_programfiles:
+        IfFileExists "$PROGRAMFILES\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 continue_install
+            ExecWait '"$PROGRAMFILES\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
+            Goto continue_install
 
+    uninstall_programfiles64:
+        IfFileExists "$PROGRAMFILES64\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 continue_install
+            ExecWait '"$PROGRAMFILES64\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
+
+    continue_install:
     ; Initialize shortcut variables (defaults)
     StrCpy $CreateDesktopShortcut "1"
     StrCpy $CreateStartMenuShortcut "1"

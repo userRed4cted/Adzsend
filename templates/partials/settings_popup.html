@@ -181,11 +181,11 @@
                                 <div class="team-current-avatar" id="team-current-avatar"></div>
                                 <div class="team-current-info">
                                     <span class="team-current-id" id="team-current-id">None</span>
+                                    <div class="team-owner-crown" id="team-owner-crown" style="display: none;" title="Team owner">
+                                        <img src="{{ url_for('static', filename='OwnerDiscordCrown.png') }}" alt="Owner">
+                                    </div>
                                 </div>
                                 <button class="team-leave-btn" id="team-leave-btn" disabled>Leave</button>
-                                <div class="team-owner-crown" id="team-owner-crown" style="display: none;" title="Team owner">
-                                    <img src="{{ url_for('static', filename='OwnerDiscordCrown.png') }}" alt="Owner">
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -814,17 +814,19 @@
     }
 
     .team-invitation-accept img {
-        width: 24px;
-        height: 24px;
+        width: 16px;
+        height: 16px;
         filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(195deg) brightness(93%) contrast(89%);
         transition: filter 0.2s ease;
+        pointer-events: none;
     }
 
     .team-invitation-deny img {
-        width: 24px;
-        height: 24px;
+        width: 16px;
+        height: 16px;
         filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(195deg) brightness(93%) contrast(89%);
         transition: filter 0.2s ease;
+        pointer-events: none;
     }
 
     .team-invitation-accept:hover,
@@ -867,6 +869,9 @@
 
     .team-current-info {
         flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
     .team-current-id {
@@ -885,6 +890,7 @@
         font-size: 0.85rem;
         font-weight: 500;
         transition: color 0.2s ease;
+        flex-shrink: 0;
     }
 
     .team-leave-btn:hover:not(:disabled) {
@@ -898,10 +904,9 @@
     }
 
     .team-owner-crown {
-        display: flex;
+        display: none;
         align-items: center;
         justify-content: center;
-        padding: 0.5rem 1rem;
     }
 
     .team-owner-crown img {
@@ -1675,18 +1680,18 @@
                                 // Accept button click handler
                                 const acceptBtn = item.querySelector('.team-invitation-accept');
                                 acceptBtn.addEventListener('click', async () => {
-                                    const confirmed = await showConfirm('Accept this team invitation?', 'Accept Invitation');
+                                    const confirmed = await customConfirm('Joining team', 'Are you sure you would like to join this team?', 'Join');
                                     if (confirmed) {
-                                        acceptInvitation(invitation.id);
+                                        await acceptInvitation(invitation.id);
                                     }
                                 });
 
                                 // Deny button click handler
                                 const denyBtn = item.querySelector('.team-invitation-deny');
                                 denyBtn.addEventListener('click', async () => {
-                                    const confirmed = await showConfirm('Deny this team invitation?', 'Deny Invitation');
+                                    const confirmed = await customConfirm('Deny invitation', 'Are you sure you would like to deny this team invitation?', 'Deny');
                                     if (confirmed) {
-                                        denyInvitation(invitation.id);
+                                        await denyInvitation(invitation.id);
                                     }
                                 });
 
@@ -1715,14 +1720,14 @@
                 const data = await response.json();
                 if (data.success) {
                     acceptedInvitation = true;
-                    await showAlert('Team invitation accepted!', 'Success');
                     loadTeamInvitations();
                     loadCurrentTeam();
                 } else {
-                    await showAlert('Error: ' + data.error, 'Error');
+                    await customAlert('Error', 'Something went wrong, please try again.');
                 }
             } catch (error) {
-                await showAlert('Error accepting invitation: ' + error, 'Error');
+                console.error('[Teams] Accept error:', error);
+                await customAlert('Error', 'Something went wrong, please try again.');
             }
         }
 
@@ -1736,10 +1741,10 @@
                 if (data.success) {
                     loadTeamInvitations();
                 } else {
-                    await showAlert('Error: ' + data.error, 'Error');
+                    await customAlert('Error', 'Error: ' + data.error);
                 }
             } catch (error) {
-                await showAlert('Error denying invitation: ' + error, 'Error');
+                await customAlert('Error', 'Error denying invitation: ' + error);
             }
         }
 
@@ -1768,7 +1773,7 @@
                             invitationsList.innerHTML = '<div class="team-no-invitations">Cant join other teams as team owner.</div>';
                         }
                     } else if (data.success && data.in_team) {
-                        // User is in a team
+                        // User is in a team - show the team owner's info with crown
                         const team = data.team;
                         const teamOwnerPhoto = team.owner_profile_photo || 'Light_Blue.jpg';
                         acceptedInvitation = true;
@@ -1777,7 +1782,7 @@
                         leaveBtn.style.display = 'block';
                         leaveBtn.disabled = false;
                         leaveBtn.textContent = 'Leave';
-                        crownEl.style.display = 'flex';
+                        crownEl.style.display = 'flex';  // Show crown next to team owner's ID
                     } else {
                         // Not in any team
                         acceptedInvitation = false;
@@ -1804,7 +1809,7 @@
         async function handleLeaveTeam() {
             const leaveBtn = document.getElementById('team-leave-btn');
 
-            const confirmed = await showConfirm('Leave your current team? You will need to accept a new invitation to join another team.', 'Leave Team', { danger: true, confirmText: 'Leave Team' });
+            const confirmed = await customConfirm('Leave team', 'Are you sure you would like to leave your team?', 'Leave');
             if (!confirmed) return;
 
             leaveBtn.textContent = 'Leaving...';
@@ -1817,17 +1822,16 @@
                 });
                 const data = await response.json();
                 if (data.success) {
-                    await showAlert('Left team successfully', 'Success');
                     acceptedInvitation = false;
                     loadCurrentTeam();
                     loadTeamInvitations();
                 } else {
-                    await showAlert('Error: ' + data.error, 'Error');
+                    await customAlert('Error', 'Something went wrong, please try again.');
                     leaveBtn.textContent = 'Leave';
                     leaveBtn.disabled = false;
                 }
             } catch (error) {
-                await showAlert('Error leaving team: ' + error, 'Error');
+                await customAlert('Error', 'Something went wrong, please try again.');
                 leaveBtn.textContent = 'Leave';
                 leaveBtn.disabled = false;
             }

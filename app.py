@@ -3065,7 +3065,8 @@ def get_current_team():
                 'owner_username': team.get('owner_username'),
                 'owner_discord_id': team.get('owner_discord_id'),
                 'owner_avatar': team.get('owner_avatar'),
-                'owner_adzsend_id': team.get('owner_adzsend_id')
+                'owner_adzsend_id': team.get('owner_adzsend_id'),
+                'owner_profile_photo': team.get('owner_profile_photo', 'Light_Blue.jpg')
             }
         }, 200
 

@@ -13,7 +13,6 @@
         window.DB_WIPE_MESSAGE = "{{ db_wipe_message }}";
     </script>
     <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
-    <script src="{{ url_for('static', filename='custom_modals.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     <!-- Centralized Scale Manager - handles proportional scaling across all resolutions -->
     <script src="{{ url_for('static', filename='scale_manager.js') }}"></script>
@@ -930,14 +929,14 @@
                         <div class="detail-label">Email</div>
                         <div class="detail-value" style="display: flex; align-items: center; gap: 8px;">
                             ${user.email || 'No email'}
-                            ${user.email ? `<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" onclick="copyToClipboard('${user.email}')">` : ''}
+                            ${user.email ? `<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" class="copy-btn" data-copy-value="${encodeURIComponent(user.email)}">` : ''}
                         </div>
                     </div>
                     <div class="detail-row">
                         <div class="detail-label">Adzsend ID</div>
                         <div class="detail-value" style="display: flex; align-items: center; gap: 8px;">
                             ${user.adzsend_id || 'No ID'}
-                            ${user.adzsend_id ? `<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" onclick="copyToClipboard('${user.adzsend_id}')">` : ''}
+                            ${user.adzsend_id ? `<img src="{{ url_for('static', filename='copy.png') }}" style="width: 14px; height: 14px; cursor: pointer; opacity: 0.6; filter: sepia(1) saturate(5) hue-rotate(130deg) brightness(0.9);" class="copy-btn" data-copy-value="${encodeURIComponent(user.adzsend_id)}">` : ''}
                         </div>
                     </div>
                     <div class="detail-row">
@@ -1007,6 +1006,14 @@
                 alert('Failed to copy to clipboard');
             }
         }
+
+        // Event delegation for copy buttons (secure - uses data attributes instead of inline onclick)
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('copy-btn')) {
+                const value = decodeURIComponent(e.target.dataset.copyValue || '');
+                if (value) copyToClipboard(value);
+            }
+        });
 
         async function viewMessage() {
             if (!currentUser) return;

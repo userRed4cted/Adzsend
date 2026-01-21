@@ -1,0 +1,73 @@
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
+const { app, shell } = require('electron');
+
+// Version file URL - update this to your actual GitHub raw URL
+const VERSION_URL = 'https://raw.githubusercontent.com/YOUR_USERNAME/Adzsend/main/bridge/version.json';
+
+// Check for updates
+function checkForUpdates(currentVersion) {
+    return new Promise((resolve, reject) => {
+        https.get(VERSION_URL, (res) => {
+            let data = '';
+
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            res.on('end', () => {
+                try {
+                    const versionInfo = JSON.parse(data);
+                    const updateAvailable = compareVersions(versionInfo.version, currentVersion) > 0;
+
+                    resolve({
+                        updateAvailable,
+                        currentVersion,
+                        latestVersion: versionInfo.version,
+                        downloadUrl: versionInfo.download_url
+                    });
+                } catch (error) {
+                    reject(new Error('Failed to parse version info'));
+                }
+            });
+        }).on('error', (error) => {
+            reject(new Error('No internet connection'));
+        });
+    });
+}
+
+// Compare version strings (returns 1 if v1 > v2, -1 if v1 < v2, 0 if equal)
+function compareVersions(v1, v2) {
+    const parts1 = v1.split('.').map(Number);
+    const parts2 = v2.split('.').map(Number);
+
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+        const p1 = parts1[i] || 0;
+        const p2 = parts2[i] || 0;
+
+        if (p1 > p2) return 1;
+        if (p1 < p2) return -1;
+    }
+
+    return 0;
+}
+
+// Download update - opens the download URL in browser
+// User will download and run the installer manually
+async function downloadUpdate(downloadUrl) {
+    return new Promise((resolve, reject) => {
+        try {
+            // Open the download URL in the default browser
+            shell.openExternal(downloadUrl);
+            resolve();
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+module.exports = {
+    checkForUpdates,
+    downloadUpdate
+};

@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
-    <script src="{{ url_for('static', filename='custom_modals.js') }}"></script>
+    <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     <style>
         .code-input-container {
             display: flex;
@@ -370,7 +370,7 @@
                 }
             } catch (error) {
                 console.error('Resend error:', error);
-                await showAlert('Failed to resend code. Please try again.', 'Error');
+                await customAlert('Error', 'Failed to resend code. Please try again.');
                 resendBtn.disabled = false;
                 resendBtn.textContent = 'Resend Code';
             }

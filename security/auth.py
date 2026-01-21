@@ -74,8 +74,8 @@ rate_limiter = RateLimiter()
 
 # Rate limit configurations (requests per window)
 RATE_LIMITS = {
-    'login': (5, 60),         # 5 attempts per minute
-    'signup': (3, 60),        # 3 attempts per minute
+    'login': (3, 300),        # 3 attempts per 5 minutes
+    'signup': (3, 300),       # 3 attempts per 5 minutes
     'api': (60, 60),          # 60 requests per minute for API
     'send_message': (30, 60), # 30 messages per minute
     'token_update': (3, 300), # 3 token updates per 5 minutes

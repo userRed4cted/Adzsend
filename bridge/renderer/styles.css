@@ -1,0 +1,532 @@
+/* Font declarations */
+@font-face {
+    font-family: 'gg sans';
+    src: url('../assets/fonts/gg sans Regular.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'gg sans';
+    src: url('../assets/fonts/gg sans Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'gg sans';
+    src: url('../assets/fonts/gg sans Bold.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'ABC Ginto Nord';
+    src: url('../assets/fonts/ABCGintoNord-Black-Trial.otf') format('opentype');
+    font-weight: 900;
+    font-style: normal;
+}
+
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'gg sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #121215;
+    color: #ffffff;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+}
+
+/* Custom Title Bar */
+.title-bar {
+    height: 32px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    -webkit-app-region: drag;
+    background: #121215;
+}
+
+.title-bar-drag {
+    flex: 1;
+    height: 100%;
+}
+
+.title-bar-buttons {
+    display: flex;
+    -webkit-app-region: no-drag;
+}
+
+.title-bar-btn {
+    width: 46px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.title-bar-btn img {
+    width: 12px;
+    height: 12px;
+    filter: brightness(0) saturate(100%) invert(55%) sepia(5%) saturate(368%) hue-rotate(195deg) brightness(93%) contrast(89%);
+    transition: filter 0.15s ease;
+}
+
+.title-bar-btn:hover {
+    background: #1A1A1E;
+}
+
+.title-bar-btn:hover img {
+    filter: brightness(0) saturate(100%) invert(100%);
+}
+
+.close-btn:hover {
+    background: #ff0000;
+}
+
+.close-btn:hover img {
+    filter: brightness(0) saturate(100%) invert(100%);
+}
+
+/* Main Content */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 40px;
+    height: calc(100vh - 32px - 30px);
+}
+
+/* Logo */
+.logo-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.logo {
+    width: 200px;
+    height: auto;
+    margin-bottom: 8px;
+}
+
+.bridge-text {
+    font-family: 'ABC Ginto Nord', sans-serif;
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #ffffff;
+}
+
+/* Modify Secret Key Button */
+.modify-key-btn {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-family: 'gg sans', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: opacity 0.2s ease;
+}
+
+.modify-key-btn:hover {
+    opacity: 0.8;
+}
+
+/* Status Text (outside frame) */
+.status-text {
+    font-family: 'gg sans', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #81838A;
+    margin-bottom: 16px;
+}
+
+.status-value {
+    font-family: 'gg sans', sans-serif;
+    font-weight: 700;
+    color: #81838A;
+}
+
+.status-value.online {
+    color: #15d8bc;
+}
+
+/* Activation Frame */
+.activation-frame {
+    background: #1A1A1E;
+    border: 1px solid #222225;
+    border-radius: 8px;
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 280px;
+    margin-bottom: 20px;
+}
+
+.activate-btn {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-family: 'gg sans', sans-serif;
+    font-weight: 500;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 8px 24px;
+    transition: opacity 0.2s ease;
+}
+
+.activate-btn:hover {
+    opacity: 0.8;
+}
+
+.activate-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.frame-divider {
+    width: 100%;
+    height: 1px;
+    background: #222225;
+    margin: 12px 0;
+}
+
+.frame-status {
+    font-family: 'gg sans', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    color: #81838A;
+}
+
+/* Messages Counter */
+.messages-counter {
+    font-family: 'gg sans', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    color: #81838A;
+    margin-bottom: 20px;
+}
+
+#messages-count {
+    color: #15d8bc;
+    font-weight: 700;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: auto;
+}
+
+.action-btn {
+    background: transparent;
+    border: 1px solid #222225;
+    border-radius: 6px;
+    color: #dcddde;
+    font-family: 'gg sans', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background: #1A1A1E;
+    border-color: #333333;
+}
+
+/* Version Display */
+.version-display {
+    position: fixed;
+    bottom: 10px;
+    left: 15px;
+    font-family: 'gg sans', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    color: #81838A;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* Modal */
+.modal {
+    background: #1A1A1E;
+    border: 1px solid #222225;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 400px;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #222225;
+}
+
+.modal-title {
+    font-family: 'gg sans', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: #ffffff;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    color: #81838A;
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.modal-close:hover {
+    color: #ffffff;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid #222225;
+}
+
+/* Secret Key Input */
+.secret-key-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: #121215;
+    border: 1px solid #222225;
+    border-radius: 6px;
+    color: #ffffff;
+    font-family: 'gg sans', sans-serif;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.secret-key-input:focus {
+    outline: none;
+    border-color: #15d8bc;
+}
+
+.secret-key-input::placeholder {
+    color: #81838A;
+}
+
+.modal-hint {
+    font-family: 'gg sans', sans-serif;
+    font-size: 13px;
+    color: #81838A;
+}
+
+.modal-hint a {
+    color: #15d8bc;
+    text-decoration: none;
+}
+
+.modal-hint a:hover {
+    text-decoration: underline;
+}
+
+/* Modal Buttons */
+.modal-btn {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-family: 'gg sans', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.cancel-btn {
+    background: transparent;
+    border: 1px solid #222225;
+    color: #dcddde;
+}
+
+.cancel-btn:hover {
+    background: #222225;
+}
+
+.add-btn {
+    background: linear-gradient(to bottom, #15d8bc, #006e59);
+    color: #121215;
+}
+
+.add-btn:hover {
+    background: linear-gradient(to bottom, #10b89e, #004e40);
+}
+
+.retry-btn {
+    background: linear-gradient(to bottom, #15d8bc, #006e59);
+    color: #121215;
+}
+
+.retry-btn:hover {
+    background: linear-gradient(to bottom, #10b89e, #004e40);
+}
+
+/* Error/Info Messages */
+.error-message, .logged-out-message, .update-message {
+    font-family: 'gg sans', sans-serif;
+    font-size: 14px;
+    color: #dcddde;
+    margin-bottom: 8px;
+}
+
+.error-hint, .logged-out-hint, .update-hint {
+    font-family: 'gg sans', sans-serif;
+    font-size: 13px;
+    color: #81838A;
+}
+
+.update-version {
+    font-family: 'gg sans', sans-serif;
+    font-size: 14px;
+    color: #15d8bc;
+    margin-bottom: 12px;
+}
+
+/* Settings Modal Specific */
+.settings-item {
+    margin-bottom: 16px;
+}
+
+.settings-item:last-child {
+    margin-bottom: 0;
+}
+
+.settings-label {
+    display: block;
+    font-family: 'gg sans', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    color: #81838A;
+    margin-bottom: 8px;
+}
+
+.settings-key-container {
+    display: flex;
+    gap: 10px;
+}
+
+.settings-key-display {
+    flex: 1;
+    padding: 10px 14px;
+    background: #121215;
+    border: 1px solid #222225;
+    border-radius: 6px;
+    color: #ffffff;
+    font-family: 'gg sans', sans-serif;
+    font-size: 14px;
+}
+
+.settings-key-display:focus {
+    outline: none;
+}
+
+.settings-key-btn {
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid #222225;
+    border-radius: 6px;
+    color: #15d8bc;
+    font-family: 'gg sans', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.settings-key-btn:hover {
+    background: #222225;
+}
+
+.settings-divider {
+    height: 1px;
+    background: #222225;
+    margin: 16px 0;
+}
+
+.settings-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.settings-checkbox-label input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #15d8bc;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+}
+
+.settings-checkbox-label input[type="checkbox"]:checked {
+    background: #15d8bc;
+}
+
+.settings-checkbox-label input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    width: 4px;
+    height: 8px;
+    border: solid #121215;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.settings-checkbox-text {
+    font-family: 'gg sans', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #dcddde;
+}

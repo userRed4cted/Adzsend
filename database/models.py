@@ -11,7 +11,7 @@ from cryptography.fernet import Fernet
 
 # Configuration Constants
 DEFAULT_MESSAGE_DELAY_MS = 1000  # Default delay between messages in milliseconds
-VERIFICATION_CODE_EXPIRY_MINUTES = 10  # How long verification codes are valid
+VERIFICATION_CODE_EXPIRY_MINUTES = 5  # How long verification codes are valid
 RESEND_COOLDOWN_MINUTES = 1  # Minimum time between resending verification codes
 MAX_ID_GENERATION_RETRIES = 5  # Max retries for unique ID generation on collision
 ADZSEND_ID_LENGTH = 10  # Length of adzsend_id identifiers
@@ -20,6 +20,11 @@ ADZSEND_ID_LENGTH = 10  # Length of adzsend_id identifiers
 def generate_verification_code():
     """Generate a random 6-digit verification code."""
     return ''.join([str(secrets.randbelow(10)) for _ in range(6)])
+
+
+def hash_verification_code(code):
+    """Hash a verification code using SHA256 for secure storage."""
+    return hashlib.sha256(code.encode()).hexdigest()
 
 def generate_adzsend_id():
     """Generate a unique 18-digit Adzsend ID (like Discord snowflake)."""
@@ -568,6 +573,26 @@ def init_db():
 
     # Index for efficient cleanup queries
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sent_messages_sent_at ON sent_messages(sent_at)')
+
+    # Bridge connections table (for Adzsend Bridge desktop app)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS bridge_connections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE,
+            secret_key_hash TEXT NOT NULL,
+            secret_key_timestamp TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            last_connected TEXT,
+            last_disconnected TEXT,
+            is_online INTEGER DEFAULT 0,
+            connection_ip TEXT,
+            last_regenerated TEXT,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+
+    # Index for quick lookup by user_id
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_bridge_connections_user_id ON bridge_connections(user_id)')
 
     conn.commit()
     conn.close()
@@ -1674,10 +1699,11 @@ def get_team_invitations(discord_id):
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT btm.*, bt.owner_user_id, u.username as owner_username, u.avatar as owner_avatar, u.discord_id as owner_discord_id, u.adzsend_id as owner_adzsend_id
+        SELECT btm.*, bt.owner_user_id, u.username as owner_username, u.avatar as owner_avatar, u.discord_id as owner_discord_id, u.adzsend_id as owner_adzsend_id, ud.profile_photo as owner_profile_photo
         FROM business_team_members btm
         JOIN business_teams bt ON btm.team_id = bt.id
         JOIN users u ON bt.owner_user_id = u.id
+        LEFT JOIN user_data ud ON u.id = ud.user_id
         WHERE btm.member_discord_id = ? AND btm.invitation_status = 'pending'
         ORDER BY btm.added_at DESC
     ''', (discord_id,))
@@ -2181,6 +2207,24 @@ def create_user_with_email(email, signup_ip):
     return None  # Max retries exceeded
 
 
+def cleanup_expired_verification_codes():
+    """Delete all expired verification codes from the database."""
+    conn = get_db()
+    cursor = conn.cursor()
+    now = datetime.now().isoformat()
+
+    cursor.execute('''
+        DELETE FROM verification_codes
+        WHERE expires_at < ?
+    ''', (now,))
+
+    deleted_count = cursor.rowcount
+    conn.commit()
+    conn.close()
+
+    return deleted_count
+
+
 def has_active_verification_code(email, purpose='login'):
     """Check if there's already an active (unexpired, unused) verification code.
     Returns (has_active, is_rate_limited) tuple."""
@@ -2217,6 +2261,9 @@ def has_active_verification_code(email, purpose='login'):
 
 def create_verification_code(email, purpose='login'):
     """Create a verification code for email auth. Returns the code or None if rate limited."""
+    # Clean up expired codes first
+    cleanup_expired_verification_codes()
+
     conn = get_db()
     cursor = conn.cursor()
 
@@ -2249,16 +2296,19 @@ def create_verification_code(email, purpose='login'):
         WHERE email = ? AND purpose = ? AND used = 0
     ''', (email_lower, purpose))
 
-    # Create new code
+    # Hash the code before storing
+    code_hash = hash_verification_code(code)
+
+    # Create new code (store hash, not plaintext)
     cursor.execute('''
         INSERT INTO verification_codes (email, code, purpose, created_at, expires_at, resend_count)
         VALUES (?, ?, ?, ?, ?, 0)
-    ''', (email_lower, code, purpose, created_at.isoformat(), expires_at.isoformat()))
+    ''', (email_lower, code_hash, purpose, created_at.isoformat(), expires_at.isoformat()))
 
     conn.commit()
     conn.close()
 
-    return code
+    return code  # Return plaintext code to send to user
 
 
 def verify_code(email, code, purpose='login'):
@@ -2296,15 +2346,18 @@ def verify_code(email, code, purpose='login'):
         conn.close()
         return False, "Verification code has expired. Please request a new one.", False
 
-    # DEV ONLY: Bypass code - always accept 000001
+    # DEV ONLY: Bypass code - remove when Resend email integration is complete
     if code == '000001':
         cursor.execute('UPDATE verification_codes SET used = 1 WHERE id = ?', (active_record['id'],))
         conn.commit()
         conn.close()
         return True, None, False
 
-    # Check if the code matches
-    if active_record['code'] != code:
+    # Hash the submitted code and compare with stored hash
+    submitted_hash = hash_verification_code(code)
+
+    # Check if the code matches (compare hashes)
+    if not secrets.compare_digest(active_record['code'], submitted_hash):
         # Increment wrong attempts
         new_wrong_attempts = wrong_attempts + 1
         cursor.execute('UPDATE verification_codes SET wrong_attempts = ? WHERE id = ?',
@@ -3232,6 +3285,341 @@ def cleanup_old_sent_messages():
     conn.close()
 
     return deleted_count
+
+
+# =============================================================================
+# BRIDGE CONNECTIONS (for Adzsend Bridge desktop app)
+# =============================================================================
+
+# HMAC secret key for signing bridge secret keys
+# This should be set in environment variables
+def _get_bridge_hmac_secret():
+    """Get the HMAC secret for signing bridge keys."""
+    secret = os.getenv('BRIDGE_HMAC_SECRET')
+    if not secret:
+        raise ValueError(
+            "BRIDGE_HMAC_SECRET environment variable is not set!\n"
+            "Generate one with: python -c 'import secrets; print(secrets.token_hex(32))'"
+        )
+    return secret
+
+
+def generate_bridge_secret_key(adzsend_id):
+    """
+    Generate a Discord-style token for bridge authentication.
+    Format: base64(adzsend_id).base64(timestamp).hmac_signature
+    """
+    import hmac
+
+    timestamp = str(int(datetime.now().timestamp()))
+
+    # Base64 encode parts
+    part1 = base64.urlsafe_b64encode(adzsend_id.encode()).decode().rstrip('=')
+    part2 = base64.urlsafe_b64encode(timestamp.encode()).decode().rstrip('=')
+
+    # Create HMAC signature
+    hmac_secret = _get_bridge_hmac_secret()
+    signature_data = f"{adzsend_id}.{timestamp}"
+    signature = hmac.new(
+        hmac_secret.encode(),
+        signature_data.encode(),
+        hashlib.sha256
+    ).digest()
+    part3 = base64.urlsafe_b64encode(signature).decode().rstrip('=')
+
+    return f"{part1}.{part2}.{part3}"
+
+
+def verify_bridge_secret_key(secret_key):
+    """
+    Verify a bridge secret key and extract the adzsend_id if valid.
+    Returns (is_valid, adzsend_id, timestamp) tuple.
+    """
+    import hmac
+
+    try:
+        parts = secret_key.split('.')
+        if len(parts) != 3:
+            return (False, None, None)
+
+        # Decode parts (add padding back)
+        part1 = parts[0] + '=' * (4 - len(parts[0]) % 4) if len(parts[0]) % 4 else parts[0]
+        part2 = parts[1] + '=' * (4 - len(parts[1]) % 4) if len(parts[1]) % 4 else parts[1]
+        part3 = parts[2] + '=' * (4 - len(parts[2]) % 4) if len(parts[2]) % 4 else parts[2]
+
+        adzsend_id = base64.urlsafe_b64decode(part1).decode()
+        timestamp = base64.urlsafe_b64decode(part2).decode()
+        provided_signature = base64.urlsafe_b64decode(part3)
+
+        # Recalculate HMAC
+        hmac_secret = _get_bridge_hmac_secret()
+        signature_data = f"{adzsend_id}.{timestamp}"
+        expected_signature = hmac.new(
+            hmac_secret.encode(),
+            signature_data.encode(),
+            hashlib.sha256
+        ).digest()
+
+        # Constant-time comparison
+        if hmac.compare_digest(provided_signature, expected_signature):
+            return (True, adzsend_id, timestamp)
+        else:
+            return (False, None, None)
+
+    except Exception as e:
+        print(f"[BRIDGE] Error verifying secret key: {e}")
+        return (False, None, None)
+
+
+def hash_bridge_secret_key(secret_key):
+    """Hash a bridge secret key for storage."""
+    return hashlib.sha256(secret_key.encode()).hexdigest()
+
+
+def create_or_get_bridge_connection(user_id):
+    """Create a new bridge connection or get existing one for a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Check if user already has a bridge connection
+    cursor.execute('SELECT * FROM bridge_connections WHERE user_id = ?', (user_id,))
+    existing = cursor.fetchone()
+
+    if existing:
+        conn.close()
+        return dict(existing)
+
+    # Get user's adzsend_id
+    cursor.execute('SELECT adzsend_id FROM users WHERE id = ?', (user_id,))
+    user = cursor.fetchone()
+
+    if not user or not user['adzsend_id']:
+        conn.close()
+        return None
+
+    # Generate new secret key
+    secret_key = generate_bridge_secret_key(user['adzsend_id'])
+    secret_key_hash = hash_bridge_secret_key(secret_key)
+    timestamp = datetime.now().isoformat()
+
+    cursor.execute('''
+        INSERT INTO bridge_connections (user_id, secret_key_hash, secret_key_timestamp, created_at)
+        VALUES (?, ?, ?, ?)
+    ''', (user_id, secret_key_hash, timestamp, timestamp))
+
+    conn.commit()
+
+    # Return the new connection with the unhashed key (only time it's available)
+    cursor.execute('SELECT * FROM bridge_connections WHERE user_id = ?', (user_id,))
+    connection = cursor.fetchone()
+    conn.close()
+
+    result = dict(connection)
+    result['secret_key'] = secret_key  # Include unhashed key for initial display
+    return result
+
+
+def get_bridge_connection(user_id):
+    """Get bridge connection info for a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM bridge_connections WHERE user_id = ?', (user_id,))
+    connection = cursor.fetchone()
+    conn.close()
+
+    return dict(connection) if connection else None
+
+
+def get_bridge_connection_by_adzsend_id(adzsend_id):
+    """Get bridge connection by adzsend_id."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT bc.*, u.adzsend_id
+        FROM bridge_connections bc
+        JOIN users u ON bc.user_id = u.id
+        WHERE u.adzsend_id = ?
+    ''', (adzsend_id,))
+    connection = cursor.fetchone()
+    conn.close()
+
+    return dict(connection) if connection else None
+
+
+def regenerate_bridge_secret_key(user_id):
+    """Regenerate the bridge secret key for a user. Returns new key or None on error."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Check rate limit (5 minutes)
+    cursor.execute('SELECT last_regenerated FROM bridge_connections WHERE user_id = ?', (user_id,))
+    connection = cursor.fetchone()
+
+    if connection and connection['last_regenerated']:
+        last_regen = datetime.fromisoformat(connection['last_regenerated'])
+        if datetime.now() - last_regen < timedelta(minutes=5):
+            conn.close()
+            return None  # Rate limited
+
+    # Get user's adzsend_id
+    cursor.execute('SELECT adzsend_id FROM users WHERE id = ?', (user_id,))
+    user = cursor.fetchone()
+
+    if not user or not user['adzsend_id']:
+        conn.close()
+        return None
+
+    # Generate new secret key
+    secret_key = generate_bridge_secret_key(user['adzsend_id'])
+    secret_key_hash = hash_bridge_secret_key(secret_key)
+    timestamp = datetime.now().isoformat()
+
+    if connection:
+        # Update existing
+        cursor.execute('''
+            UPDATE bridge_connections
+            SET secret_key_hash = ?, secret_key_timestamp = ?, last_regenerated = ?, is_online = 0
+            WHERE user_id = ?
+        ''', (secret_key_hash, timestamp, timestamp, user_id))
+    else:
+        # Create new
+        cursor.execute('''
+            INSERT INTO bridge_connections (user_id, secret_key_hash, secret_key_timestamp, created_at, last_regenerated)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (user_id, secret_key_hash, timestamp, timestamp, timestamp))
+
+    conn.commit()
+    conn.close()
+
+    return secret_key
+
+
+def validate_bridge_secret_key(secret_key):
+    """
+    Validate a bridge secret key and return user_id if valid.
+    Also checks that the key matches what's stored in the database.
+    """
+    # First, verify the cryptographic signature
+    is_valid, adzsend_id, timestamp = verify_bridge_secret_key(secret_key)
+
+    if not is_valid:
+        return None
+
+    # Then check it matches the stored hash
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT bc.user_id, bc.secret_key_hash, bc.secret_key_timestamp
+        FROM bridge_connections bc
+        JOIN users u ON bc.user_id = u.id
+        WHERE u.adzsend_id = ?
+    ''', (adzsend_id,))
+
+    connection = cursor.fetchone()
+    conn.close()
+
+    if not connection:
+        return None
+
+    # Check hash matches (in case key was regenerated)
+    stored_hash = connection['secret_key_hash']
+    provided_hash = hash_bridge_secret_key(secret_key)
+
+    if stored_hash != provided_hash:
+        return None  # Key was regenerated, this old key is invalid
+
+    return connection['user_id']
+
+
+def set_bridge_online(user_id, ip_address=None):
+    """Mark a bridge connection as online."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        UPDATE bridge_connections
+        SET is_online = 1, last_connected = ?, connection_ip = ?
+        WHERE user_id = ?
+    ''', (datetime.now().isoformat(), ip_address, user_id))
+
+    conn.commit()
+    conn.close()
+
+
+def set_bridge_offline(user_id):
+    """Mark a bridge connection as offline."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        UPDATE bridge_connections
+        SET is_online = 0, last_disconnected = ?
+        WHERE user_id = ?
+    ''', (datetime.now().isoformat(), user_id))
+
+    conn.commit()
+    conn.close()
+
+
+def is_bridge_online(user_id):
+    """Check if a user's bridge is online."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT is_online FROM bridge_connections WHERE user_id = ?', (user_id,))
+    connection = cursor.fetchone()
+    conn.close()
+
+    return connection['is_online'] == 1 if connection else False
+
+
+def get_bridge_status(user_id):
+    """Get bridge connection status for a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT is_online, last_connected, last_disconnected, connection_ip
+        FROM bridge_connections
+        WHERE user_id = ?
+    ''', (user_id,))
+
+    connection = cursor.fetchone()
+    conn.close()
+
+    if not connection:
+        return {
+            'has_bridge': False,
+            'is_online': False,
+            'last_connected': None,
+            'last_disconnected': None
+        }
+
+    return {
+        'has_bridge': True,
+        'is_online': connection['is_online'] == 1,
+        'last_connected': connection['last_connected'],
+        'last_disconnected': connection['last_disconnected']
+    }
+
+
+def can_regenerate_bridge_key(user_id):
+    """Check if user can regenerate their bridge key (5 minute cooldown)."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT last_regenerated FROM bridge_connections WHERE user_id = ?', (user_id,))
+    connection = cursor.fetchone()
+    conn.close()
+
+    if not connection or not connection['last_regenerated']:
+        return True
+
+    last_regen = datetime.fromisoformat(connection['last_regenerated'])
+    return datetime.now() - last_regen >= timedelta(minutes=5)
 
 
 # Initialize database on import

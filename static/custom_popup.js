@@ -3,6 +3,35 @@
 // =============================================================================
 // Replaces browser alert() and confirm() with styled custom popups
 
+// Simple HTML sanitizer to prevent XSS - allows safe tags only
+function sanitizeHtml(html) {
+    if (typeof html !== 'string') return '';
+
+    // Create a temporary element
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    // Remove dangerous elements
+    const dangerous = temp.querySelectorAll('script, iframe, object, embed, form, input, button, link, meta, style');
+    dangerous.forEach(el => el.remove());
+
+    // Remove dangerous attributes from all elements
+    const allElements = temp.querySelectorAll('*');
+    allElements.forEach(el => {
+        // Remove event handlers and dangerous attributes
+        const attrs = [...el.attributes];
+        attrs.forEach(attr => {
+            const name = attr.name.toLowerCase();
+            if (name.startsWith('on') || name === 'href' && attr.value.toLowerCase().startsWith('javascript:') ||
+                name === 'src' && !attr.value.match(/^(https?:\/\/|\/|data:image\/)/i)) {
+                el.removeAttribute(attr.name);
+            }
+        });
+    });
+
+    return temp.innerHTML;
+}
+
 let currentPopup = null;
 let popupResolve = null;
 let tokenUpdateCallback = null;
@@ -75,7 +104,7 @@ function showCustomPopup(title, message, buttonText = 'Ok', options = {}) {
         // Support HTML content if allowHtml is true
         if (options.allowHtml) {
             titleEl.textContent = title;  // Title is always plain text
-            textEl.innerHTML = message;   // Message can be HTML
+            textEl.innerHTML = sanitizeHtml(message);   // Message sanitized for safety
             textEl.style.display = message ? 'block' : 'none';
 
             // Add event listeners for collapsible sections after HTML is inserted
@@ -98,7 +127,7 @@ function showCustomPopup(title, message, buttonText = 'Ok', options = {}) {
 
         // Support scrollable content box
         if (options.contentHtml) {
-            contentEl.innerHTML = options.contentHtml;
+            contentEl.innerHTML = sanitizeHtml(options.contentHtml);
             contentEl.style.display = 'block';
         }
 

@@ -2,14 +2,12 @@
 
 !include "LogicLib.nsh"
 
-Var UninstallPath
-
 ; Check for existing installation BEFORE installer wizard appears
 !macro customInit
-  ; Check if already installed
-  ReadRegStr $UninstallPath HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{${UNINSTALL_APP_KEY}}" "UninstallString"
+  ; Check if already installed (use $0 instead of custom var to avoid warning)
+  ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{${UNINSTALL_APP_KEY}}" "UninstallString"
 
-  ${If} $UninstallPath != ""
+  ${If} $0 != ""
     ; Already installed - show prompt
     MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\n• Yes = Reinstall (update to this version)$\r$\n• No = Uninstall completely$\r$\n• Cancel = Exit setup" IDYES continueInstall IDNO runUninstall
 
@@ -18,7 +16,7 @@ Var UninstallPath
 
     runUninstall:
       ; Run the uninstaller silently
-      ExecWait '"$UninstallPath" /S'
+      ExecWait '"$0" /S'
       Abort
 
     continueInstall:

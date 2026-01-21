@@ -78,8 +78,8 @@
             transition: all 0.15s ease;
         }
         .tos-checkbox img {
-            width: 12px;
-            height: 12px;
+            width: 24px;
+            height: 24px;
             display: none;
             filter: brightness(0) saturate(100%) invert(6%) sepia(5%) saturate(1000%) hue-rotate(201deg) brightness(95%) contrast(92%);
         }
@@ -102,6 +102,11 @@
         .tos-label a:hover {
             text-decoration: underline;
         }
+        /* Ensure error message is always visible */
+        .error-message {
+            display: block !important;
+            visibility: visible !important;
+        }
     </style>
 </head>
 <body>
@@ -112,9 +117,7 @@
             <div class="login-container">
                 <div class="token-form">
                     <h2 class="form-title">Sign Up</h2>
-                    {% if error %}
-                        <div class="error-message">{{ error }}</div>
-                    {% endif %}
+                    <div class="error-message" id="signup-error" style="{% if not error %}display: none;{% endif %}">{{ error or '' }}</div>
 
                     <form method="POST" action="{{ url_for('signup_page') }}" id="signup-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

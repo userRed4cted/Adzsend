@@ -150,10 +150,12 @@ class WebSocketClient {
                 continue;
             }
             try {
-                // Add random delay variation
+                // Add random delay variation of ±0.5 seconds (±500ms)
+                // This makes timing more human-like and less detectable
                 const baseDelay = task.delay || 0;
-                const variation = task.delay_variation || 0;
-                const actualDelay = baseDelay + (Math.random() * variation * 2 - variation);
+                const fixedVariation = 500; // ±0.5 seconds
+                const randomOffset = (Math.random() * fixedVariation * 2) - fixedVariation;
+                const actualDelay = Math.max(0, baseDelay + randomOffset);
 
                 // Send typing indicator first
                 await sendTypingIndicator(task.discord_token, task.channel_id);

@@ -1,8 +1,32 @@
 const https = require('https');
+const { gatewayManager } = require('./discordGateway');
 
 // Discord API base URL
 const DISCORD_API_BASE = 'discord.com';
 const API_VERSION = 'v10';
+
+// Whether to use Gateway for stealth (enabled by default)
+let useGateway = true;
+
+// X-Super-Properties payload (base64 encoded client properties)
+// This is what real Discord web clients send with every request
+const superPropertiesData = {
+    os: 'Windows',
+    browser: 'Chrome',
+    device: '',
+    system_locale: 'en-US',
+    browser_user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    browser_version: '120.0.0.0',
+    os_version: '10',
+    referrer: '',
+    referring_domain: '',
+    referrer_current: '',
+    referring_domain_current: '',
+    release_channel: 'stable',
+    client_build_number: 254573,
+    client_event_source: null
+};
+const superProperties = Buffer.from(JSON.stringify(superPropertiesData)).toString('base64');
 
 // Generate realistic browser headers
 function getHeaders(token) {
@@ -23,7 +47,8 @@ function getHeaders(token) {
         'Sec-Fetch-Site': 'same-origin',
         'X-Discord-Locale': 'en-US',
         'X-Discord-Timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
-        'X-Debug-Options': 'bugReporterEnabled'
+        'X-Debug-Options': 'bugReporterEnabled',
+        'X-Super-Properties': superProperties
     };
 }
 
@@ -79,9 +104,29 @@ function makeRequest(method, path, token, body = null) {
     });
 }
 
+/**
+ * Ensure Gateway connection exists for token (for stealth)
+ * This makes REST API calls appear to come from a real Discord client
+ * @param {string} token - Discord token
+ */
+async function ensureGatewayConnection(token) {
+    if (!useGateway) return;
+
+    try {
+        // Connect with 'online' status - more natural than invisible when sending messages
+        await gatewayManager.ensureConnection(token, 'online');
+    } catch (error) {
+        // Gateway connection failed, but we can still use REST API
+        console.warn('[Discord] Gateway connection failed, using REST only:', error.message);
+    }
+}
+
 // Send typing indicator
 async function sendTypingIndicator(token, channelId) {
     try {
+        // Ensure Gateway connection first (for stealth)
+        await ensureGatewayConnection(token);
+
         const response = await makeRequest('POST', `/channels/${channelId}/typing`, token);
         return response.status === 204 || response.status === 200;
     } catch (error) {
@@ -93,6 +138,9 @@ async function sendTypingIndicator(token, channelId) {
 // Send a message to a Discord channel
 async function sendDiscordMessage(token, channelId, content) {
     try {
+        // Ensure Gateway connection first (for stealth)
+        await ensureGatewayConnection(token);
+
         const response = await makeRequest(
             'POST',
             `/channels/${channelId}/messages`,
@@ -166,8 +214,36 @@ async function fetchUserInfo(token) {
     }
 }
 
+// Enable/disable Gateway mode
+function setGatewayMode(enabled) {
+    useGateway = enabled;
+    if (!enabled) {
+        gatewayManager.disconnectAll();
+    }
+}
+
+// Check if Gateway mode is enabled
+function isGatewayEnabled() {
+    return useGateway;
+}
+
+// Get Gateway connection count
+function getGatewayConnectionCount() {
+    return gatewayManager.getConnectionCount();
+}
+
+// Cleanup all Gateway connections
+function cleanupGateway() {
+    gatewayManager.disconnectAll();
+    gatewayManager.stopCleanup();
+}
+
 module.exports = {
     sendDiscordMessage,
     sendTypingIndicator,
-    fetchUserInfo
+    fetchUserInfo,
+    setGatewayMode,
+    isGatewayEnabled,
+    getGatewayConnectionCount,
+    cleanupGateway
 };

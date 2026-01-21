@@ -3170,6 +3170,10 @@
             if (sendBtn) {
                 sendBtn.addEventListener('click', async function() {
                     if (selectedChannels.length > 0 && messageInput && messageInput.value.trim()) {
+                        // Check if bridge is connected before sending
+                        const bridgeConnected = await checkBridgeConnected();
+                        if (!bridgeConnected) return;
+
                         // Check for filtered content before proceeding
                         const message = messageInput.value.trim();
                         const filteredWords = {{ BLACKLISTED_WORDS|tojson }};
@@ -4148,6 +4152,10 @@
                 teamSendBtn.addEventListener('click', async function() {
                     const teamMessage = teamMessageInput ? teamMessageInput.value.trim() : '';
                     if (teamSelectedChannels.length > 0 && teamMessage) {
+                        // Check if bridge is connected before sending
+                        const bridgeConnected = await checkBridgeConnected();
+                        if (!bridgeConnected) return;
+
                         // Check for filtered content before proceeding
                         const filteredWords = {{ BLACKLISTED_WORDS|tojson }};
                         const phraseExceptions = {{ PHRASE_EXCEPTIONS|tojson }};

@@ -3,6 +3,7 @@ const path = require('path');
 const Store = require('electron-store');
 const WebSocketClient = require('./src/websocket');
 const { checkForUpdates, downloadUpdate } = require('./src/updater');
+const { cleanupGateway } = require('./src/discord');
 
 // Initialize store for persistent data
 // Use machine-specific encryption key derived from app path and user data path
@@ -688,4 +689,6 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
     isQuitting = true;
+    // Cleanup Discord Gateway connections
+    cleanupGateway();
 });

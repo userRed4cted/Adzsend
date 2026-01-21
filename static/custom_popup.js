@@ -395,6 +395,46 @@ function showSuspendPopup() {
     currentPopup = overlay;
 }
 
+// Check if bridge is connected, show popup if not
+// Returns true if bridge is connected, false otherwise
+async function checkBridgeConnected() {
+    try {
+        const response = await fetch('/api/bridge/status');
+        const data = await response.json();
+
+        if (data.success && data.is_online) {
+            return true;
+        }
+
+        // Bridge not connected - show popup
+        const result = await showCustomPopup(
+            'Adzsend Bridge',
+            'In order to send messages, Adzsend Bridge must be connected.',
+            'View'
+        );
+
+        if (result) {
+            // User clicked View - go to settings/bridge page
+            if (typeof openSettings === 'function') {
+                openSettings();
+                setTimeout(() => {
+                    const bridgeBtn = document.querySelector('[data-settings-page="bridge"]');
+                    if (bridgeBtn) {
+                        bridgeBtn.click();
+                    }
+                }, 100);
+            }
+        }
+
+        return false;
+    } catch (error) {
+        console.error('Error checking bridge status:', error);
+        // If we can't check, assume not connected
+        await customAlert('Error', 'Unable to check bridge status. Please try again.');
+        return false;
+    }
+}
+
 // Initialize on page load
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initCustomPopup);

@@ -1,12 +1,16 @@
 !include "LogicLib.nsh"
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
+!include "nsDialogs.nsh"
 
 ; Custom variables
 Var CreateDesktopShortcut
 Var CreateStartMenuShortcut
 Var PinToTaskbar
 Var ExistingInstallFound
+Var OptionsCheckbox1
+Var OptionsCheckbox2
+Var OptionsCheckbox3
 
 ; ============================================================================
 ; INSTALLER CONFIGURATION
@@ -75,11 +79,80 @@ Var ExistingInstallFound
         continue_install:
     ${EndIf}
 
-    ; Initialize shortcut variables
+    ; Initialize shortcut variables (defaults)
     StrCpy $CreateDesktopShortcut "1"
     StrCpy $CreateStartMenuShortcut "1"
     StrCpy $PinToTaskbar "0"
 !macroend
+
+; ============================================================================
+; CUSTOM OPTIONS PAGE - Inserted via customHeader
+; ============================================================================
+
+!macro customHeader
+    ; Insert custom page into the installer flow
+    Page custom OptionsPageCreate OptionsPageLeave
+!macroend
+
+Function OptionsPageCreate
+    nsDialogs::Create 1018
+    Pop $0
+
+    ${If} $0 == error
+        Abort
+    ${EndIf}
+
+    ; Title
+    ${NSD_CreateLabel} 0 0 100% 20u "Choose installation options:"
+    Pop $0
+
+    ; Desktop shortcut checkbox
+    ${NSD_CreateCheckbox} 0 30u 100% 12u "Create desktop shortcut"
+    Pop $OptionsCheckbox1
+    ${NSD_SetState} $OptionsCheckbox1 ${BST_CHECKED}
+
+    ; Start menu shortcut checkbox
+    ${NSD_CreateCheckbox} 0 48u 100% 12u "Create Start Menu shortcut"
+    Pop $OptionsCheckbox2
+    ${NSD_SetState} $OptionsCheckbox2 ${BST_CHECKED}
+
+    ; Pin to taskbar checkbox
+    ${NSD_CreateCheckbox} 0 66u 100% 12u "Pin to taskbar"
+    Pop $OptionsCheckbox3
+    ${NSD_SetState} $OptionsCheckbox3 ${BST_UNCHECKED}
+
+    nsDialogs::Show
+FunctionEnd
+
+Function OptionsPageLeave
+    ; Get checkbox states
+    ${NSD_GetState} $OptionsCheckbox1 $CreateDesktopShortcut
+    ${NSD_GetState} $OptionsCheckbox2 $CreateStartMenuShortcut
+    ${NSD_GetState} $OptionsCheckbox3 $PinToTaskbar
+
+    ; Convert BST_CHECKED (1) to "1", BST_UNCHECKED (0) to "0"
+    ${If} $CreateDesktopShortcut == ${BST_CHECKED}
+        StrCpy $CreateDesktopShortcut "1"
+    ${Else}
+        StrCpy $CreateDesktopShortcut "0"
+    ${EndIf}
+
+    ${If} $CreateStartMenuShortcut == ${BST_CHECKED}
+        StrCpy $CreateStartMenuShortcut "1"
+    ${Else}
+        StrCpy $CreateStartMenuShortcut "0"
+    ${EndIf}
+
+    ${If} $PinToTaskbar == ${BST_CHECKED}
+        StrCpy $PinToTaskbar "1"
+    ${Else}
+        StrCpy $PinToTaskbar "0"
+    ${EndIf}
+FunctionEnd
+
+; ============================================================================
+; CUSTOM INSTALL - Create shortcuts based on user selection
+; ============================================================================
 
 !macro customInstall
     ; Create shortcuts based on user selection
@@ -98,6 +171,10 @@ Var ExistingInstallFound
         nsExec::ExecToStack 'powershell -ExecutionPolicy Bypass -Command "(New-Object -ComObject Shell.Application).Namespace(\"$INSTDIR\").ParseName(\"Adzsend Bridge.exe\").InvokeVerb(\"taskbarpin\")"'
     ${EndIf}
 !macroend
+
+; ============================================================================
+; CUSTOM UNINSTALL
+; ============================================================================
 
 !macro customUnInstall
     ; Kill running instance before uninstall
@@ -129,68 +206,3 @@ Var ExistingInstallFound
     DeleteRegKey HKCU "Software\adzsend-bridge"
     DeleteRegKey HKCU "Software\Adzsend Bridge"
 !macroend
-
-; ============================================================================
-; CUSTOM OPTIONS PAGE
-; ============================================================================
-
-!macro customPageOptions
-    ; This page shows shortcut options
-    Page custom OptionsPageCreate OptionsPageLeave
-!macroend
-
-Function OptionsPageCreate
-    nsDialogs::Create 1018
-    Pop $0
-
-    ${If} $0 == error
-        Abort
-    ${EndIf}
-
-    ; Title
-    ${NSD_CreateLabel} 0 0 100% 20u "Choose installation options:"
-    Pop $0
-
-    ; Desktop shortcut checkbox
-    ${NSD_CreateCheckbox} 0 30u 100% 12u "Create desktop shortcut"
-    Pop $1
-    ${NSD_SetState} $1 ${BST_CHECKED}
-
-    ; Start menu shortcut checkbox
-    ${NSD_CreateCheckbox} 0 48u 100% 12u "Create Start Menu shortcut"
-    Pop $2
-    ${NSD_SetState} $2 ${BST_CHECKED}
-
-    ; Pin to taskbar checkbox
-    ${NSD_CreateCheckbox} 0 66u 100% 12u "Pin to taskbar"
-    Pop $3
-    ${NSD_SetState} $3 ${BST_UNCHECKED}
-
-    nsDialogs::Show
-FunctionEnd
-
-Function OptionsPageLeave
-    ; Get checkbox states
-    ${NSD_GetState} $1 $CreateDesktopShortcut
-    ${NSD_GetState} $2 $CreateStartMenuShortcut
-    ${NSD_GetState} $3 $PinToTaskbar
-
-    ; Convert BST_CHECKED (1) to "1", BST_UNCHECKED (0) to "0"
-    ${If} $CreateDesktopShortcut == ${BST_CHECKED}
-        StrCpy $CreateDesktopShortcut "1"
-    ${Else}
-        StrCpy $CreateDesktopShortcut "0"
-    ${EndIf}
-
-    ${If} $CreateStartMenuShortcut == ${BST_CHECKED}
-        StrCpy $CreateStartMenuShortcut "1"
-    ${Else}
-        StrCpy $CreateStartMenuShortcut "0"
-    ${EndIf}
-
-    ${If} $PinToTaskbar == ${BST_CHECKED}
-        StrCpy $PinToTaskbar "1"
-    ${Else}
-        StrCpy $PinToTaskbar "0"
-    ${EndIf}
-FunctionEnd

@@ -185,10 +185,12 @@ body {
     color: #ffffff;
     font-family: 'gg sans', sans-serif;
     font-weight: 500;
-    font-size: 16px;
+    font-size: 14px;
     cursor: pointer;
-    padding: 8px 24px;
+    padding: 6px 20px;
     transition: opacity 0.2s ease;
+    width: 100%;
+    text-align: center;
 }
 
 .activate-btn:hover {
@@ -204,13 +206,13 @@ body {
     width: 100%;
     height: 1px;
     background: #222225;
-    margin: 12px 0;
+    margin: 10px 0;
 }
 
 .frame-status {
     font-family: 'gg sans', sans-serif;
     font-weight: 500;
-    font-size: 13px;
+    font-size: 14px;
     color: #81838A;
 }
 
@@ -228,29 +230,28 @@ body {
     font-weight: 700;
 }
 
-/* Action Buttons */
-.action-buttons {
-    display: flex;
-    gap: 12px;
+/* Dashboard Button - styled like View Pricing button */
+.dashboard-btn {
     margin-top: auto;
-}
-
-.action-btn {
-    background: transparent;
-    border: 1px solid #222225;
-    border-radius: 6px;
-    color: #dcddde;
+    padding: 0.75rem 2rem;
+    background: linear-gradient(to bottom, #15d8bc, #006e59);
+    border: none;
+    border-radius: 8px;
+    color: #121215;
     font-family: 'gg sans', sans-serif;
-    font-weight: 500;
-    font-size: 14px;
-    padding: 10px 20px;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
-.action-btn:hover {
-    background: #1A1A1E;
-    border-color: #333333;
+.dashboard-btn:hover {
+    background: linear-gradient(to bottom, #10b89e, #004e40);
+}
+
+.dashboard-btn:active {
+    transform: scale(1.01);
 }
 
 /* Version Display */
@@ -427,106 +428,3 @@ body {
     margin-bottom: 12px;
 }
 
-/* Settings Modal Specific */
-.settings-item {
-    margin-bottom: 16px;
-}
-
-.settings-item:last-child {
-    margin-bottom: 0;
-}
-
-.settings-label {
-    display: block;
-    font-family: 'gg sans', sans-serif;
-    font-weight: 500;
-    font-size: 13px;
-    color: #81838A;
-    margin-bottom: 8px;
-}
-
-.settings-key-container {
-    display: flex;
-    gap: 10px;
-}
-
-.settings-key-display {
-    flex: 1;
-    padding: 10px 14px;
-    background: #121215;
-    border: 1px solid #222225;
-    border-radius: 6px;
-    color: #ffffff;
-    font-family: 'gg sans', sans-serif;
-    font-size: 14px;
-}
-
-.settings-key-display:focus {
-    outline: none;
-}
-
-.settings-key-btn {
-    padding: 10px 16px;
-    background: transparent;
-    border: 1px solid #222225;
-    border-radius: 6px;
-    color: #15d8bc;
-    font-family: 'gg sans', sans-serif;
-    font-weight: 500;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.settings-key-btn:hover {
-    background: #222225;
-}
-
-.settings-divider {
-    height: 1px;
-    background: #222225;
-    margin: 16px 0;
-}
-
-.settings-checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-}
-
-.settings-checkbox-label input[type="checkbox"] {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
-    border: 2px solid #15d8bc;
-    border-radius: 4px;
-    background: transparent;
-    cursor: pointer;
-    position: relative;
-}
-
-.settings-checkbox-label input[type="checkbox"]:checked {
-    background: #15d8bc;
-}
-
-.settings-checkbox-label input[type="checkbox"]:checked::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 5px;
-    width: 4px;
-    height: 8px;
-    border: solid #121215;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-}
-
-.settings-checkbox-text {
-    font-family: 'gg sans', sans-serif;
-    font-weight: 500;
-    font-size: 14px;
-    color: #dcddde;
-}

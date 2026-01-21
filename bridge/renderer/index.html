@@ -49,11 +49,8 @@
             Messages sent this session: <span id="messages-count">0</span>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            <button class="action-btn" id="open-dashboard-btn">Open Dashboard</button>
-            <button class="action-btn" id="settings-btn">Settings</button>
-        </div>
+        <!-- Dashboard Button -->
+        <button class="dashboard-btn" id="open-dashboard-btn">Open Dashboard</button>
     </div>
 
     <!-- Version Display -->
@@ -73,103 +70,6 @@
             <div class="modal-footer">
                 <button class="modal-btn cancel-btn" id="modal-cancel">Cancel</button>
                 <button class="modal-btn add-btn" id="modal-add">Add</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Error Modal -->
-    <div class="modal-overlay" id="error-modal" style="display: none;">
-        <div class="modal">
-            <div class="modal-header">
-                <span class="modal-title" id="error-title">Error</span>
-                <button class="modal-close" id="error-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="error-message" id="error-message"></p>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn retry-btn" id="error-retry">Retry</button>
-                <button class="modal-btn cancel-btn" id="error-cancel">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Logged Out Modal -->
-    <div class="modal-overlay" id="logged-out-modal" style="display: none;">
-        <div class="modal">
-            <div class="modal-header">
-                <span class="modal-title">Logged Out</span>
-            </div>
-            <div class="modal-body">
-                <p class="logged-out-message">Your bridge was logged in from another device.</p>
-                <p class="logged-out-hint">If this wasn't you, don't worry, your Adzsend account is safe. Regenerate your secret key to use Adzsend Bridge.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn" id="logged-out-dashboard">Open Dashboard</button>
-                <button class="modal-btn cancel-btn" id="logged-out-close">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Update Modal (Forced) -->
-    <div class="modal-overlay" id="update-modal" style="display: none;">
-        <div class="modal">
-            <div class="modal-header">
-                <span class="modal-title">Update Required</span>
-            </div>
-            <div class="modal-body">
-                <p class="update-message">A new version of Adzsend Bridge is available.</p>
-                <p class="update-version">Current: <span id="current-version">1.0.0</span> &rarr; Latest: <span id="latest-version">1.0.1</span></p>
-                <p class="update-hint">You must update to continue using Adzsend Bridge.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn add-btn" id="update-btn">Update Now</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Network Error Modal -->
-    <div class="modal-overlay" id="network-modal" style="display: none;">
-        <div class="modal">
-            <div class="modal-header">
-                <span class="modal-title">Network Error</span>
-            </div>
-            <div class="modal-body">
-                <p class="error-message">Unable to connect to Adzsend servers.</p>
-                <p class="error-hint">Please check your internet connection.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn retry-btn" id="network-retry">Retry</button>
-                <button class="modal-btn cancel-btn" id="network-close">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div class="modal-overlay" id="settings-modal" style="display: none;">
-        <div class="modal">
-            <div class="modal-header">
-                <span class="modal-title">Settings</span>
-                <button class="modal-close" id="settings-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="settings-item">
-                    <span class="settings-label">Secret Key</span>
-                    <div class="settings-key-container">
-                        <input type="password" class="settings-key-display" id="settings-key-display" readonly>
-                        <button class="settings-key-btn" id="settings-key-change">Change Key</button>
-                    </div>
-                </div>
-                <div class="settings-divider"></div>
-                <div class="settings-item">
-                    <label class="settings-checkbox-label">
-                        <input type="checkbox" id="auto-start-checkbox">
-                        <span class="settings-checkbox-text">Start with Windows</span>
-                    </label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn add-btn" id="settings-save">Save & Close</button>
             </div>
         </div>
     </div>

@@ -8,16 +8,10 @@ const frameStatus = document.getElementById('frame-status');
 const messagesCounter = document.getElementById('messages-counter');
 const messagesCount = document.getElementById('messages-count');
 const openDashboardBtn = document.getElementById('open-dashboard-btn');
-const settingsBtn = document.getElementById('settings-btn');
 const versionDisplay = document.getElementById('version-display');
 
-// Modals
+// Modals (only keeping ones that need input fields)
 const secretKeyModal = document.getElementById('secret-key-modal');
-const errorModal = document.getElementById('error-modal');
-const loggedOutModal = document.getElementById('logged-out-modal');
-const updateModal = document.getElementById('update-modal');
-const networkModal = document.getElementById('network-modal');
-const settingsModal = document.getElementById('settings-modal');
 
 // State
 let isActivated = false;
@@ -51,12 +45,10 @@ function setupEventListeners() {
     // Activate button
     activateBtn.addEventListener('click', handleActivate);
 
-    // Action buttons
+    // Dashboard button - opens ~/dashboard
     openDashboardBtn.addEventListener('click', () => {
         window.bridge.openExternal('https://adzsend.com/dashboard');
     });
-
-    settingsBtn.addEventListener('click', showSettingsModal);
 
     // Secret Key Modal
     document.getElementById('modal-close').addEventListener('click', hideSecretKeyModal);
@@ -67,41 +59,6 @@ function setupEventListeners() {
         window.bridge.openExternal('https://adzsend.com/dashboard/settings');
     });
 
-    // Error Modal
-    document.getElementById('error-close').addEventListener('click', hideErrorModal);
-    document.getElementById('error-cancel').addEventListener('click', hideErrorModal);
-    document.getElementById('error-retry').addEventListener('click', () => {
-        hideErrorModal();
-        handleActivate();
-    });
-
-    // Logged Out Modal
-    document.getElementById('logged-out-dashboard').addEventListener('click', () => {
-        window.bridge.openExternal('https://adzsend.com/dashboard/settings');
-        hideLoggedOutModal();
-    });
-    document.getElementById('logged-out-close').addEventListener('click', hideLoggedOutModal);
-
-    // Update Modal
-    document.getElementById('update-btn').addEventListener('click', handleUpdate);
-
-    // Network Modal
-    document.getElementById('network-retry').addEventListener('click', () => {
-        hideNetworkModal();
-        handleActivate();
-    });
-    document.getElementById('network-close').addEventListener('click', () => {
-        hideNetworkModal();
-        window.bridge.close();
-    });
-
-    // Settings Modal
-    document.getElementById('settings-close').addEventListener('click', hideSettingsModal);
-    document.getElementById('settings-key-change').addEventListener('click', () => {
-        hideSettingsModal();
-        showSecretKeyModal();
-    });
-    document.getElementById('settings-save').addEventListener('click', saveSettings);
 
     // Enter key in secret key input
     document.getElementById('secret-key-input').addEventListener('keypress', (e) => {
@@ -138,12 +95,22 @@ function setupIPCListeners() {
         messagesCount.textContent = messagesSent;
     });
 
-    window.bridge.onUpdateAvailable((info) => {
-        showUpdateModal(info);
+    window.bridge.onUpdateAvailable(async (info) => {
+        // Show native update dialog
+        const shouldUpdate = await window.bridge.showUpdateDialog(info.currentVersion, info.latestVersion);
+        if (shouldUpdate) {
+            handleUpdate(info.downloadUrl);
+        }
     });
 
-    window.bridge.onUpdateCheckFailed((info) => {
-        showNetworkModal();
+    window.bridge.onUpdateCheckFailed(async (info) => {
+        // Show native network error dialog
+        const shouldRetry = await window.bridge.showNetworkErrorDialog();
+        if (shouldRetry) {
+            handleActivate();
+        } else {
+            window.bridge.close();
+        }
     });
 }
 
@@ -208,7 +175,7 @@ function handleConnectionStatus(status, reason) {
 }
 
 // Handle connection errors
-function handleConnectionError(error) {
+async function handleConnectionError(error) {
     isActivated = false;
     activateBtn.textContent = 'Activate';
     activateBtn.disabled = false;
@@ -217,14 +184,21 @@ function handleConnectionError(error) {
     statusValue.classList.remove('online');
 
     if (error.includes('ENOTFOUND') || error.includes('network') || error.includes('internet')) {
-        showNetworkModal();
+        // Show native network error dialog
+        const shouldRetry = await window.bridge.showNetworkErrorDialog();
+        if (shouldRetry) {
+            handleActivate();
+        } else {
+            window.bridge.close();
+        }
     } else {
-        showErrorModal('Connection Error', error);
+        // Show native error dialog
+        await window.bridge.showErrorDialog('Connection Error', error);
     }
 }
 
 // Handle auth failed
-function handleAuthFailed(reason) {
+async function handleAuthFailed(reason) {
     isActivated = false;
     secretKey = null;
     window.bridge.clearSecretKey();
@@ -234,11 +208,12 @@ function handleAuthFailed(reason) {
     statusValue.textContent = 'offline';
     statusValue.classList.remove('online');
 
-    showErrorModal('Invalid Secret Key', reason || 'Your secret key is invalid or has been changed. Please enter a new key.');
+    // Show native error dialog
+    await window.bridge.showErrorDialog('Invalid Secret Key', reason || 'Your secret key is invalid or has been changed. Please enter a new key.');
 }
 
 // Handle logged out elsewhere
-function handleLoggedOutElsewhere() {
+async function handleLoggedOutElsewhere() {
     isActivated = false;
     secretKey = null;
     window.bridge.clearSecretKey();
@@ -248,7 +223,11 @@ function handleLoggedOutElsewhere() {
     statusValue.textContent = 'offline';
     statusValue.classList.remove('online');
 
-    showLoggedOutModal();
+    // Show native logged out dialog
+    const openDashboard = await window.bridge.showLoggedOutDialog();
+    if (openDashboard) {
+        window.bridge.openExternal('https://adzsend.com/dashboard/settings');
+    }
 }
 
 // Update UI based on state
@@ -287,76 +266,19 @@ async function handleAddSecretKey() {
     handleActivate();
 }
 
-function showErrorModal(title, message) {
-    document.getElementById('error-title').textContent = title;
-    document.getElementById('error-message').textContent = message;
-    errorModal.style.display = 'flex';
-}
+// Handle update download
+async function handleUpdate(downloadUrl) {
+    // Download the update
+    const result = await window.bridge.downloadUpdate(downloadUrl);
 
-function hideErrorModal() {
-    errorModal.style.display = 'none';
-}
-
-function showLoggedOutModal() {
-    loggedOutModal.style.display = 'flex';
-}
-
-function hideLoggedOutModal() {
-    loggedOutModal.style.display = 'none';
-}
-
-function showUpdateModal(info) {
-    document.getElementById('current-version').textContent = info.currentVersion;
-    document.getElementById('latest-version').textContent = info.latestVersion;
-    updateModal.style.display = 'flex';
-}
-
-async function handleUpdate() {
-    const btn = document.getElementById('update-btn');
-    btn.textContent = 'Downloading...';
-    btn.disabled = true;
-
-    // Open download URL in browser
-    const updateInfo = await window.bridge.downloadUpdate();
-
-    // Close app after opening download
-    setTimeout(() => {
-        window.bridge.quitForUpdate();
-    }, 1000);
-}
-
-function showNetworkModal() {
-    networkModal.style.display = 'flex';
-}
-
-function hideNetworkModal() {
-    networkModal.style.display = 'none';
-}
-
-async function showSettingsModal() {
-    // Load current settings
-    const autoStart = await window.bridge.getAutoStart();
-    document.getElementById('auto-start-checkbox').checked = autoStart;
-
-    // Show current key (masked)
-    const keyDisplay = document.getElementById('settings-key-display');
-    if (secretKey) {
-        keyDisplay.value = secretKey.substring(0, 20) + '...';
+    if (result.success) {
+        // Close app after download starts
+        setTimeout(() => {
+            window.bridge.quitForUpdate();
+        }, 1000);
     } else {
-        keyDisplay.value = 'No key set';
+        await window.bridge.showErrorDialog('Update Failed', result.error || 'Failed to download update. Please try again.');
     }
-
-    settingsModal.style.display = 'flex';
-}
-
-function hideSettingsModal() {
-    settingsModal.style.display = 'none';
-}
-
-async function saveSettings() {
-    const autoStart = document.getElementById('auto-start-checkbox').checked;
-    await window.bridge.setAutoStart(autoStart);
-    hideSettingsModal();
 }
 
 // Initialize when DOM is ready

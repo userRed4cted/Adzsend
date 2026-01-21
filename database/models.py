@@ -2357,13 +2357,6 @@ def verify_code(email, code, purpose='login'):
         conn.close()
         return False, "Verification code has expired. Please request a new one.", False
 
-    # DEV ONLY: Bypass code - remove when Resend email integration is complete
-    if code == '000001':
-        cursor.execute('UPDATE verification_codes SET used = 1 WHERE id = ?', (active_record['id'],))
-        conn.commit()
-        conn.close()
-        return True, None, False
-
     # Hash the submitted code and compare with stored hash
     submitted_hash = hash_verification_code(code)
 

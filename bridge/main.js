@@ -312,19 +312,73 @@ ipcMain.on('open-external', (event, url) => {
     shell.openExternal(url);
 });
 
-// Show OS dialog for secret key input
-ipcMain.handle('show-secret-key-dialog', async () => {
+// Native OS dialogs
+ipcMain.handle('show-error-dialog', async (event, title, message) => {
+    return dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        buttons: ['OK'],
+        title: title,
+        message: message
+    });
+});
+
+ipcMain.handle('show-info-dialog', async (event, title, message) => {
+    return dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        buttons: ['OK'],
+        title: title,
+        message: message
+    });
+});
+
+ipcMain.handle('show-confirm-dialog', async (event, title, message, confirmText = 'Yes', cancelText = 'No') => {
     const result = await dialog.showMessageBox(mainWindow, {
         type: 'question',
-        buttons: ['Add', 'Cancel'],
-        defaultId: 0,
-        title: 'Modify Secret Key',
-        message: 'Enter your secret key:',
-        detail: 'Get your secret key from adzsend.com/dashboard/settings',
-        inputType: 'text'
+        buttons: [confirmText, cancelText],
+        defaultId: 1,
+        cancelId: 1,
+        title: title,
+        message: title,
+        detail: message
     });
+    return result.response === 0; // true if confirmed
+});
 
-    return result;
+ipcMain.handle('show-update-dialog', async (event, currentVersion, latestVersion) => {
+    const result = await dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        buttons: ['Update Now'],
+        defaultId: 0,
+        title: 'Update Required',
+        message: 'A new version is available',
+        detail: `Current: v${currentVersion}\nLatest: v${latestVersion}\n\nYou must update to continue using Adzsend Bridge.`,
+        noLink: true
+    });
+    return result.response === 0;
+});
+
+ipcMain.handle('show-network-error-dialog', async () => {
+    const result = await dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        buttons: ['Retry', 'Quit'],
+        defaultId: 0,
+        title: 'No Internet Connection',
+        message: 'Unable to connect',
+        detail: 'Please check your internet connection and try again.'
+    });
+    return result.response === 0; // true if retry
+});
+
+ipcMain.handle('show-logged-out-dialog', async () => {
+    const result = await dialog.showMessageBox(mainWindow, {
+        type: 'warning',
+        buttons: ['Open Dashboard', 'Close'],
+        defaultId: 0,
+        title: 'Logged Out',
+        message: 'You have been logged out',
+        detail: 'If this wasn\'t you, don\'t worry, your Adzsend account is safe. Regenerate your secret key to use Adzsend Bridge.'
+    });
+    return result.response === 0; // true if open dashboard
 });
 
 // Download and install update

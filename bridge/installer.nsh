@@ -23,9 +23,18 @@
 !macroend
 
 !macro customUnInstall
-  ; Clean up any leftover files
+  ; Clean up installation directory
   RMDir /r "$INSTDIR"
+
+  ; Remove app data (config, secret key, etc.)
+  RMDir /r "$APPDATA\adzsend-bridge"
 
   ; Remove startup entry if exists
   DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "AdzsendBridge"
+
+  ; Remove desktop shortcut
+  Delete "$DESKTOP\Adzsend Bridge.lnk"
+
+  ; Remove start menu shortcuts
+  RMDir /r "$SMPROGRAMS\Adzsend Bridge"
 !macroend

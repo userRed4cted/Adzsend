@@ -7,10 +7,10 @@ def delete_user_account(user_id):
     Returns (success: bool, error: str or None)
     """
     import sqlite3
-    from config import DATABASE_PATH
+    from database.models import DATABASE
 
     try:
-        conn = sqlite3.connect(DATABASE_PATH)
+        conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
 
         # Delete from all tables where user data exists

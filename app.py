@@ -1421,6 +1421,47 @@ def bridge():
     return response
 
 
+# ============================================================================
+# BRIDGE WEBSOCKET ENDPOINT
+# ============================================================================
+import json
+
+@sock.route('/bridge/ws')
+def bridge_websocket(ws):
+    """WebSocket endpoint for Adzsend Bridge desktop app"""
+    authenticated = False
+    user_id = None
+
+    while True:
+        try:
+            data = ws.receive()
+            if data is None:
+                break
+
+            message = json.loads(data)
+            msg_type = message.get('type')
+
+            if msg_type == 'auth':
+                secret_key = message.get('secret_key')
+
+                # Validate the secret key against database
+                if secret_key and validate_bridge_secret_key(secret_key):
+                    authenticated = True
+                    ws.send(json.dumps({'type': 'auth_success'}))
+                else:
+                    ws.send(json.dumps({'type': 'auth_failed', 'reason': 'Invalid secret key'}))
+                    break
+
+            elif msg_type == 'ping':
+                ws.send(json.dumps({'type': 'pong'}))
+
+            # Add more message handlers here as needed
+
+        except Exception as e:
+            print(f"[Bridge WebSocket] Error: {e}")
+            break
+
+
 def parse_markdown_links(text):
     """Parse [text](url) markdown links and convert to HTML.
     Supports ~/path syntax for relative links (will be converted to /path)

@@ -5,15 +5,12 @@ const modifyKeyBtn = document.getElementById('modify-key-btn');
 const activateBtn = document.getElementById('activate-btn');
 const statusValue = document.getElementById('status-value');
 const frameStatus = document.getElementById('frame-status');
-const messagesCounter = document.getElementById('messages-counter');
-const messagesCount = document.getElementById('messages-count');
 const openDashboardBtn = document.getElementById('open-dashboard-btn');
 const versionDisplay = document.getElementById('version-display');
 
 // State
 let isActivated = false;
 let secretKey = null;
-let messagesSent = 0;
 let isShowingDialog = false; // Prevent popup spam
 
 // Initialize
@@ -69,11 +66,6 @@ function setupIPCListeners() {
 
     window.bridge.onLoggedOutElsewhere(() => {
         handleLoggedOutElsewhere();
-    });
-
-    window.bridge.onMessageSent(() => {
-        messagesSent++;
-        messagesCount.textContent = messagesSent;
     });
 
     window.bridge.onUpdateAvailable(async (info) => {
@@ -142,7 +134,6 @@ function handleConnectionStatus(status, reason) {
             statusValue.classList.add('online');
             activateBtn.textContent = 'Deactivate';
             activateBtn.disabled = false;
-            messagesCounter.style.display = 'block';
             break;
 
         case 'disconnected':

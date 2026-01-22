@@ -79,7 +79,6 @@ def encrypt_token(plain_token):
         encrypted = fernet.encrypt(plain_token.encode())
         return encrypted.decode()  # Store as string in database
     except Exception as e:
-        print(f"[ENCRYPTION ERROR] Failed to encrypt token: {e}")
         return None
 
 def decrypt_token(encrypted_token):
@@ -91,7 +90,6 @@ def decrypt_token(encrypted_token):
         decrypted = fernet.decrypt(encrypted_token.encode())
         return decrypted.decode()
     except Exception as e:
-        print(f"[DECRYPTION ERROR] Failed to decrypt token: {e}")
         return None
 
 def get_db():
@@ -220,7 +218,6 @@ def init_db():
     try:
         cursor.execute('ALTER TABLE users ADD COLUMN adzsend_id TEXT')
         conn.commit()
-        print('[DB MIGRATION] Added adzsend_id column to users table')
     except sqlite3.OperationalError:
         pass  # Column already exists
 
@@ -246,7 +243,6 @@ def init_db():
                     new_id = generate_adzsend_id()
                 cursor.execute('UPDATE users SET adzsend_id = ? WHERE id = ?', (new_id, user[0]))
             conn.commit()
-            print(f'[DB MIGRATION] Generated adzsend_id for {len(users_without_id)} existing users')
     except sqlite3.OperationalError:
         pass  # Column does not exist yet or other error
 
@@ -254,7 +250,6 @@ def init_db():
     try:
         cursor.execute('ALTER TABLE users ADD COLUMN tos_agreed_at TEXT')
         conn.commit()
-        print('[DB MIGRATION] Added tos_agreed_at column to users table')
     except sqlite3.OperationalError:
         pass  # Column already exists
 
@@ -435,7 +430,6 @@ def init_db():
                     FROM daily_message_stats
                 ''')
         except Exception as e:
-            print(f"[WARNING] Error copying data from old daily_message_stats table: {e}")
 
         # Drop old table and rename new table
         cursor.execute('DROP TABLE daily_message_stats')
@@ -646,7 +640,6 @@ def update_user_token(discord_id, discord_token):
     # Encrypt the token before storing
     encrypted_token = encrypt_token(discord_token)
     if not encrypted_token:
-        print(f"[ERROR] Failed to encrypt token for user {discord_id}")
         conn.close()
         return False
     cursor.execute('UPDATE users SET discord_token = ? WHERE discord_id = ?', (encrypted_token, discord_id))
@@ -3324,7 +3317,6 @@ def verify_bridge_secret_key(secret_key):
             return (False, None, None)
 
     except Exception as e:
-        print(f"[BRIDGE] Error verifying secret key: {e}")
         return (False, None, None)
 
 

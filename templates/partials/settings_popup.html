@@ -1430,6 +1430,10 @@
     // Close settings popup
     function closeSettingsPopup() {
         document.getElementById('settings-popup-overlay').classList.remove('show');
+        // Stop bridge status polling when popup closes
+        if (typeof stopBridgeStatusPolling === 'function') {
+            stopBridgeStatusPolling();
+        }
     }
 
     // Settings popup - click overlay to close
@@ -1832,6 +1836,11 @@
         }
 
         async function acceptInvitation(memberId) {
+            // Prevent double-clicks
+            const operationId = `accept_invitation_${memberId}`;
+            if (AsyncButton.isProcessing(operationId)) return;
+
+            AsyncButton.startOperation(operationId);
             try {
                 const response = await fetch(`/api/team/invitation/accept/${memberId}`, {
                     method: 'POST',
@@ -1848,10 +1857,17 @@
             } catch (error) {
                 console.error('[Teams] Accept error:', error);
                 await customAlert('Error', 'Something went wrong, please try again.');
+            } finally {
+                AsyncButton.endOperation(operationId);
             }
         }
 
         async function denyInvitation(memberId) {
+            // Prevent double-clicks
+            const operationId = `deny_invitation_${memberId}`;
+            if (AsyncButton.isProcessing(operationId)) return;
+
+            AsyncButton.startOperation(operationId);
             try {
                 const response = await fetch(`/api/team/invitation/deny/${memberId}`, {
                     method: 'POST',
@@ -1865,6 +1881,8 @@
                 }
             } catch (error) {
                 await customAlert('Error', 'Error denying invitation: ' + error);
+            } finally {
+                AsyncButton.endOperation(operationId);
             }
         }
 
@@ -1927,11 +1945,15 @@
         }
 
         async function handleLeaveTeam() {
+            // Prevent double-clicks
+            if (AsyncButton.isProcessing('leave_team')) return;
+
             const leaveBtn = document.getElementById('team-leave-btn');
 
             const confirmed = await customConfirm('Leave team', 'Are you sure you would like to leave your team?', 'Leave');
             if (!confirmed) return;
 
+            AsyncButton.startOperation('leave_team');
             leaveBtn.textContent = 'Leaving...';
             leaveBtn.disabled = true;
 
@@ -1954,6 +1976,8 @@
                 await customAlert('Error', 'Something went wrong, please try again.');
                 leaveBtn.textContent = 'Leave';
                 leaveBtn.disabled = false;
+            } finally {
+                AsyncButton.endOperation('leave_team');
             }
         }
 
@@ -2163,6 +2187,10 @@
 
         // Select and save profile photo
         async function selectProfilePhoto(photo) {
+            // Prevent double-clicks
+            if (AsyncButton.isProcessing('select_profile_photo')) return;
+
+            AsyncButton.startOperation('select_profile_photo');
             try {
                 const response = await fetch('/api/save-user-data', {
                     method: 'POST',
@@ -2194,6 +2222,8 @@
                 }
             } catch (error) {
                 console.error('Error saving profile photo:', error);
+            } finally {
+                AsyncButton.endOperation('select_profile_photo');
             }
         }
     });
@@ -2235,6 +2265,8 @@
             });
         }
 
+        let bridgeStatusInterval = null;
+
         function initBridgePage() {
             // Load secret key
             loadBridgeSecretKey();
@@ -2254,6 +2286,23 @@
 
             if (regenerateBtn) {
                 regenerateBtn.addEventListener('click', regenerateSecretKey);
+            }
+
+            // Start polling for bridge status (every 5 seconds - minimal overhead)
+            startBridgeStatusPolling();
+        }
+
+        function startBridgeStatusPolling() {
+            // Clear any existing interval
+            stopBridgeStatusPolling();
+            // Poll every 5 seconds
+            bridgeStatusInterval = setInterval(loadBridgeStatus, 5000);
+        }
+
+        function stopBridgeStatusPolling() {
+            if (bridgeStatusInterval) {
+                clearInterval(bridgeStatusInterval);
+                bridgeStatusInterval = null;
             }
         }
 
@@ -2345,6 +2394,9 @@
         }
 
         async function regenerateSecretKey() {
+            // Prevent double-clicks
+            if (AsyncButton.isProcessing('regenerate_secret_key')) return;
+
             const confirmed = await customConfirm(
                 'Regenerate secret key',
                 'Are you sure you want to regenerate your secret key? You will need to enter your new secret key in the Bridge to use.',
@@ -2352,6 +2404,8 @@
             );
 
             if (!confirmed) return;
+
+            AsyncButton.startOperation('regenerate_secret_key');
 
             const regenerateBtn = document.getElementById('bridge-regenerate-key');
             const keyInput = document.getElementById('bridge-secret-key');
@@ -2388,6 +2442,7 @@
                 }
             } finally {
                 if (regenerateBtn) regenerateBtn.disabled = false;
+                AsyncButton.endOperation('regenerate_secret_key');
             }
         }
     })();
@@ -2415,34 +2470,39 @@ function closeDeleteAccountPopup() {
     document.getElementById('delete-account-popup').classList.remove('active');
 }
 
-function deleteAccount() {
+async function deleteAccount() {
+    // Prevent double-clicks
+    if (AsyncButton.isProcessing('delete_account')) return;
+
+    AsyncButton.startOperation('delete_account');
     const btn = document.getElementById('confirm-delete-account-btn');
     btn.disabled = true;
     btn.textContent = 'Deleting...';
 
-    fetch('/api/delete-account', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': window.csrfToken
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
+    try {
+        const response = await fetch('/api/delete-account', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': window.csrfToken
+            }
+        });
+        const data = await response.json();
         if (data.success) {
             // Account deleted, redirect to home
             window.location.href = '/';
         } else {
-            alert(data.error || 'Failed to delete account');
+            await customAlert('Error', data.error || 'Failed to delete account');
             btn.disabled = false;
             btn.textContent = 'Delete account';
         }
-    })
-    .catch(error => {
+    } catch (error) {
         console.error('Error:', error);
-        alert('An error occurred while deleting your account');
+        await customAlert('Error', 'An error occurred while deleting your account');
         btn.disabled = false;
         btn.textContent = 'Delete account';
-    });
+    } finally {
+        AsyncButton.endOperation('delete_account');
+    }
 }
 </script>

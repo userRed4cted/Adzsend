@@ -216,20 +216,6 @@ body {
     color: #81838A;
 }
 
-/* Messages Counter */
-.messages-counter {
-    font-family: 'gg sans', sans-serif;
-    font-weight: 500;
-    font-size: 13px;
-    color: #81838A;
-    margin-bottom: 20px;
-}
-
-#messages-count {
-    color: #15d8bc;
-    font-weight: 700;
-}
-
 /* Dashboard Button - styled like View Pricing button */
 .dashboard-btn {
     margin-top: auto;

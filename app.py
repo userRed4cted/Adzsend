@@ -33,7 +33,8 @@ from database import (
     # Bridge connection functions
     generate_bridge_secret_key, validate_bridge_secret_key,
     create_or_get_bridge_connection, get_bridge_connection,
-    regenerate_bridge_secret_key, get_bridge_status, can_regenerate_bridge_key
+    regenerate_bridge_secret_key, get_bridge_status, can_regenerate_bridge_key,
+    set_bridge_online, set_bridge_offline
 )
 
 # Config imports
@@ -241,16 +242,12 @@ def fetch_discord_user_info(discord_id):
             discord_user = response.json()
             username = discord_user.get('username', 'Unknown User')
             avatar = discord_user.get('avatar', '')
-            print(f"[DISCORD API] Successfully fetched user info for {discord_id}: {username}")
             return username, avatar
         else:
-            print(f"[DISCORD API] Failed to fetch user {discord_id}: Status {response.status_code}, Response: {response.text}")
             return None, None
     except requests.exceptions.Timeout:
-        print(f"[DISCORD API] Timeout fetching user {discord_id}")
         return None, None
     except Exception as e:
-        print(f"[DISCORD API] Error fetching user {discord_id}: {str(e)}")
         return None, None
 
 # Session validation before each request
@@ -906,7 +903,6 @@ def verify_code_api():
         session.pop('pending_email_change', None)
         session.pop('email_change_user_id', None)
 
-        print(f"[EMAIL CHANGE] Email changed for user {user['id']} to {email}")
 
         return jsonify({'success': True, 'redirect': url_for('settings')})
 
@@ -1008,24 +1004,20 @@ def set_plan():
     try:
         # Activate the plan
         set_subscription(user['id'], plan_type, plan_id, plan_config, billing_period)
-        print(f"[PLAN] Plan activated for {session['user']['username']}: {plan_config['name']} ({plan_type})")
 
         # If it's a business plan, create a business team
         redirect_url = '/dashboard'
         if plan_type == 'business':
             from database import create_business_team, get_active_subscription, auto_deny_pending_invitations
             subscription = get_active_subscription(user['id'])
-            print(f"[PLAN] Business plan - subscription lookup for user {user['id']}: {subscription}")
             if subscription:
                 max_members = plan_config.get('max_members', 3)
                 team_id = create_business_team(user['id'], subscription['id'], max_members)
-                print(f"[PLAN] Business team created: team_id={team_id}, max_members={max_members}")
                 redirect_url = '/team-management'
 
                 # Auto-deny any pending team invitations since user is now a business owner
                 auto_deny_pending_invitations(session['user']['id'])
             else:
-                print(f"[ERROR] No subscription found after activation for user {user['id']}")
 
         return jsonify({
             'success': True,
@@ -1033,7 +1025,6 @@ def set_plan():
             'redirect_url': redirect_url
         }), 200
     except Exception as e:
-        print(f"[ERROR] Plan activation error: {str(e)}")
         return jsonify({'success': False, 'error': 'Failed to activate plan'}), 500
 
 @app.route('/api/update-token', methods=['POST'])
@@ -1088,14 +1079,12 @@ def update_token():
         session['user']['avatar'] = test_user_data.get('avatar')
         session.modified = True
 
-        print(f"[TOKEN UPDATE] User {session['user']['id']} updated their token | IP: {get_client_ip()}")
 
         return {'success': True, 'message': 'Token updated successfully'}, 200
 
     except requests.exceptions.Timeout:
         return {'error': 'Discord API timeout. Please try again.'}, 500
     except Exception as e:
-        print(f"[ERROR] Token update error: {str(e)}")
         return {'error': 'Failed to verify token'}, 500
 
 @app.route('/old_personal_panel')
@@ -1186,7 +1175,6 @@ def dashboard():
     guilds = []
     primary_account = None
 
-    print(f"[DASHBOARD] User {user['id']} - Linked accounts: {len(linked_accounts)}")
 
     # Fetch guilds from ALL linked accounts and merge them
     all_guilds = []
@@ -1222,12 +1210,10 @@ def dashboard():
                 conn.commit()
                 conn.close()
 
-        print(f"[DASHBOARD] Primary account: {primary_account['id'] if primary_account else None}")
 
         if primary_account:
             # Get full account details with token for discord_info
             account_details = get_linked_discord_account_by_id(primary_account['id'])
-            print(f"[DASHBOARD] Account details retrieved: {account_details is not None}")
             if account_details:
                 # Create discord_info from primary account
                 discord_info = {
@@ -1239,78 +1225,8 @@ def dashboard():
                     } if account_details.get('avatar_decoration') else None
                 }
 
-        # Fetch guilds ONLY from the selected/primary account
-        if primary_account:
-            acc = primary_account
-            print(f"[DASHBOARD] Fetching guilds for selected account {acc['id']}")
-
-            account_details = get_linked_discord_account_by_id(acc['id'])
-            if account_details and account_details.get('discord_token'):
-                print(f"[DASHBOARD] Account {acc['id']} has valid token, fetching guilds...")
-
-                try:
-                    token = account_details['discord_token']
-                    headers = {'Authorization': token}
-                    guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=5)
-                    print(f"[DASHBOARD] Account {acc['id']} guilds API response: {guilds_resp.status_code}")
-
-                    if guilds_resp.status_code == 200:
-                        account_guilds = guilds_resp.json()
-                        print(f"[DASHBOARD] Account {acc['id']} guilds fetched: {len(account_guilds)} servers")
-
-                        # Add account_id to each guild and track mapping
-                        for guild in account_guilds:
-                            guild['_account_id'] = acc['id']  # Store which account this guild belongs to
-                            guild_to_account[guild['id']] = acc['id']
-                            all_guilds.append(guild)
-                    elif guilds_resp.status_code == 401:
-                        # Token is invalid - mark account as needing token update
-                        print(f"[DASHBOARD] Account {acc['id']} has invalid token (401)")
-                        # Set is_valid to 0 so frontend shows update popup
-                        from database import get_db
-                        conn = get_db()
-                        cursor = conn.cursor()
-                        cursor.execute('UPDATE linked_discord_accounts SET is_valid = 0 WHERE id = ?', (acc['id'],))
-                        conn.commit()
-                        conn.close()
-                    elif guilds_resp.status_code == 403:
-                        # Check if account is suspended/deleted
-                        try:
-                            error_data = guilds_resp.json()
-                            error_code = error_data.get('code', 0)
-                            if error_code in [40001, 40002]:
-                                print(f"[DASHBOARD] Account {acc['id']} is suspended/disabled (code {error_code})")
-                                # Unlink the account and store info for popup
-                                from database.models import unlink_discord_account
-                                suspended_accounts.append({
-                                    'username': acc.get('username', 'Unknown'),
-                                    'discord_id': acc.get('discord_id', 'Unknown')
-                                })
-                                unlink_discord_account(user['id'], acc['id'])
-                        except Exception as e:
-                            print(f"[DASHBOARD] Error parsing 403 response: {e}")
-                    else:
-                        print(f"[DASHBOARD] Account {acc['id']} failed to fetch guilds: {guilds_resp.status_code}")
-                except Exception as e:
-                    print(f"[DASHBOARD] Error fetching guilds for account {acc['id']}: {e}")
-
-    guilds = all_guilds
-    print(f"[DASHBOARD] Final guilds count for selected account: {len(guilds)}")
-
-    # Fallback to old single-account system if new system found nothing
-    if len(guilds) == 0 and user.get('discord_token'):
-        print(f"[DASHBOARD] No guilds from new system, trying legacy token")
-        try:
-            legacy_token = get_decrypted_token(user['discord_id'])
-            if legacy_token:
-                headers = {'Authorization': legacy_token}
-                guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=5)
-                print(f"[DASHBOARD] Legacy token guilds API response: {guilds_resp.status_code}")
-                if guilds_resp.status_code == 200:
-                    guilds = guilds_resp.json()
-                    print(f"[DASHBOARD] Legacy token guilds fetched: {len(guilds)} servers")
-        except Exception as e:
-            print(f"[DASHBOARD] Error with legacy token: {e}")
+        # Guilds are now loaded asynchronously via /api/guilds endpoint
+        # This makes the page load instantly instead of waiting for Discord API
 
     # Get plan status and user data
     plan_status = get_plan_status(user['id'])
@@ -1432,8 +1348,8 @@ def bridge_websocket(ws):
     authenticated = False
     user_id = None
 
-    while True:
-        try:
+    try:
+        while True:
             data = ws.receive()
             if data is None:
                 break
@@ -1444,9 +1360,14 @@ def bridge_websocket(ws):
             if msg_type == 'auth':
                 secret_key = message.get('secret_key')
 
-                # Validate the secret key against database
-                if secret_key and validate_bridge_secret_key(secret_key):
+                # Validate the secret key against database - returns user_id if valid
+                validated_user_id = validate_bridge_secret_key(secret_key) if secret_key else None
+
+                if validated_user_id:
                     authenticated = True
+                    user_id = validated_user_id
+                    # Mark bridge as online in database
+                    set_bridge_online(user_id)
                     ws.send(json.dumps({'type': 'auth_success'}))
                 else:
                     ws.send(json.dumps({'type': 'auth_failed', 'reason': 'Invalid secret key'}))
@@ -1457,9 +1378,11 @@ def bridge_websocket(ws):
 
             # Add more message handlers here as needed
 
-        except Exception as e:
-            print(f"[Bridge WebSocket] Error: {e}")
-            break
+    except Exception as e:
+    finally:
+        # Always mark bridge as offline when connection ends
+        if user_id:
+            set_bridge_offline(user_id)
 
 
 def parse_markdown_links(text):
@@ -1555,6 +1478,78 @@ def paid_services_terms():
     )
 
 
+@app.route('/api/guilds')
+@rate_limit('api')
+def get_guilds():
+    """Fetch guilds for the current user's primary Discord account"""
+    if 'authenticated' not in session:
+        return {'error': 'Unauthorized'}, 401
+
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return {'error': 'User not found'}, 404
+
+    from database import get_linked_discord_accounts, get_linked_discord_account_by_id
+
+    linked_accounts = get_linked_discord_accounts(user['id'])
+    if not linked_accounts:
+        return {'success': True, 'guilds': [], 'no_account': True}
+
+    primary_account = get_primary_discord_account(user, linked_accounts)
+    if not primary_account:
+        return {'success': True, 'guilds': [], 'no_account': True}
+
+    account_details = get_linked_discord_account_by_id(primary_account['id'])
+    if not account_details or not account_details.get('discord_token'):
+        return {'success': True, 'guilds': [], 'no_token': True}
+
+    try:
+        token = account_details['discord_token']
+        headers = {'Authorization': token}
+        guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=10)
+
+        if guilds_resp.status_code == 200:
+            guilds = guilds_resp.json()
+            # Add account_id to each guild
+            for guild in guilds:
+                guild['_account_id'] = primary_account['id']
+            return {'success': True, 'guilds': guilds}
+        elif guilds_resp.status_code == 401:
+            # Token invalid
+            from database import get_db
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute('UPDATE linked_discord_accounts SET is_valid = 0 WHERE id = ?', (primary_account['id'],))
+            conn.commit()
+            conn.close()
+            return {'success': False, 'token_invalid': True, 'account_info': {
+                'account_id': primary_account['id'],
+                'username': primary_account.get('username', 'Unknown'),
+                'discord_id': primary_account.get('discord_id', 'Unknown')
+            }}, 401
+        elif guilds_resp.status_code == 403:
+            # Check for suspended account
+            try:
+                error_data = guilds_resp.json()
+                error_code = error_data.get('code', 0)
+                if error_code in [40001, 40002]:
+                    from database.models import unlink_discord_account
+                    unlink_discord_account(user['id'], primary_account['id'])
+                    return {'success': False, 'suspended': True, 'account_info': {
+                        'username': primary_account.get('username', 'Unknown'),
+                        'discord_id': primary_account.get('discord_id', 'Unknown')
+                    }}
+            except:
+                pass
+            return {'success': False, 'error': 'Access denied'}, 403
+        else:
+            return {'success': False, 'error': 'Failed to fetch guilds'}, guilds_resp.status_code
+    except requests.exceptions.Timeout:
+        return {'success': False, 'error': 'Request timeout'}, 500
+    except Exception as e:
+        return {'success': False, 'error': str(e)}, 500
+
+
 @app.route('/api/guild/<guild_id>/channels')
 @rate_limit('api')
 def get_guild_channels(guild_id):
@@ -1605,9 +1600,9 @@ def get_guild_channels(guild_id):
                 'error': 'Token invalid',
                 'token_invalid': True,
                 'account_info': {
-                    'account_id': primary_account['id'],
-                    'username': primary_account.get('username', 'Unknown'),
-                    'discord_id': primary_account.get('discord_id', 'Unknown')
+                    'account_id': primary_account['id'] if primary_account else None,
+                    'username': primary_account.get('username', 'Unknown') if primary_account else 'Unknown',
+                    'discord_id': primary_account.get('discord_id', 'Unknown') if primary_account else 'Unknown'
                 }
             }, 401
         else:
@@ -1616,6 +1611,120 @@ def get_guild_channels(guild_id):
         return {'error': 'Request timeout'}, 500
     except Exception as e:
         return {'error': str(e)}, 500
+
+
+@app.route('/api/refresh-guilds-channels', methods=['POST'])
+@rate_limit('api')
+def refresh_guilds_channels():
+    """Refresh and return current guilds with their channels for pre-send validation"""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    if 'authenticated' not in session:
+        return {'error': 'Unauthorized'}, 401
+
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return {'error': 'User not found'}, 404
+
+    # Get token from linked Discord accounts
+    from database import get_linked_discord_accounts, get_linked_discord_account_by_id
+    linked_accounts = get_linked_discord_accounts(user['id'])
+
+    user_token = None
+    primary_account = None
+    if linked_accounts:
+        primary_account = get_primary_discord_account(user, linked_accounts)
+        if primary_account:
+            account_details = get_linked_discord_account_by_id(primary_account['id'])
+            if account_details:
+                user_token = account_details.get('discord_token')
+
+    if not user_token:
+        return {'error': 'No linked Discord account'}, 401
+
+    headers = {'Authorization': user_token}
+    result_guilds = []
+
+    try:
+        # Fetch guilds
+        guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=10)
+
+        if guilds_resp.status_code == 200:
+            guilds = guilds_resp.json()
+
+            # For each guild, fetch channels
+            for guild in guilds:
+                guild_data = {
+                    'id': guild['id'],
+                    'name': guild['name'],
+                    'icon': guild.get('icon'),
+                    'channels': []
+                }
+
+                try:
+                    channels_resp = requests.get(
+                        f'https://discord.com/api/v10/guilds/{guild["id"]}/channels',
+                        headers=headers,
+                        timeout=5
+                    )
+
+                    if channels_resp.status_code == 200:
+                        channels = channels_resp.json()
+                        # Filter to text channels only
+                        text_channels = [
+                            {'id': ch['id'], 'name': ch['name'], 'position': ch.get('position', 0)}
+                            for ch in channels if ch.get('type') == 0
+                        ]
+                        # Sort by position
+                        text_channels.sort(key=lambda x: x['position'])
+                        guild_data['channels'] = text_channels
+                except Exception:
+                    # If channels fail, still include guild with empty channels
+                    pass
+
+                result_guilds.append(guild_data)
+
+            return {'guilds': result_guilds}, 200
+
+        elif guilds_resp.status_code == 401:
+            return {
+                'error': 'Token invalid',
+                'token_invalid': True,
+                'account_info': {
+                    'account_id': primary_account['id'] if primary_account else None,
+                    'username': primary_account.get('username', 'Unknown') if primary_account else 'Unknown',
+                    'discord_id': primary_account.get('discord_id', 'Unknown') if primary_account else 'Unknown'
+                }
+            }, 401
+        elif guilds_resp.status_code == 403:
+            # Check if suspended
+            try:
+                error_data = guilds_resp.json()
+                error_code = error_data.get('code', 0)
+                if error_code in [40001, 40002]:
+                    return {
+                        'error': 'Account suspended',
+                        'account_suspended': True,
+                        'account_info': {
+                            'account_id': primary_account['id'] if primary_account else None,
+                            'username': primary_account.get('username', 'Unknown') if primary_account else 'Unknown',
+                            'discord_id': primary_account.get('discord_id', 'Unknown') if primary_account else 'Unknown'
+                        }
+                    }, 403
+            except Exception:
+                pass
+            return {'error': 'Access forbidden'}, 403
+        else:
+            return {'error': 'Failed to fetch guilds'}, guilds_resp.status_code
+
+    except requests.exceptions.Timeout:
+        return {'error': 'Request timeout'}, 500
+    except Exception as e:
+        return {'error': str(e)}, 500
+
 
 @app.route('/api/send-message-single', methods=['POST'])
 @rate_limit('send_message')
@@ -1685,7 +1794,6 @@ def send_message_single():
 
         # Don't skip based on is_valid - try all accounts
         # if not acc.get('is_valid', True):
-        #     print(f"[SEND] Skipping invalid account {acc['id']}")
         #     continue
 
         account_details = get_linked_discord_account_by_id(acc['id'])
@@ -1782,7 +1890,6 @@ def send_message_single():
                 session['sent_count'] += 1
                 session.modified = True
             except Exception as db_error:
-                print(f"[ERROR] Database error after successful send: {str(db_error)}")
                 import traceback
                 traceback.print_exc()
                 # Message was sent successfully, return success anyway
@@ -2031,7 +2138,6 @@ def team_management():
             plan_config = BUSINESS_PLANS.get(subscription['plan_id'], {})
             max_members = plan_config.get('max_members', 3)
             team_id = create_business_team(user['id'], subscription['id'], max_members)
-            print(f"[BUSINESS] Late team creation for user {user['id']}: team_id={team_id}")
             # Refetch the team
             team = get_business_team_by_owner(user['id'])
 
@@ -2047,7 +2153,6 @@ def team_management():
             username, avatar = fetch_discord_user_info(member['member_discord_id'])
             if username:
                 update_team_member_info(team['id'], member['member_discord_id'], username, avatar)
-                print(f"[BUSINESS] Updated member info for {member['member_discord_id']}: {username}")
 
     # Get member stats including usage (refetch after potential updates)
     member_stats = get_team_member_stats(team['id'])
@@ -2111,7 +2216,6 @@ def team_panel():
             plan_config = BUSINESS_PLANS.get(subscription['plan_id'], {})
             max_members = plan_config.get('max_members', 3)
             team_id = create_business_team(user['id'], subscription['id'], max_members)
-            print(f"[TEAM] Late team creation for user {user['id']}: team_id={team_id}")
             # Refetch the team
             team = get_business_team_by_owner(user['id'])
 
@@ -2203,7 +2307,6 @@ def api_delete_account():
             return jsonify({'success': False, 'error': error or 'Failed to delete account'}), 500
 
     except Exception as e:
-        print(f"[DELETE ACCOUNT API] Error: {str(e)}")
         return jsonify({'success': False, 'error': 'An error occurred'}), 500
 
 @app.route('/api/change-email', methods=['POST'])
@@ -2274,7 +2377,6 @@ def api_change_email():
         }), 200
 
     except Exception as e:
-        print(f"[ERROR] Email change error: {str(e)}")
         return jsonify({'success': False, 'error': 'Failed to initiate email change'}), 500
 
 @app.route('/verify-email-change')
@@ -2356,7 +2458,6 @@ def api_verify_email_change():
         session.pop('pending_email_change', None)
         session.pop('email_change_user_id', None)
 
-        print(f"[EMAIL CHANGE] Email changed for user {user['id']} to {email}")
 
         return jsonify({
             'success': True,
@@ -2364,7 +2465,6 @@ def api_verify_email_change():
         }), 200
 
     except Exception as e:
-        print(f"[ERROR] Email change verification error: {str(e)}")
         return jsonify({'success': False, 'error': 'Failed to change email'}), 500
 
 @app.route('/api/cancel-plan', methods=['POST'])
@@ -2388,12 +2488,10 @@ def cancel_plan():
 
         # Cancel the subscription
         cancel_subscription(user['id'])
-        print(f"[PLAN] Plan cancelled for {session['user']['username']}")
 
         return jsonify({'success': True}), 200
 
     except Exception as e:
-        print(f"[ERROR] Cancel plan error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/cancel')
@@ -2408,10 +2506,8 @@ def dev_cancel_plan():
         user = get_user_by_id(session.get('user_id'))
         if user:
             cancel_subscription(user['id'])
-            print(f"[DEV] Plan reset to free for {session['user']['username']}")
         return redirect(url_for('dashboard'))
     except Exception as e:
-        print(f"[DEV ERROR] Cancel error: {str(e)}")
         return redirect(url_for('dashboard'))
 
 @app.route('/clear')
@@ -2433,11 +2529,9 @@ def dev_clear_account():
             if user.get('flagged'):
                 unflag_user(user['id'])
 
-            print(f"[DEV] Cleared bans/flags for {session['user']['username']}")
 
         return redirect(url_for('dashboard'))
     except Exception as e:
-        print(f"[DEV ERROR] Clear error: {str(e)}")
         return redirect(url_for('dashboard'))
 
 @app.route('/api/flag-self', methods=['POST'])
@@ -2469,7 +2563,6 @@ def api_flag_self():
         return jsonify({'success': True}), 200
 
     except Exception as e:
-        print(f"[ERROR] Flag self error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/save-user-data', methods=['POST'])
@@ -2518,7 +2611,6 @@ def api_save_user_data():
         return jsonify({'success': True}), 200
 
     except Exception as e:
-        print(f"[ERROR] Save user data error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/get-user-data', methods=['GET'])
@@ -2551,7 +2643,6 @@ def api_get_user_data():
         }), 200
 
     except Exception as e:
-        print(f"[ERROR] Get user data error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/status-check', methods=['GET'])
@@ -2589,7 +2680,6 @@ def status_check():
         }), 200
 
     except Exception as e:
-        print(f"[ERROR] Status check error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -2616,11 +2706,9 @@ def delete_account():
         if user:
             # Delete user from database (this will cascade delete subscriptions and usage)
             delete_user(user['discord_id'])
-            print(f"[DELETE] Account deleted: {user_data.get('username')} (ID: {user_id})")
         elif user_email:
             # Fallback: delete by email if discord_id lookup fails
             delete_user_by_email(user_email)
-            print(f"[DELETE] Account deleted by email: {user_data.get('username')} ({user_email})")
         else:
             return {'success': False, 'error': 'User not found'}, 404
 
@@ -2630,7 +2718,6 @@ def delete_account():
         return {'success': True}, 200
 
     except Exception as e:
-        print(f"[ERROR] Delete account error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/team/add-member', methods=['POST'])
@@ -2719,7 +2806,6 @@ def add_team_member_api():
             return {'success': False, 'error': 'Member already exists in the team'}, 400
 
     except Exception as e:
-        print(f"[ERROR] Add member error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/team/remove-member', methods=['POST'])
@@ -2756,7 +2842,6 @@ def remove_team_member_api():
         return {'success': True, 'message': 'Member removed successfully'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Remove member error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/team/set-team-message', methods=['POST'])
@@ -2795,7 +2880,6 @@ def set_team_message():
         return {'success': True, 'message': 'Team message updated successfully'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Set team message error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -2831,7 +2915,6 @@ def get_team_member_analytics(member_adzsend_id):
         return {'success': True, 'analytics': analytics}, 200
 
     except Exception as e:
-        print(f"[ERROR] Get member analytics error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -2868,7 +2951,6 @@ def get_team_member_daily_stats(member_adzsend_id):
 
     except Exception as e:
         import traceback
-        print(f"[ERROR] Get member daily stats error: {str(e)}")
         traceback.print_exc()
         return {'success': False, 'error': str(e)}, 500
 
@@ -2898,7 +2980,6 @@ def get_personal_analytics():
         }, 200
 
     except Exception as e:
-        print(f"[ERROR] Get personal analytics error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -2923,7 +3004,6 @@ def get_personal_daily_stats():
 
     except Exception as e:
         import traceback
-        print(f"[ERROR] Get personal daily stats error: {str(e)}")
         traceback.print_exc()
         return {'success': False, 'error': str(e)}, 500
 
@@ -2946,7 +3026,6 @@ def get_personal_analytics_summary_endpoint():
 
     except Exception as e:
         import traceback
-        print(f"[ERROR] Get personal analytics summary error: {str(e)}")
         traceback.print_exc()
         return {'success': False, 'error': str(e)}, 500
 
@@ -2970,7 +3049,6 @@ def get_user_status():
         }, 200
 
     except Exception as e:
-        print(f"[ERROR] Get user status error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -2988,7 +3066,6 @@ def get_invitations():
         return {'success': True, 'invitations': invitations}, 200
 
     except Exception as e:
-        print(f"[ERROR] Get invitations error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -3025,7 +3102,6 @@ def accept_invitation(member_id):
         return {'success': True, 'message': 'Invitation accepted'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Accept invitation error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -3053,7 +3129,6 @@ def deny_invitation(member_id):
         return {'success': True, 'message': 'Invitation denied'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Deny invitation error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -3074,7 +3149,6 @@ def clear_invitations():
         return {'success': True, 'message': 'All invitations cleared'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Clear invitations error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -3139,7 +3213,6 @@ def get_current_team():
         }, 200
 
     except Exception as e:
-        print(f"[ERROR] Get current team error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -3166,7 +3239,6 @@ def leave_team_route():
         return {'success': True, 'message': 'Left team successfully'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Leave team error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -3207,7 +3279,6 @@ def remove_member_from_list(member_id):
         return {'success': True, 'message': 'Member removed from list'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Remove member from list error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 
@@ -3280,7 +3351,6 @@ def admin_get_users():
 
     except Exception as e:
         import traceback
-        print(f"[ERROR] Admin get users error: {str(e)}")
         traceback.print_exc()
         return {'success': False, 'error': str(e)}, 500
 
@@ -3344,7 +3414,6 @@ def admin_search_user():
         return {'success': True, 'user': user}, 200
 
     except Exception as e:
-        print(f"[ERROR] Admin search user error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/admin/user/<int:user_id>', methods=['GET'])
@@ -3375,7 +3444,6 @@ def admin_get_user_details(user_id):
         return {'success': True, 'user': user_details}, 200
 
     except Exception as e:
-        print(f"[ERROR] Admin get user details error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/admin/ban/<int:user_id>', methods=['POST'])
@@ -3405,7 +3473,6 @@ def admin_ban_user(user_id):
         return {'success': True, 'message': 'User banned successfully'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Admin ban user error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/admin/unban/<int:user_id>', methods=['POST'])
@@ -3430,7 +3497,6 @@ def admin_unban_user(user_id):
         return {'success': True, 'message': 'User unbanned successfully'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Admin unban user error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/admin/flag/<int:user_id>', methods=['POST'])
@@ -3455,7 +3521,6 @@ def admin_flag_user(user_id):
         return {'success': True, 'message': 'User flagged successfully'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Admin flag user error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/admin/unflag/<int:user_id>', methods=['POST'])
@@ -3480,7 +3545,6 @@ def admin_unflag_user(user_id):
         return {'success': True, 'message': 'User unflagged successfully'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Admin unflag user error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/admin/delete/<int:user_id>', methods=['POST'])
@@ -3510,7 +3574,6 @@ def admin_delete_user(user_id):
         return {'success': True, 'message': 'User deleted successfully'}, 200
 
     except Exception as e:
-        print(f"[ERROR] Admin delete user error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/admin/user/<int:user_id>/message', methods=['GET'])
@@ -3534,7 +3597,6 @@ def admin_get_user_message(user_id):
         return {'success': True, 'message': draft_message or '', 'has_message': bool(draft_message)}, 200
 
     except Exception as e:
-        print(f"[ERROR] Admin get user message error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/admin/user/<int:user_id>/team-message', methods=['GET'])
@@ -3568,7 +3630,6 @@ def admin_get_team_message(user_id):
         return {'success': True, 'message': team_message or '', 'has_message': bool(team_message)}, 200
 
     except Exception as e:
-        print(f"[ERROR] Admin get team message error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/admin/user/<int:user_id>/billing-history', methods=['GET'])
@@ -3588,7 +3649,6 @@ def admin_get_billing_history(user_id):
         return {'success': True, 'history': history, 'has_history': len(history) > 0}, 200
 
     except Exception as e:
-        print(f"[ERROR] Admin get billing history error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 @app.route('/api/admin/user/<int:user_id>/plan-status', methods=['GET'])
@@ -3608,7 +3668,6 @@ def admin_get_user_plan_status(user_id):
         return {'success': True, 'plan_status': plan_status}, 200
 
     except Exception as e:
-        print(f"[ERROR] Admin get plan status error: {str(e)}")
         return {'success': False, 'error': str(e)}, 500
 
 # =============================================================================
@@ -3686,7 +3745,6 @@ def handle_link_account_callback(user_id, state):
         token_response = requests.post(token_url, data=token_data, timeout=10)
 
         if token_response.status_code != 200:
-            print(f"[LINK ACCOUNT] Token exchange failed: {token_response.text}")
             return render_template('oauth_callback.html', success=False, error='Failed to get access token')
 
         token_json = token_response.json()
@@ -3703,7 +3761,6 @@ def handle_link_account_callback(user_id, state):
         )
 
         if user_response.status_code != 200:
-            print(f"[LINK ACCOUNT] Failed to get user info: {user_response.text}")
             return render_template('oauth_callback.html', success=False, error='Failed to get user info')
 
         discord_user = user_response.json()
@@ -3734,7 +3791,6 @@ def handle_link_account_callback(user_id, state):
     except requests.exceptions.Timeout:
         return render_template('oauth_callback.html', success=False, error='Connection timeout')
     except Exception as e:
-        print(f"[LINK ACCOUNT] Error: {str(e)}")
         return render_template('oauth_callback.html', success=False, error='An error occurred')
 
 
@@ -3783,7 +3839,6 @@ def discord_oauth_callback():
         token_response = requests.post(token_url, data=token_data, timeout=10)
 
         if token_response.status_code != 200:
-            print(f"[DISCORD OAUTH] Token exchange failed: {token_response.text}")
             return redirect(url_for('settings') + '?discord_error=Failed%20to%20get%20access%20token')
 
         token_json = token_response.json()
@@ -3800,7 +3855,6 @@ def discord_oauth_callback():
         )
 
         if user_response.status_code != 200:
-            print(f"[DISCORD OAUTH] Failed to get user info: {user_response.text}")
             return redirect(url_for('settings') + '?discord_error=Failed%20to%20get%20user%20info')
 
         discord_user = user_response.json()
@@ -3823,7 +3877,6 @@ def discord_oauth_callback():
     except requests.exceptions.Timeout:
         return redirect(url_for('settings') + '?discord_error=Connection%20timeout')
     except Exception as e:
-        print(f"[DISCORD OAUTH] Error: {str(e)}")
         return redirect(url_for('settings') + '?discord_error=An%20error%20occurred')
 
 
@@ -3909,7 +3962,6 @@ def discord_verify_token():
     except requests.exceptions.Timeout:
         return {'error': 'Connection timeout'}, 500
     except Exception as e:
-        print(f"[DISCORD TOKEN VERIFY] Error: {str(e)}")
         return {'error': 'An error occurred'}, 500
 
 
@@ -3972,7 +4024,6 @@ def discord_link():
     except requests.exceptions.Timeout:
         return {'error': 'Connection timeout'}, 500
     except Exception as e:
-        print(f"[DISCORD LINK] Error: {str(e)}")
         return {'error': 'An error occurred'}, 500
 
 
@@ -4191,7 +4242,6 @@ def verify_link_account_token():
     except requests.exceptions.Timeout:
         return {'error': 'Connection timeout', 'valid': False}, 200
     except Exception as e:
-        print(f"[VERIFY TOKEN] Error: {str(e)}")
         return {'error': 'Verification failed', 'valid': False}, 200
 
 
@@ -4296,7 +4346,6 @@ def update_account_token():
     except requests.exceptions.Timeout:
         return {'error': 'Discord API timeout'}, 500
     except Exception as e:
-        print(f"[TOKEN UPDATE] Error: {e}")
         return {'error': 'Failed to verify token'}, 500
 
 

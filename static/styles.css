@@ -1412,19 +1412,21 @@ body {
     gap: 4px;
 }
 
-/* Discord-style bouncing dots loader */
+/* Loading dots animation - centralized, do not duplicate */
 .loading-dots {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 5px;
 }
 
 .loading-dots .dot {
     width: 8px;
     height: 8px;
-    background-color: #81828A;
+    background-color: #b5bac1;
     border-radius: 50%;
-    animation: discord-bounce 1.4s ease-in-out infinite;
+    animation: dot-pulse 1.4s ease-in-out infinite both;
+    will-change: opacity, transform;
 }
 
 .loading-dots .dot:nth-child(1) {
@@ -1432,19 +1434,26 @@ body {
 }
 
 .loading-dots .dot:nth-child(2) {
-    animation-delay: 0.2s;
+    animation-delay: 0.16s;
 }
 
 .loading-dots .dot:nth-child(3) {
-    animation-delay: 0.4s;
+    animation-delay: 0.32s;
 }
 
-@keyframes discord-bounce {
+/* Dark dot variant for light backgrounds */
+.loading-dots.dark .dot {
+    background-color: #121215;
+}
+
+@keyframes dot-pulse {
     0%, 80%, 100% {
-        transform: translateY(0);
+        opacity: 0.4;
+        transform: scale(0.8);
     }
     40% {
-        transform: translateY(-8px);
+        opacity: 1;
+        transform: scale(1);
     }
 }
 

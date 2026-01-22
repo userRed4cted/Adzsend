@@ -43,5 +43,4 @@ def delete_user_account(user_id):
         return True, None
 
     except Exception as e:
-        print(f"[DELETE ACCOUNT] Error deleting user {user_id}: {str(e)}")
         return False, str(e)

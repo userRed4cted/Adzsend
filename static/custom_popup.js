@@ -88,12 +88,23 @@ function showCustomPopup(title, message, buttonText = 'Ok', options = {}) {
     return new Promise((resolve) => {
         initCustomPopup();
 
+        // If a popup is already showing, close it first and resolve its promise
+        if (currentPopup && popupResolve) {
+            const prevResolve = popupResolve;
+            popupResolve = null;
+            currentPopup = null;
+            prevResolve(false);
+        }
+
         const overlay = document.getElementById('custom-popup-overlay');
         const titleEl = document.getElementById('custom-popup-title');
         const textEl = document.getElementById('custom-popup-text');
         const btnEl = document.getElementById('custom-popup-btn');
         const contentEl = document.getElementById('custom-popup-content');
         const tokenSection = document.getElementById('custom-popup-token-section');
+
+        // Ensure overlay is reset before showing new popup
+        overlay.classList.remove('active');
 
         // Reset visibility
         contentEl.style.display = 'none';
@@ -143,8 +154,10 @@ function showCustomPopup(title, message, buttonText = 'Ok', options = {}) {
         currentPopup = overlay;
         popupResolve = resolve;
 
-        // Show with animation
-        overlay.classList.add('active');
+        // Show with animation (use requestAnimationFrame to ensure DOM is ready)
+        requestAnimationFrame(() => {
+            overlay.classList.add('active');
+        });
     });
 }
 
@@ -152,6 +165,17 @@ function showCustomPopup(title, message, buttonText = 'Ok', options = {}) {
 function closePopup(result) {
     const overlay = document.getElementById('custom-popup-overlay');
     if (!overlay) return;
+
+    // Prevent double-closing
+    if (!overlay.classList.contains('active')) {
+        // Still resolve if there's a pending promise
+        if (popupResolve) {
+            popupResolve(result);
+            popupResolve = null;
+        }
+        currentPopup = null;
+        return;
+    }
 
     overlay.classList.remove('active');
 

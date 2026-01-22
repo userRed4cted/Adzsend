@@ -38,6 +38,7 @@
     </script>
     <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
+    {% include 'partials/base_scripts.html' %}
     <style>
         body {
             margin: 0;
@@ -467,11 +468,18 @@
             }
         });
 
-        // Purchase button handlers
+        // Purchase button handlers - uses AsyncButton for double-click prevention
         purchaseButtons.forEach(btn => {
             btn.addEventListener('click', async () => {
                 // Skip if button is disabled
                 if (btn.disabled) {
+                    return;
+                }
+
+                // Prevent double-clicks using plan ID as unique operation
+                const planId = btn.dataset.planId;
+                const operationId = `purchase_${planId}`;
+                if (AsyncButton.isProcessing(operationId)) {
                     return;
                 }
 
@@ -482,7 +490,6 @@
                 }
 
                 const planType = btn.dataset.planType;
-                const planId = btn.dataset.planId;
 
                 // Determine which billing toggle to use based on plan type
                 let isYearly = false;
@@ -507,6 +514,9 @@
                     return; // User cancelled
                 }
 
+                // Mark operation as started after confirmation
+                AsyncButton.startOperation(operationId);
+
                 // For testing: just set the plan on the account
                 try {
                     const response = await fetch('/api/set-plan', {
@@ -530,6 +540,8 @@
                     }
                 } catch (error) {
                     await customAlert('Error', 'Error activating plan: ' + error);
+                } finally {
+                    AsyncButton.endOperation(operationId);
                 }
             });
         });

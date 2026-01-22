@@ -15,6 +15,7 @@
     </script>
     <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
+    {% include 'partials/base_scripts.html' %}
     <style>
         /* Prevent page scrolling */
         body {
@@ -413,6 +414,33 @@
             font-weight: 600;
         }
 
+        /* Loading placeholder for server sidebar */
+        .server-loading-placeholder {
+            display: flex;
+            justify-content: center;
+            padding-top: 8px;
+        }
+
+        .server-loading-placeholder .server-icon-holder.placeholder {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #2b2d31;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .server-loading-placeholder .loading-dots {
+            gap: 3px;
+        }
+
+        .server-loading-placeholder .loading-dots .dot {
+            width: 6px;
+            height: 6px;
+        }
+
         /* Divider between content and server sidebar */
         .server-sidebar-divider {
             width: 1px;
@@ -680,11 +708,11 @@
                     <div class="menu-section">
                         <div class="menu-category">Main</div>
 
-                        <button class="menu-item{% if not discord_linked or is_team_owner or not guilds %} disabled{% endif %}" data-page="personal-panel" id="personal-panel-btn" data-discord-linked="{{ discord_linked|tojson }}" data-has-guilds="{{ (guilds|length > 0)|tojson }}"{% if not discord_linked or is_team_owner or not guilds %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
+                        <button class="menu-item{% if not discord_linked or is_team_owner %} disabled{% endif %}" data-page="personal-panel" id="personal-panel-btn" data-discord-linked="{{ discord_linked|tojson }}"{% if not discord_linked or is_team_owner %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
                             Personal panel
                         </button>
 
-                        <button class="menu-item{% if not discord_linked or not has_team or not guilds %} disabled{% endif %}" data-page="team-panel" id="team-panel-btn" data-discord-linked="{{ discord_linked|tojson }}" data-has-guilds="{{ (guilds|length > 0)|tojson }}"{% if not discord_linked or not has_team or not guilds %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
+                        <button class="menu-item{% if not discord_linked or not has_team %} disabled{% endif %}" data-page="team-panel" id="team-panel-btn" data-discord-linked="{{ discord_linked|tojson }}"{% if not discord_linked or not has_team %} disabled style="opacity: 0.5; cursor: not-allowed; color: #81828A;"{% endif %}>
                             Team panel
                         </button>
 
@@ -707,11 +735,16 @@
                 <div class="main-content-wrapper">
                     <!-- Page: Personal Panel -->
                     <div id="page-personal-panel" class="page-content" style="height: 100%; display: none; flex-direction: column;">
-                    {% if guilds %}
+                    {% if discord_linked %}
                     <div class="main-layout" style="height: 100%;">
                         <!-- Left: Discord-style Server Sidebar -->
                         <div class="server-sidebar" id="server-sidebar">
-                            <!-- Server icons will be populated by JavaScript -->
+                            <!-- Loading placeholder shown until guilds load -->
+                            <div class="server-loading-placeholder">
+                                <div class="server-icon-holder placeholder">
+                                    <div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Divider after server sidebar -->
@@ -830,11 +863,16 @@
 
                     <!-- Page: Team Panel -->
                     <div id="page-team-panel" class="page-content" style="height: 100%; display: none; flex-direction: column;">
-                    {% if has_team and guilds %}
+                    {% if has_team and discord_linked %}
                     <div class="main-layout" style="height: 100%;">
                         <!-- Left: Discord-style Server Sidebar -->
                         <div class="server-sidebar" id="team-server-sidebar">
-                            <!-- Server icons will be populated by JavaScript -->
+                            <!-- Loading placeholder shown until guilds load -->
+                            <div class="server-loading-placeholder">
+                                <div class="server-icon-holder placeholder">
+                                    <div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Divider after server sidebar -->
@@ -1917,9 +1955,14 @@
         });
 
         // Global function to show send results (used by both Personal and Team panels)
-        async function showSendResults(succeeded, rateLimited, failed) {
+        async function showSendResults(succeeded, rateLimited, failed, wasCancelled = false) {
             // Determine title based on results
-            let title = succeeded.length > 0 ? 'Send succeeded' : 'Failed to send';
+            let title;
+            if (wasCancelled) {
+                title = 'Sending cancelled';
+            } else {
+                title = succeeded.length > 0 ? 'Send succeeded' : 'Failed to send';
+            }
 
             // Build content HTML for scroll frame - no gaps between items
             let contentHTML = '';
@@ -1973,6 +2016,10 @@
                 document.querySelectorAll('.account-switcher-card').forEach(card => {
                     card.addEventListener('click', async function() {
                         const accountId = parseInt(this.getAttribute('data-account-id'));
+                        const operationId = `switch_account_${accountId}`;
+
+                        if (AsyncButton.isProcessing(operationId)) return;
+                        AsyncButton.startOperation(operationId);
 
                         // Close the popup first
                         closePopup(true);
@@ -1999,6 +2046,8 @@
                         } catch (error) {
                             console.error('Error switching account:', error);
                             await customAlert('Error', 'Failed to switch account. Please try again.');
+                        } finally {
+                            AsyncButton.endOperation(operationId);
                         }
                     });
                 });
@@ -2014,10 +2063,15 @@
 
             // Server-side validated access flags (cannot be bypassed via inspect element)
             const discordLinked = {{ 'true' if discord_linked else 'false' }};
-            const hasGuilds = {{ 'true' if guilds else 'false' }};
+            let hasGuilds = false; // Will be set true after guilds load async
             const hasTeam = {{ 'true' if has_team else 'false' }};
             const isTeamOwner = {{ 'true' if is_team_owner else 'false' }};
             const currentDiscordAccountId = {{ primary_account.id if primary_account else 'null' }};
+
+            // Function to update hasGuilds and UI when guilds are loaded
+            window.updateHasGuilds = function(guildsLoaded) {
+                hasGuilds = guildsLoaded;
+            };
 
             // Check for suspended/deleted accounts detected during page load
             const suspendedAccounts = {{ suspended_accounts | tojson | safe }};
@@ -2110,13 +2164,8 @@
                     }, 100);
                 }
                 // Continue to set up menu handlers even if no Discord account linked
-            } else if (!hasGuilds) {
-                // User has account linked but no servers
-                await customAlert(
-                    "You're not in any servers",
-                    'To send messages join a server/guild'
-                );
             }
+            // Note: hasGuilds check moved to loadGuildsAsync() since guilds load asynchronously
 
             menuItems.forEach(item => {
                 item.addEventListener('click', () => {
@@ -2128,10 +2177,10 @@
                     }
 
                     // Server-side validated access control (cannot bypass with inspect element)
-                    if (targetPage === 'personal-panel' && (!hasGuilds || isTeamOwner)) {
+                    if (targetPage === 'personal-panel' && isTeamOwner) {
                         return;
                     }
-                    if (targetPage === 'team-panel' && (!hasTeam || !hasGuilds)) {
+                    if (targetPage === 'team-panel' && !hasTeam) {
                         return;
                     }
                     if (targetPage === 'team-management' && !isTeamOwner) {
@@ -2205,12 +2254,15 @@
 
             let guilds = [];
             let serverChannels = {}; // Cache for channels by guild ID
+            let channelsLoadingComplete = false; // Track if all channels have finished loading
             let selectedChannels = []; // Array for multiple channel selection
             let teamSelectedChannels = []; // Team panel selected channels - declare early so DB load works
             let selectedGuild = null; // Currently selected guild
             let searchTags = []; // Search filter tags
             let currentServerColor = 'rgba(21, 216, 188, 0.6)'; // Current server's dominant color
             let isSending = false; // Track if messages are being sent
+            let isChecking = false; // Track if checking guilds/channels before send
+            let shouldCancelSend = false; // Track if user wants to cancel
             let failedChannels = new Map(); // Track channels that failed to send with failure type
             let viewMode = 'servers'; // 'servers', 'channels', or 'selected'
             let channelsOnlySearchText = ''; // Search filter for channels-only mode
@@ -2397,9 +2449,6 @@
             function renderChannelsOnlyMode() {
                 if (!channelsOnlyList) return;
 
-                // Check if any channels have been loaded
-                const hasLoadedChannels = Object.keys(serverChannels).length > 0;
-
                 // Collect all channels from all servers
                 let allChannels = [];
                 for (const guild of guilds) {
@@ -2433,8 +2482,8 @@
                 }
 
                 if (allChannels.length === 0) {
-                    if (!hasLoadedChannels) {
-                        // Channels haven't been loaded yet - show loading message
+                    if (!channelsLoadingComplete) {
+                        // Channels are still being loaded - show loading message
                         channelsOnlyList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
                     } else if (channelsOnlySearchText || channelsOnlySearchTags.length > 0) {
                         // Channels loaded but filtered to empty
@@ -2752,7 +2801,8 @@
                             const data = await response.json();
 
                             if (data.token_invalid) {
-                                return; // Skip, will handle redirect elsewhere
+                                serverChannels[guild.id] = []; // Mark as loaded (empty) to prevent re-fetch
+                                return;
                             }
 
                             if (data.channels) {
@@ -2773,6 +2823,12 @@
                 });
 
                 await Promise.all(promises);
+
+                // Mark loading as complete and do final render
+                channelsLoadingComplete = true;
+                if (viewMode === 'channels') {
+                    renderChannelsOnlyMode();
+                }
             }
 
             // Fetch all guilds and build UI
@@ -2784,37 +2840,76 @@
                 // Then load from database (syncs across devices)
                 await loadUserDataFromDB();
 
-                guilds = {{ guilds|tojson }};
-
-                // Remove selected channels from servers that no longer exist (user left server)
-                const guildIds = new Set(guilds.map(g => g.id));
-                const originalLength = selectedChannels.length;
-                selectedChannels = selectedChannels.filter(ch => guildIds.has(ch.guildId));
-
-                // Save if any channels were removed
-                if (selectedChannels.length !== originalLength) {
-                    saveSelectedChannels();
-                    saveUserDataToDB();
-                }
-
-                // Render servers
-                renderServers();
-
-                // Update selected display
+                // Update selected display with cached data
                 updateSelectedDisplay();
                 updateSendButton();
-                updateCharCount(); // Initialize character count display
+                updateCharCount();
 
-                // Preload all channels in background (don't await - let it run async)
-                preloadAllChannels().catch(err => console.error('Error preloading channels:', err));
-
-                // Hide loading and show content for personal message box
+                // Hide loading and show content for personal message box immediately
                 const personalMsgLoadingEl = document.getElementById('personal-message-loading');
                 const personalMsgContentEl = document.getElementById('personal-message-content');
                 if (personalMsgLoadingEl) personalMsgLoadingEl.style.display = 'none';
                 if (personalMsgContentEl) {
                     personalMsgContentEl.style.opacity = '1';
                     personalMsgContentEl.style.pointerEvents = 'auto';
+                }
+
+                // Load guilds asynchronously (doesn't block page load)
+                loadGuildsAsync();
+            }
+
+            async function loadGuildsAsync() {
+                try {
+                    const response = await fetch('/api/guilds');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        guilds = data.guilds || [];
+
+                        // Update global hasGuilds flag
+                        if (window.updateHasGuilds) {
+                            window.updateHasGuilds(guilds.length > 0);
+                        }
+
+                        // Show "no servers" popup if user has Discord linked but no servers
+                        if (guilds.length === 0 && !data.no_account && !data.no_token) {
+                            await customAlert(
+                                "You're not in any servers",
+                                'To send messages join a server/guild'
+                            );
+                        }
+
+                        // Remove selected channels from servers that no longer exist
+                        const guildIds = new Set(guilds.map(g => g.id));
+                        const originalLength = selectedChannels.length;
+                        selectedChannels = selectedChannels.filter(ch => guildIds.has(ch.guildId));
+
+                        if (selectedChannels.length !== originalLength) {
+                            saveSelectedChannels();
+                            saveUserDataToDB();
+                        }
+
+                        // Render servers and update UI
+                        renderServers();
+                        updateSelectedDisplay();
+                        updateSendButton();
+
+                        // Preload channels in background
+                        preloadAllChannels().catch(err => console.error('Error preloading channels:', err));
+                    } else if (data.token_invalid) {
+                        // Show token update popup
+                        showTokenUpdatePopup(data.account_info, (success) => {
+                            if (success) {
+                                window.location.reload();
+                            }
+                        });
+                    } else if (data.suspended) {
+                        // Show suspended account popup
+                        await showSuspendedAccountPopup(data.account_info);
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error loading guilds:', error);
                 }
             }
 
@@ -3166,13 +3261,33 @@
 
             // Emoji button is just an icon - no picker functionality
 
-            // Send button handler
+            // Send button handler - uses AsyncButton for double-click prevention
             if (sendBtn) {
                 sendBtn.addEventListener('click', async function() {
+                    // If currently sending or checking, handle cancel
+                    if (isSending || isChecking) {
+                        const cancelConfirmed = await customConfirm('Message sending', 'Are you sure you would like to cancel? This will stop any further actions.', 'Yes');
+                        if (cancelConfirmed) {
+                            shouldCancelSend = true;
+                        }
+                        return;
+                    }
+
+                    // Prevent double-clicks during initial processing (before isSending/isChecking are set)
+                    if (AsyncButton.isProcessing('personal_send')) {
+                        return;
+                    }
+
                     if (selectedChannels.length > 0 && messageInput && messageInput.value.trim()) {
+                        // Mark operation as started to prevent duplicate clicks
+                        AsyncButton.startOperation('personal_send');
+
                         // Check if bridge is connected before sending
                         const bridgeConnected = await checkBridgeConnected();
-                        if (!bridgeConnected) return;
+                        if (!bridgeConnected) {
+                            AsyncButton.endOperation('personal_send');
+                            return;
+                        }
 
                         // Check for filtered content before proceeding
                         const message = messageInput.value.trim();
@@ -3243,37 +3358,204 @@
                             }
 
                             await customAlert('Warning', `Your message contains prohibited content:\n• ${foundWords.join('\n• ')}`);
+                            AsyncButton.endOperation('personal_send');
                             return; // Stop execution
                         }
 
                         // Show confirmation popup
                         const channelCount = selectedChannels.length;
                         const confirmed = await customConfirm('Send Message', `Send message to ${channelCount} channel${channelCount !== 1 ? 's' : ''}?`, 'Send');
-                        if (!confirmed) return;
+                        if (!confirmed) {
+                            AsyncButton.endOperation('personal_send');
+                            return;
+                        }
 
-                        // Clear previous failed channels
-                        failedChannels.clear();
+                        // Reset cancel flag
+                        shouldCancelSend = false;
 
-                        isSending = true;
-                        sendBtn.disabled = true;
-                        sendBtn.innerHTML = '<span id="send-progress">Sending...</span>';
-
-                        // Send messages one by one for real-time usage tracking
-                        let succeededChannels = [];
-                        let rateLimitedChannels = [];
-                        let failedChannelsList = [];
-
-                        // Helper function to wait/delay
-                        const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-                        // Get custom delay setting from global variable (updated by settings popup)
-                        const getCustomDelay = () => window.userMessageDelay || 1000;
-
-                        // Get progress element for smooth updates
-                        const progressEl = document.getElementById('send-progress');
+                        // Phase 1: Check and refresh guilds/channels
+                        isChecking = true;
+                        sendBtn.disabled = false; // Keep enabled for cancel
+                        sendBtn.innerHTML = '<span id="send-progress">Checking...</span>';
 
                         try {
+                            const refreshResponse = await fetch('/api/refresh-guilds-channels', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-Token': '{{ csrf_token }}'
+                                }
+                            });
+
+                            // Check for cancel
+                            if (shouldCancelSend) {
+                                isChecking = false;
+                                shouldCancelSend = false;
+                                sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                sendBtn.innerHTML = 'Send';
+                                return;
+                            }
+
+                            const refreshData = await refreshResponse.json();
+
+                            if (refreshData.token_invalid && refreshData.account_info) {
+                                isChecking = false;
+                                sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                sendBtn.innerHTML = 'Send';
+                                await showTokenUpdatePopup(refreshData.account_info, () => {
+                                    window.location.reload();
+                                });
+                                return;
+                            }
+
+                            if (refreshData.account_suspended && refreshData.account_info) {
+                                isChecking = false;
+                                sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                sendBtn.innerHTML = 'Send';
+                                await showSuspendedAccountPopup(refreshData.account_info);
+                                window.location.reload();
+                                return;
+                            }
+
+                            if (!refreshResponse.ok || !refreshData.guilds) {
+                                isChecking = false;
+                                sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                sendBtn.innerHTML = 'Send';
+                                await customAlert('Error', 'Failed to verify channels. Please try again.');
+                                return;
+                            }
+
+                            // Check for cancel again
+                            if (shouldCancelSend) {
+                                isChecking = false;
+                                shouldCancelSend = false;
+                                sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                sendBtn.innerHTML = 'Send';
+                                return;
+                            }
+
+                            // Build a map of valid guild IDs and channel IDs from refresh
+                            const validGuilds = new Map();
+                            const validChannels = new Set();
+                            for (const guild of refreshData.guilds) {
+                                validGuilds.set(guild.id, guild);
+                                for (const channel of guild.channels) {
+                                    validChannels.add(`${guild.id}-${channel.id}`);
+                                }
+                            }
+
+                            // Update local guilds data
+                            guilds = refreshData.guilds.map(g => ({
+                                id: g.id,
+                                name: g.name,
+                                icon: g.icon
+                            }));
+
+                            // Update serverChannels cache
+                            for (const guild of refreshData.guilds) {
+                                serverChannels[guild.id] = guild.channels;
+                            }
+
+                            // Remove channels from old guilds that no longer exist
+                            const oldGuildIds = Object.keys(serverChannels);
+                            for (const guildId of oldGuildIds) {
+                                if (!validGuilds.has(guildId)) {
+                                    delete serverChannels[guildId];
+                                }
+                            }
+
+                            // Filter out selected channels that no longer exist
+                            const removedChannels = [];
+                            const originalCount = selectedChannels.length;
+                            selectedChannels = selectedChannels.filter(ch => {
+                                const key = `${ch.guildId}-${ch.id}`;
+                                const exists = validChannels.has(key);
+                                if (!exists) {
+                                    removedChannels.push(ch);
+                                }
+                                return exists;
+                            });
+
+                            // If channels were removed, update UI and save
+                            if (removedChannels.length > 0) {
+                                // Save updated selection
+                                saveSelectedChannels();
+                                saveUserDataToDB();
+
+                                // Update all UI elements
+                                renderServers();
+                                updateSelectedDisplay();
+                                updateSendButton();
+
+                                // Update server counts for affected guilds
+                                const affectedGuilds = new Set(removedChannels.map(ch => ch.guildId));
+                                for (const guildId of affectedGuilds) {
+                                    updateServerCount(guildId);
+                                }
+                            }
+
+                            // Re-render servers list to show updated data
+                            renderServers();
+                            if (viewMode === 'channels') {
+                                renderChannelsOnlyMode();
+                            } else if (viewMode === 'selected') {
+                                renderSelectedChannelsMode();
+                            }
+
+                            isChecking = false;
+
+                            // Check for cancel after checking phase
+                            if (shouldCancelSend) {
+                                shouldCancelSend = false;
+                                sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                sendBtn.innerHTML = 'Send';
+                                return;
+                            }
+
+                            // If no channels left after filtering, stop
+                            if (selectedChannels.length === 0) {
+                                sendBtn.disabled = true;
+                                sendBtn.innerHTML = 'Send';
+                                await customAlert('No channels', 'All selected channels are no longer available. Please select new channels.');
+                                return;
+                            }
+
+                            // Clear previous failed channels
+                            failedChannels.clear();
+
+                            // Phase 2: Start sending
+                            isSending = true;
+                            sendBtn.disabled = false; // Keep enabled for cancel
+                            sendBtn.innerHTML = '<span id="send-progress">Sending...</span>';
+
+                            // Send messages one by one for real-time usage tracking
+                            let succeededChannels = [];
+                            let rateLimitedChannels = [];
+                            let failedChannelsList = [];
+
+                            // Helper function to wait/delay
+                            const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+                            // Get custom delay setting from global variable (updated by settings popup)
+                            const getCustomDelay = () => window.userMessageDelay || 1000;
+
+                            // Get progress element for smooth updates
+                            const progressEl = document.getElementById('send-progress');
+
                             for (let i = 0; i < selectedChannels.length; i++) {
+                                // Check for cancel before each message
+                                if (shouldCancelSend) {
+                                    shouldCancelSend = false;
+                                    isSending = false;
+                                    sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                    sendBtn.innerHTML = 'Send';
+                                    // Show partial results if any
+                                    if (succeededChannels.length > 0 || rateLimitedChannels.length > 0 || failedChannelsList.length > 0) {
+                                        await showSendResults(succeededChannels, rateLimitedChannels, failedChannelsList, true);
+                                    }
+                                    return;
+                                }
+
                                 const channel = selectedChannels[i];
 
                                 // Update progress text only (keeps spinner smooth)
@@ -3309,6 +3591,7 @@
                                         username: 'Unknown',
                                         discord_id: 'Unknown'
                                     };
+                                    isSending = false;
                                     await showSuspendedAccountPopup(accountInfo);
                                     window.location.reload();
                                     return; // Stop execution
@@ -3319,17 +3602,20 @@
                                         discord_id: result.account_id || 'Unknown',
                                         account_id: result.account_id
                                     };
+                                    isSending = false;
                                     await showTokenUpdatePopup(accountInfo, () => {
                                         window.location.reload();
                                     });
                                     return; // Stop execution
                                 } else if (result.limit_reached) {
                                     // Usage limit reached - redirect to billing in settings
+                                    isSending = false;
                                     await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
                                     window.location.href = '/settings#billing';
                                     return; // Stop execution
                                 } else if (result.user_flagged) {
                                     // User was flagged - update UI immediately
+                                    isSending = false;
                                     if (result.user_banned) {
                                         // Auto-banned - BLOCK EVERYTHING IMMEDIATELY
                                         // Disable send button and message input
@@ -3384,8 +3670,11 @@
                             await customAlert('Error', `Error sending message: ${error.message}`);
                         } finally {
                             isSending = false;
+                            isChecking = false;
+                            shouldCancelSend = false;
                             sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
                             sendBtn.innerHTML = 'Send';
+                            AsyncButton.endOperation('personal_send');
                         }
                     }
                 });
@@ -3414,6 +3703,7 @@
 
             let teamGuilds = [];
             let teamServerChannels = {}; // Cache for channels by guild ID
+            let teamChannelsLoadingComplete = false; // Track if all team channels have finished loading
             // teamSelectedChannels already declared at top // Array for multiple channel selection
             let teamSelectedGuild = null; // Currently selected guild
             let teamSearchTags = []; // Search filter tags
@@ -3597,8 +3887,6 @@
             function teamRenderChannelsOnlyMode() {
                 if (!teamChannelsOnlyList) return;
 
-                const hasLoadedChannels = Object.keys(teamServerChannels).length > 0;
-
                 let allChannels = [];
                 for (const guild of teamGuilds) {
                     const channels = teamServerChannels[guild.id] || [];
@@ -3629,7 +3917,8 @@
                 }
 
                 if (allChannels.length === 0) {
-                    if (!hasLoadedChannels) {
+                    if (!teamChannelsLoadingComplete) {
+                        // Channels are still being loaded - show loading message
                         teamChannelsOnlyList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
                     } else if (teamChannelsOnlySearchText || teamChannelsOnlySearchTags.length > 0) {
                         teamChannelsOnlyList.innerHTML = '<div class="no-selection">No channels match search</div>';
@@ -3814,6 +4103,7 @@
                             const data = await response.json();
 
                             if (data.token_invalid) {
+                                teamServerChannels[guild.id] = []; // Mark as loaded (empty) to prevent re-fetch
                                 return;
                             }
 
@@ -3834,39 +4124,60 @@
                 });
 
                 await Promise.all(promises);
+
+                // Mark loading as complete and do final render
+                teamChannelsLoadingComplete = true;
+                if (teamViewMode === 'channels') {
+                    teamRenderChannelsOnlyMode();
+                }
             }
 
             // Initialize team UI
             async function teamInitializeUI() {
                 teamLoadSelectedChannels();
 
-                teamGuilds = {{ guilds|tojson }};
-
-                // Remove selected channels from servers that no longer exist
-                const guildIds = new Set(teamGuilds.map(g => g.id));
-                const originalLength = teamSelectedChannels.length;
-                teamSelectedChannels = teamSelectedChannels.filter(ch => guildIds.has(ch.guildId));
-
-                if (teamSelectedChannels.length !== originalLength) {
-                    teamSaveSelectedChannels();
-                }
-
-                teamRenderServers();
                 teamUpdateSelectedDisplay();
                 teamUpdateSendButton();
 
-                // Also update after a slight delay to ensure DOM is fully ready
-                setTimeout(teamUpdateSendButton, 100);
-
-                teamPreloadAllChannels();
-
-                // Hide loading and show content for team message box
+                // Hide loading and show content for team message box immediately
                 const teamMsgLoadingEl = document.getElementById('team-message-loading');
                 const teamMsgContentEl = document.getElementById('team-message-content');
                 if (teamMsgLoadingEl) teamMsgLoadingEl.style.display = 'none';
                 if (teamMsgContentEl) {
                     teamMsgContentEl.style.opacity = '1';
                     teamMsgContentEl.style.pointerEvents = 'auto';
+                }
+
+                // Load guilds asynchronously
+                teamLoadGuildsAsync();
+            }
+
+            async function teamLoadGuildsAsync() {
+                try {
+                    const response = await fetch('/api/guilds');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        teamGuilds = data.guilds || [];
+
+                        // Remove selected channels from servers that no longer exist
+                        const guildIds = new Set(teamGuilds.map(g => g.id));
+                        const originalLength = teamSelectedChannels.length;
+                        teamSelectedChannels = teamSelectedChannels.filter(ch => guildIds.has(ch.guildId));
+
+                        if (teamSelectedChannels.length !== originalLength) {
+                            teamSaveSelectedChannels();
+                        }
+
+                        teamRenderServers();
+                        teamUpdateSelectedDisplay();
+                        teamUpdateSendButton();
+
+                        // Preload channels in background
+                        teamPreloadAllChannels();
+                    }
+                } catch (error) {
+                    console.error('Error loading team guilds:', error);
                 }
             }
 
@@ -4147,14 +4458,25 @@
             // Expose globally for page switch handler
             window.teamUpdateSendButton = teamUpdateSendButton;
 
-            // Team send button handler
+            // Team send button handler - uses AsyncButton for double-click prevention
             if (teamSendBtn) {
                 teamSendBtn.addEventListener('click', async function() {
+                    // Prevent double-clicks
+                    if (AsyncButton.isProcessing('team_send')) {
+                        return;
+                    }
+
                     const teamMessage = teamMessageInput ? teamMessageInput.value.trim() : '';
                     if (teamSelectedChannels.length > 0 && teamMessage) {
+                        // Mark operation as started
+                        AsyncButton.startOperation('team_send');
+
                         // Check if bridge is connected before sending
                         const bridgeConnected = await checkBridgeConnected();
-                        if (!bridgeConnected) return;
+                        if (!bridgeConnected) {
+                            AsyncButton.endOperation('team_send');
+                            return;
+                        }
 
                         // Check for filtered content before proceeding
                         const filteredWords = {{ BLACKLISTED_WORDS|tojson }};
@@ -4217,13 +4539,17 @@
                             }
 
                             await customAlert('Warning', `Your message contains prohibited content:\n• ${foundWords.join('\n• ')}`);
+                            AsyncButton.endOperation('team_send');
                             return;
                         }
 
                         // Show confirmation popup
                         const channelCount = teamSelectedChannels.length;
                         const confirmed = await customConfirm('Send Message', `Send message to ${channelCount} channel${channelCount !== 1 ? 's' : ''}?`, 'Send');
-                        if (!confirmed) return;
+                        if (!confirmed) {
+                            AsyncButton.endOperation('team_send');
+                            return;
+                        }
 
                         teamFailedChannels.clear();
 
@@ -4344,6 +4670,7 @@
                             teamIsSending = false;
                             teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessage;
                             teamSendBtn.innerHTML = 'Send';
+                            AsyncButton.endOperation('team_send');
                         }
                     }
                 });
@@ -4412,6 +4739,9 @@
 
             if (mgmtSaveBtn) {
                 mgmtSaveBtn.addEventListener('click', async function() {
+                    if (AsyncButton.isProcessing('team_save_message')) return;
+                    AsyncButton.startOperation('team_save_message');
+
                     const message = mgmtMessageInput ? mgmtMessageInput.value : '';
 
                     mgmtSaveBtn.disabled = true;
@@ -4454,6 +4784,8 @@
                         await customAlert('Error', 'Failed to save team message: ' + error.message);
                         mgmtSaveBtn.innerHTML = 'Save';
                         updateMgmtSaveButton();
+                    } finally {
+                        AsyncButton.endOperation('team_save_message');
                     }
                 });
             }
@@ -4543,6 +4875,10 @@
                             return;
                         }
 
+                        const operationId = `add_member_${adzsendId}`;
+                        if (AsyncButton.isProcessing(operationId)) return;
+                        AsyncButton.startOperation(operationId);
+
                         try {
                             const response = await fetch('/api/team/add-member', {
                                 method: 'POST',
@@ -4585,6 +4921,8 @@
                         } catch (error) {
                             console.error('Add member error:', error);
                             await customAlert('Failed', 'Adzsend account with this ID dose not exist, please check again.');
+                        } finally {
+                            AsyncButton.endOperation(operationId);
                         }
                     }
                 });
@@ -4604,6 +4942,10 @@
                     if (!memberItem) return;
 
                     const adzsendId = memberItem.dataset.adzsendId;
+                    const operationId = `cancel_invite_${adzsendId}`;
+
+                    if (AsyncButton.isProcessing(operationId)) return;
+                    AsyncButton.startOperation(operationId);
 
                     try {
                         const response = await fetch('/api/team/remove-member', {
@@ -4627,6 +4969,8 @@
                     } catch (error) {
                         console.error('Cancel invitation error:', error);
                         await customAlert('Error', 'Failed to cancel invitation: ' + error.message);
+                    } finally {
+                        AsyncButton.endOperation(operationId);
                     }
                 });
             }
@@ -4641,9 +4985,14 @@
                     if (!memberItem) return;
 
                     const adzsendId = memberItem.dataset.adzsendId;
+                    const operationId = `remove_member_${adzsendId}`;
+
+                    if (AsyncButton.isProcessing(operationId)) return;
 
                     const confirmed = await customConfirm('Remove this team member?', 'Remove Member', { confirmText: 'Remove' });
                     if (!confirmed) return;
+
+                    AsyncButton.startOperation(operationId);
 
                     try {
                         const response = await fetch('/api/team/remove-member', {
@@ -4667,6 +5016,8 @@
                     } catch (error) {
                         console.error('Remove member error:', error);
                         await customAlert('Failed to remove member: ' + error.message, 'Error');
+                    } finally {
+                        AsyncButton.endOperation(operationId);
                     }
                 });
             }
@@ -5145,7 +5496,7 @@
         }
 
         // Initialize personal analytics when page loads
-        document.addEventListener('DOMContentLoaded', async function() {
+        document.addEventListener('DOMContentLoaded', function() {
             // Team analytics is server-rendered, just show it
             const teamLoadingEl = document.getElementById('team-analytics-loading');
             const teamContentEl = document.getElementById('team-analytics-content');
@@ -5157,7 +5508,11 @@
 
             setupPersonalDateHandlers();
 
-            // Load analytics - init must complete before loading stats
+            // Load analytics in background (non-blocking)
+            loadPersonalAnalyticsAsync();
+        });
+
+        async function loadPersonalAnalyticsAsync() {
             try {
                 await loadPersonalAnalyticsSummary();
                 await initPersonalAnalytics();
@@ -5166,7 +5521,7 @@
             } finally {
                 hidePersonalAnalyticsLoading();
             }
-        });
+        }
 
         async function loadPersonalAnalyticsSummary() {
             try {

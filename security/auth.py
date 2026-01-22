@@ -331,7 +331,6 @@ def secure_session_config(app):
     # Use a strong secret key
     secret_key = os.getenv('SECRET_KEY')
     if not secret_key or secret_key == 'your-secret-key-here':
-        print("[SECURITY WARNING] Using a weak or default SECRET_KEY! Set a strong SECRET_KEY environment variable.")
         # Generate a random one for this session (tokens will be invalid on restart)
         app.secret_key = secrets.token_hex(32)
     else:

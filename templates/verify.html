@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
+    {% include 'partials/base_scripts.html' %}
     <style>
         .code-input-container {
             display: flex;
@@ -323,8 +324,14 @@
         }
 
         resendBtn.addEventListener('click', async () => {
+            // Prevent double-clicks
+            if (AsyncButton.isProcessing('resend_code')) {
+                return;
+            }
+            AsyncButton.startOperation('resend_code');
+
             resendBtn.disabled = true;
-            resendBtn.innerHTML = '<div class="loading-dots" style="display: inline-flex; gap: 4px;"><span class="dot" style="background-color: #121215;"></span><span class="dot" style="background-color: #121215;"></span><span class="dot" style="background-color: #121215;"></span></div>';
+            resendBtn.innerHTML = '<div class="loading-dots dark"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
 
             try {
                 // SECURITY: Email is retrieved from session server-side
@@ -373,6 +380,8 @@
                 await customAlert('Error', 'Failed to resend code. Please try again.');
                 resendBtn.disabled = false;
                 resendBtn.textContent = 'Resend Code';
+            } finally {
+                AsyncButton.endOperation('resend_code');
             }
         });
 

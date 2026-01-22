@@ -4,6 +4,7 @@ const Store = require('electron-store');
 const WebSocketClient = require('./src/websocket');
 const { checkForUpdates, downloadUpdate } = require('./src/updater');
 const { cleanupGateway } = require('./src/discord');
+const { getDialogStyles, getDialogWindowOptions, escapeHtml, loadingDotsHTML } = require('./src/dialogStyles');
 
 // Initialize store for persistent data
 // Use machine-specific encryption key derived from app path and user data path
@@ -333,146 +334,15 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
         let validationTimeout = null;
         let isCancelled = false;
 
-        const promptWindow = new BrowserWindow({
-            width: 440,
-            height: 220,
-            parent: parent,
-            modal: true,
-            show: false,
-            resizable: false,
-            minimizable: false,
-            maximizable: false,
-            frame: false,
-            transparent: true,
-            backgroundColor: '#00000000',
-            hasShadow: false,
-            webPreferences: {
-                nodeIntegration: true,
-                contextIsolation: false
-            }
-        });
+        const promptWindow = new BrowserWindow(getDialogWindowOptions(parent, { height: 220 }));
 
+        const styles = getDialogStyles({ hasInput: true, hasLoading: true });
         const html = `
 <!DOCTYPE html>
 <html>
 <head>
-    <style>
-        @font-face {
-            font-family: 'gg sans';
-            src: local('Segoe UI'), local('Arial');
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html {
-            background: transparent;
-        }
-        body {
-            font-family: 'gg sans', 'Segoe UI', sans-serif;
-            background: #1A1A1E;
-            color: #fff;
-            padding: 1.25rem 1.5rem 1.5rem 1.5rem;
-            -webkit-app-region: drag;
-            border: 1px solid #222225;
-            border-radius: 8px;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
-        }
-        .close-btn {
-            position: absolute;
-            top: 0.75rem;
-            right: 0.75rem;
-            background: transparent;
-            border: 1px solid transparent;
-            color: #81828A;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 300;
-            line-height: 1;
-            border-radius: 4px;
-            -webkit-app-region: no-drag;
-        }
-        .close-btn:hover {
-            background: #1A1A1E;
-            border-color: #222225;
-            color: white;
-        }
-        .title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #ffffff;
-            padding-right: 2rem;
-        }
-        .message {
-            font-size: 0.8925rem;
-            color: #81828A;
-            margin-bottom: 1rem;
-            line-height: 1.4;
-            white-space: pre-wrap;
-        }
-        input {
-            width: 100%;
-            padding: 0.6rem 0.75rem;
-            border: 1px solid #222225;
-            border-radius: 6px;
-            background: #121215;
-            color: #dcddde;
-            font-size: 0.875rem;
-            font-family: 'gg sans', 'Segoe UI', sans-serif;
-            outline: none;
-            -webkit-app-region: no-drag;
-        }
-        input:focus { border-color: #222225; }
-        input::placeholder { color: #81828A; }
-        input:disabled { opacity: 0.6; }
-        .buttons {
-            margin-top: auto;
-            padding-top: 1rem;
-            -webkit-app-region: no-drag;
-        }
-        button.ok {
-            width: 100%;
-            background: linear-gradient(to bottom, #15d8bc, #006e59);
-            color: #121215;
-            border: none;
-            border-radius: 4px;
-            padding: 0.65rem 1.25rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            font-family: 'gg sans', 'Segoe UI', sans-serif;
-            cursor: pointer;
-            transition: filter 0.2s ease;
-            min-height: 38px;
-        }
-        button.ok:hover:not(:disabled) { filter: brightness(1.1); }
-        button.ok:active:not(:disabled) { filter: brightness(0.9); }
-        button.ok:disabled { cursor: not-allowed; opacity: 0.8; }
-        .loading-dots {
-            display: inline-flex;
-            gap: 4px;
-        }
-        .loading-dots span {
-            width: 6px;
-            height: 6px;
-            background: #121215;
-            border-radius: 50%;
-            animation: dot-pulse 1.4s infinite ease-in-out both;
-        }
-        .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
-        .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
-        .loading-dots span:nth-child(3) { animation-delay: 0s; }
-        @keyframes dot-pulse {
-            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
-            40% { transform: scale(1); opacity: 1; }
-        }
+    <style>${styles}
+        .message { margin-bottom: 1rem; }
     </style>
 </head>
 <body>
@@ -501,7 +371,7 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
             input.disabled = loading;
             submitBtn.disabled = loading;
             if (loading) {
-                submitBtn.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+                submitBtn.innerHTML = '${loadingDotsHTML}';
             } else {
                 submitBtn.textContent = 'Update';
             }
@@ -819,119 +689,24 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
 function showCustomDialog(title, message, buttonText, showCancel = false) {
     return new Promise((resolve) => {
         const parent = getDialogParent();
-        const dialogWindow = new BrowserWindow({
-            width: 440,
-            height: 180,
-            parent: parent,
-            modal: true,
-            show: false,
-            resizable: false,
-            minimizable: false,
-            maximizable: false,
-            frame: false,
-            transparent: true,
-            backgroundColor: '#00000000',
-            hasShadow: false,
-            webPreferences: {
-                nodeIntegration: true,
-                contextIsolation: false
-            }
-        });
+        const dialogWindow = new BrowserWindow(getDialogWindowOptions(parent));
 
+        const styles = getDialogStyles();
         const html = `
 <!DOCTYPE html>
 <html>
 <head>
-    <style>
-        @font-face {
-            font-family: 'gg sans';
-            src: local('Segoe UI'), local('Arial');
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html {
-            background: transparent;
-        }
-        body {
-            font-family: 'gg sans', 'Segoe UI', sans-serif;
-            background: #1A1A1E;
-            color: #fff;
-            padding: 1.25rem 1.5rem 1.5rem 1.5rem;
-            -webkit-app-region: drag;
-            border: 1px solid #222225;
-            border-radius: 8px;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
-        }
-        .close-btn {
-            position: absolute;
-            top: 0.75rem;
-            right: 0.75rem;
-            background: transparent;
-            border: 1px solid transparent;
-            color: #81828A;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 300;
-            line-height: 1;
-            border-radius: 4px;
-            -webkit-app-region: no-drag;
-            transition: all 0.2s ease;
-        }
-        .close-btn:hover {
-            background: #1A1A1E;
-            border-color: #222225;
-            color: white;
-        }
-        .title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #ffffff;
-            padding-right: 2rem;
-        }
-        .message {
-            font-size: 0.8925rem;
-            color: #81828A;
-            line-height: 1.4;
-            white-space: pre-wrap;
-            flex: 1;
-        }
-        .buttons {
-            margin-top: 1rem;
-            -webkit-app-region: no-drag;
-        }
-        button.ok {
-            width: 100%;
-            background: linear-gradient(to bottom, #15d8bc, #006e59);
-            color: #121215;
-            border: none;
-            border-radius: 4px;
-            padding: 0.65rem 1.25rem;
-            font-size: 0.875rem;
-            font-weight: 600;
-            font-family: 'gg sans', 'Segoe UI', sans-serif;
-            cursor: pointer;
-            transition: filter 0.2s ease;
-        }
-        button.ok:hover { filter: brightness(1.1); }
-        button.ok:active { filter: brightness(0.9); }
+    <style>${styles}
+        .message { flex: 1; }
+        .buttons { margin-top: 1rem; }
     </style>
 </head>
 <body>
     <button class="close-btn" onclick="cancel()">&times;</button>
-    <div class="title">${title.replace(/</g, '&lt;')}</div>
-    <div class="message">${message.replace(/</g, '&lt;')}</div>
+    <div class="title">${escapeHtml(title)}</div>
+    <div class="message">${escapeHtml(message)}</div>
     <div class="buttons">
-        <button class="ok" onclick="submit()">${buttonText.replace(/</g, '&lt;')}</button>
+        <button class="ok" onclick="submit()">${escapeHtml(buttonText)}</button>
     </div>
     <script>
         const { ipcRenderer } = require('electron');

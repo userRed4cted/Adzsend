@@ -340,7 +340,9 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
             minimizable: false,
             maximizable: false,
             frame: false,
-            backgroundColor: '#1A1A1E',
+            transparent: true,
+            backgroundColor: '#00000000',
+            hasShadow: false,
             webPreferences: {
                 nodeIntegration: true,
                 contextIsolation: false
@@ -509,7 +511,9 @@ function showCustomDialog(title, message, buttonText, showCancel = false) {
             minimizable: false,
             maximizable: false,
             frame: false,
-            backgroundColor: '#1A1A1E',
+            transparent: true,
+            backgroundColor: '#00000000',
+            hasShadow: false,
             webPreferences: {
                 nodeIntegration: true,
                 contextIsolation: false

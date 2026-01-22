@@ -1,13 +1,6 @@
 !include "LogicLib.nsh"
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
-!include "nsDialogs.nsh"
-
-; Custom variables
-Var CreateStartMenuShortcut
-Var RunAfterInstall
-Var OptionsCheckbox1
-Var OptionsCheckbox2
 
 ; ============================================================================
 ; INSTALLER CONFIGURATION
@@ -32,10 +25,6 @@ Var OptionsCheckbox2
     ; Kill running instance before install
     nsExec::ExecToStack 'taskkill /F /IM "Adzsend Bridge.exe"'
     Sleep 500
-
-    ; Initialize variables (defaults)
-    StrCpy $CreateStartMenuShortcut "1"
-    StrCpy $RunAfterInstall "1"
 
     ; Check if already installed - show uninstall popup
     IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Adzsend Bridge.exe" 0 check_programfiles_init
@@ -74,86 +63,15 @@ Var OptionsCheckbox2
 !macroend
 
 ; ============================================================================
-; CUSTOM PAGES - Options page (shown after installation completes)
-; ============================================================================
-
-; Page order: Welcome -> License -> Directory -> InstFiles -> [customHeader] -> Finish
-; Options page appears after files are installed, user selects options, then clicks Finish
-
-!macro customHeader
-    Page custom OptionsPageCreate OptionsPageLeave
-!macroend
-
-; ============================================================================
-; OPTIONS PAGE
-; ============================================================================
-
-Function OptionsPageCreate
-    nsDialogs::Create 1018
-    Pop $0
-
-    ${If} $0 == error
-        Abort
-    ${EndIf}
-
-    ; Title
-    ${NSD_CreateLabel} 0 0 100% 20u "Installation complete! Choose your options:"
-    Pop $0
-
-    ; Run after install checkbox
-    ${NSD_CreateCheckbox} 0 30u 100% 12u "Run Adzsend Bridge"
-    Pop $OptionsCheckbox1
-    ${NSD_SetState} $OptionsCheckbox1 ${BST_CHECKED}
-
-    ; Start menu shortcut checkbox
-    ${NSD_CreateCheckbox} 0 48u 100% 12u "Create Start Menu shortcut"
-    Pop $OptionsCheckbox2
-    ${NSD_SetState} $OptionsCheckbox2 ${BST_CHECKED}
-
-    nsDialogs::Show
-FunctionEnd
-
-Function OptionsPageLeave
-    ; Get checkbox states
-    ${NSD_GetState} $OptionsCheckbox1 $RunAfterInstall
-    ${NSD_GetState} $OptionsCheckbox2 $CreateStartMenuShortcut
-
-    ; Convert BST_CHECKED (1) to "1", BST_UNCHECKED (0) to "0"
-    ${If} $RunAfterInstall == ${BST_CHECKED}
-        StrCpy $RunAfterInstall "1"
-    ${Else}
-        StrCpy $RunAfterInstall "0"
-    ${EndIf}
-
-    ${If} $CreateStartMenuShortcut == ${BST_CHECKED}
-        StrCpy $CreateStartMenuShortcut "1"
-    ${Else}
-        StrCpy $CreateStartMenuShortcut "0"
-    ${EndIf}
-
-    ; Always create desktop shortcut (like Discord)
-    CreateShortcut "$DESKTOP\Adzsend Bridge.lnk" "$INSTDIR\Adzsend Bridge.exe" "" "$INSTDIR\Adzsend Bridge.exe" 0
-
-    ; Create Start Menu shortcut if selected
-    ${If} $CreateStartMenuShortcut == "1"
-        CreateDirectory "$SMPROGRAMS\Adzsend Bridge"
-        CreateShortcut "$SMPROGRAMS\Adzsend Bridge\Adzsend Bridge.lnk" "$INSTDIR\Adzsend Bridge.exe" "" "$INSTDIR\Adzsend Bridge.exe" 0
-        CreateShortcut "$SMPROGRAMS\Adzsend Bridge\Uninstall Adzsend Bridge.lnk" "$INSTDIR\Uninstall Adzsend Bridge.exe"
-    ${EndIf}
-
-    ; Launch app if checkbox is checked
-    ${If} $RunAfterInstall == "1"
-        Exec '"$INSTDIR\Adzsend Bridge.exe"'
-    ${EndIf}
-FunctionEnd
-
-; ============================================================================
-; CUSTOM INSTALL - Shortcuts and launch handled in OptionsPageLeave
+; CUSTOM INSTALL - Create desktop shortcut and launch app
 ; ============================================================================
 
 !macro customInstall
-    ; Shortcuts and app launch are handled in OptionsPageLeave (after user selects options)
-    ; Desktop shortcut is always created, Start Menu is optional
+    ; Always create desktop shortcut (like Discord)
+    CreateShortcut "$DESKTOP\Adzsend Bridge.lnk" "$INSTDIR\Adzsend Bridge.exe" "" "$INSTDIR\Adzsend Bridge.exe" 0
+
+    ; Auto-launch app after install
+    Exec '"$INSTDIR\Adzsend Bridge.exe"'
 !macroend
 
 ; ============================================================================
@@ -185,9 +103,8 @@ FunctionEnd
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Adzsend Bridge"
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "adzsend-bridge"
 
-    ; Remove shortcuts (current user - no admin required)
+    ; Remove desktop shortcut (current user - no admin required)
     Delete "$DESKTOP\Adzsend Bridge.lnk"
-    RMDir /r "$SMPROGRAMS\Adzsend Bridge"
 
     ; Remove app registry keys (current user - no admin required)
     DeleteRegKey HKCU "Software\adzsend-bridge"

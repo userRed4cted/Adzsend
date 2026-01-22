@@ -14,6 +14,7 @@ const versionDisplay = document.getElementById('version-display');
 let isActivated = false;
 let secretKey = null;
 let messagesSent = 0;
+let isShowingDialog = false; // Prevent popup spam
 
 // Initialize
 async function init() {
@@ -92,6 +93,7 @@ function setupIPCListeners() {
             window.bridge.close();
         }
     });
+
 }
 
 // Handle activate/deactivate
@@ -156,6 +158,8 @@ function handleConnectionStatus(status, reason) {
 
 // Handle connection errors
 async function handleConnectionError(error) {
+    if (isShowingDialog) return; // Prevent popup spam
+
     isActivated = false;
     activateBtn.textContent = 'Activate';
     activateBtn.disabled = false;
@@ -163,20 +167,25 @@ async function handleConnectionError(error) {
     statusValue.textContent = 'offline';
     statusValue.classList.remove('online');
 
+    isShowingDialog = true;
     if (error.includes('ENOTFOUND') || error.includes('network') || error.includes('internet')) {
         // Show network error dialog
         const shouldRetry = await window.bridge.showNetworkErrorDialog();
+        isShowingDialog = false;
         if (shouldRetry) {
             handleActivate();
         }
     } else {
         // Show error dialog
         await window.bridge.showErrorDialog('Connection error', error + '.');
+        isShowingDialog = false;
     }
 }
 
 // Handle auth failed
 async function handleAuthFailed(reason) {
+    if (isShowingDialog) return; // Prevent popup spam
+
     isActivated = false;
     secretKey = null;
     window.bridge.clearSecretKey();
@@ -187,11 +196,15 @@ async function handleAuthFailed(reason) {
     statusValue.classList.remove('online');
 
     // Show error dialog
+    isShowingDialog = true;
     await window.bridge.showErrorDialog('Invalid secret key', reason || 'Your secret key is invalid or has been changed.');
+    isShowingDialog = false;
 }
 
 // Handle logged out elsewhere
 async function handleLoggedOutElsewhere() {
+    if (isShowingDialog) return; // Prevent popup spam
+
     isActivated = false;
     secretKey = null;
     window.bridge.clearSecretKey();
@@ -202,7 +215,9 @@ async function handleLoggedOutElsewhere() {
     statusValue.classList.remove('online');
 
     // Show logged out dialog - if user clicks button, prompt for new secret key
+    isShowingDialog = true;
     const updateKey = await window.bridge.showLoggedOutDialog();
+    isShowingDialog = false;
     if (updateKey) {
         promptForSecretKey();
     }
@@ -215,17 +230,24 @@ function updateUI() {
 
 // Prompt for secret key using styled dialog
 async function promptForSecretKey() {
+    if (isShowingDialog) return; // Prevent popup spam
+
+    isShowingDialog = true;
     const key = await window.bridge.showInputDialog(
         'Secret key',
         'Input your Adzsend Bridge secret key.',
         'Paste your secret key',
         'Update'
     );
+    isShowingDialog = false;
 
     if (key) {
-        secretKey = key;
-        await window.bridge.saveSecretKey(key);
-        // Automatically try to connect
+        const trimmedKey = key.trim();
+        if (!trimmedKey) return; // Empty key, do nothing
+
+        secretKey = trimmedKey;
+        await window.bridge.saveSecretKey(trimmedKey);
+        // Automatically try to connect - server will validate the key
         handleActivate();
     }
 }

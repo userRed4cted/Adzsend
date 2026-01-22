@@ -12,9 +12,6 @@ class WebSocketClient {
         this.callbacks = callbacks;
         this.ws = null;
         this.isConnectedFlag = false;
-        this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
-        this.reconnectDelay = 1000;
         this.heartbeatInterval = null;
         this.connectionTimeout = null;
         this.messagesSentThisSession = 0;
@@ -66,14 +63,12 @@ class WebSocketClient {
                 } else if (code === 4003) {
                     // Key changed/revoked
                     this.callbacks.onAuthFailed('Secret key has been changed or revoked');
+                } else if (code === 1000) {
+                    // Normal disconnect (user initiated)
+                    this.callbacks.onDisconnected(reason.toString() || 'Disconnected');
                 } else {
-                    // Normal disconnect or error
-                    this.callbacks.onDisconnected(reason.toString() || 'Connection closed');
-
-                    // Attempt reconnect for unexpected disconnects
-                    if (code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
-                        this.attemptReconnect();
-                    }
+                    // Unexpected disconnect - don't auto-reconnect, let user decide
+                    this.callbacks.onDisconnected(reason.toString() || 'Connection lost');
                 }
             });
 
@@ -93,7 +88,6 @@ class WebSocketClient {
             case 'auth_success':
                 console.log('Authentication successful');
                 this.isConnectedFlag = true;
-                this.reconnectAttempts = 0;
                 this.clearConnectionTimeout();
                 this.startHeartbeat();
                 this.callbacks.onConnected();
@@ -181,6 +175,19 @@ class WebSocketClient {
                 if (result.success) {
                     this.messagesSentThisSession++;
                     this.callbacks.onMessageSent();
+                } else if (result.error === 'token_invalid') {
+                    // Token is invalid - stop sending, mark remaining as failed
+                    // No popup - user will see invalid status in dashboard
+
+                    // Mark remaining tasks as failed (don't waste API calls)
+                    for (let j = i + 1; j < tasks.length; j++) {
+                        results.push({
+                            channel_id: tasks[j].channel_id || 'unknown',
+                            success: false,
+                            error: 'token_invalid'
+                        });
+                    }
+                    break; // Stop the loop
                 }
 
                 // Wait before next message (if there is one)
@@ -231,18 +238,6 @@ class WebSocketClient {
         }
     }
 
-    attemptReconnect() {
-        this.reconnectAttempts++;
-        const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-
-        console.log(`Attempting reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
-
-        setTimeout(() => {
-            if (!this.isConnectedFlag) {
-                this.connect();
-            }
-        }, delay);
-    }
 
     send(data) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {

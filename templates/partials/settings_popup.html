@@ -2311,7 +2311,14 @@
             if (!keyInput) return;
 
             try {
-                const response = await fetch('/api/bridge/secret-key');
+                const response = await fetch('/api/bridge/secret-key', {
+                    signal: AbortSignal.timeout(5000)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
                 const data = await response.json();
 
                 if (data.success) {
@@ -2337,7 +2344,14 @@
             if (!statusDot || !statusText) return;
 
             try {
-                const response = await fetch('/api/bridge/status');
+                const response = await fetch('/api/bridge/status', {
+                    signal: AbortSignal.timeout(5000)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
                 const data = await response.json();
 
                 if (data.success) {
@@ -2364,13 +2378,17 @@
 
         async function copySecretKey() {
             if (!bridgeSecretKey) return;
+            if (AsyncButton.isProcessing('copy_secret_key')) return;
+            AsyncButton.startOperation('copy_secret_key');
 
             try {
                 await navigator.clipboard.writeText(bridgeSecretKey);
-                alert('Copied to clipboard');
+                await customAlert('Copied', 'Secret key copied to clipboard.');
             } catch (error) {
                 console.error('Failed to copy secret key:', error);
-                alert('Failed to copy to clipboard');
+                await customAlert('Error', 'Failed to copy to clipboard.');
+            } finally {
+                AsyncButton.endOperation('copy_secret_key');
             }
         }
 
@@ -2419,8 +2437,14 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': '{{ csrf_token }}'
-                    }
+                    },
+                    signal: AbortSignal.timeout(10000)
                 });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
 
                 const data = await response.json();
 

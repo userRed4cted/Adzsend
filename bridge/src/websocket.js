@@ -1,10 +1,6 @@
 const WebSocket = require('ws');
 const { sendDiscordMessage, sendTypingIndicator } = require('./discord');
-
-// Server URL - update this for production
-// const SERVER_URL = 'wss://adzsend.com/bridge/ws';
-// For development:
-const SERVER_URL = 'ws://127.0.0.1:5000/bridge/ws';
+const { SERVER_URL } = require('./config');
 
 class WebSocketClient {
     constructor(secretKey, callbacks) {
@@ -110,6 +106,11 @@ class WebSocketClient {
             case 'logged_out':
                 // Logged in from another device
                 this.callbacks.onLoggedOutElsewhere();
+                break;
+
+            case 'key_revoked':
+                // Secret key was regenerated from website
+                this.callbacks.onAuthFailed(message.reason || 'Secret key was regenerated');
                 break;
 
             default:

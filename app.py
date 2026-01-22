@@ -1341,6 +1341,21 @@ def bridge():
 # ============================================================================
 import json
 
+# Track active bridge WebSocket connections by user_id
+active_bridge_connections = {}
+
+def disconnect_bridge_for_user(user_id):
+    """Disconnect an active bridge connection for a user (e.g., when key is regenerated)"""
+    if user_id in active_bridge_connections:
+        try:
+            ws = active_bridge_connections[user_id]
+            ws.send(json.dumps({'type': 'key_revoked', 'reason': 'Secret key was regenerated'}))
+            ws.close()
+        except Exception as e:
+            print(f'[Bridge] Error disconnecting user {user_id}: {e}')
+        finally:
+            active_bridge_connections.pop(user_id, None)
+
 @sock.route('/bridge/ws')
 def bridge_websocket(ws):
     """WebSocket endpoint for Adzsend Bridge desktop app"""
@@ -1365,6 +1380,8 @@ def bridge_websocket(ws):
                 if validated_user_id:
                     authenticated = True
                     user_id = validated_user_id
+                    # Store connection for potential disconnection later
+                    active_bridge_connections[user_id] = ws
                     # Mark bridge as online in database
                     set_bridge_online(user_id)
                     ws.send(json.dumps({'type': 'auth_success'}))
@@ -1378,8 +1395,11 @@ def bridge_websocket(ws):
             # Add more message handlers here as needed
 
     except Exception as e:
-        pass
+        print(f'[Bridge WebSocket] Error for user {user_id}: {e}')
     finally:
+        # Remove from active connections
+        if user_id:
+            active_bridge_connections.pop(user_id, None)
         # Always mark bridge as offline when connection ends
         if user_id:
             set_bridge_offline(user_id)
@@ -4481,6 +4501,9 @@ def regenerate_bridge_key():
             'error': f'Please wait {minutes}m {seconds}s before regenerating',
             'wait_seconds': wait_seconds
         }, 429
+
+    # Disconnect any active bridge connection before regenerating
+    disconnect_bridge_for_user(user_id)
 
     # Regenerate the key
     result = regenerate_bridge_secret_key(user_id)

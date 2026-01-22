@@ -102,9 +102,8 @@ async function handleActivate() {
             return;
         }
 
-        // Activate
+        // Activate - don't change button text yet, wait for connection status
         frameStatus.textContent = 'Bridge connecting';
-        activateBtn.textContent = 'Deactivate';
         activateBtn.disabled = true;
 
         const result = await window.bridge.connect(secretKey);
@@ -115,6 +114,7 @@ async function handleActivate() {
             activateBtn.disabled = false;
             frameStatus.textContent = 'Bridge offline';
         }
+        // Button text will be set to 'Deactivate' by handleConnectionStatus when connected
     }
 }
 

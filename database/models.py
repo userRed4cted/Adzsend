@@ -430,6 +430,7 @@ def init_db():
                     FROM daily_message_stats
                 ''')
         except Exception as e:
+            pass
 
         # Drop old table and rename new table
         cursor.execute('DROP TABLE daily_message_stats')

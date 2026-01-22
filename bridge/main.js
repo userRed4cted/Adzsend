@@ -425,7 +425,7 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
             if (isCancelled) return;
 
             const WebSocket = require('ws');
-            const SERVER_URL = 'ws://127.0.0.1:5000/bridge/ws';
+            const { SERVER_URL } = require('./src/config');
 
             // Helper to show dialog and reset loading state
             const showValidationError = (title, message, buttonText) => {

@@ -106,6 +106,7 @@ def check_message_content(message, user_id=None):
                 from database import flag_user
                 flag_count, was_banned = flag_user(user_id, reason)
             except Exception as e:
+                pass
 
         # Return error message with ALL prohibited words to user
         if len(found_words) == 1:

@@ -4,14 +4,10 @@
 !include "nsDialogs.nsh"
 
 ; Custom variables
-Var CreateDesktopShortcut
 Var CreateStartMenuShortcut
-Var PinToTaskbar
 Var RunAfterInstall
 Var OptionsCheckbox1
 Var OptionsCheckbox2
-Var OptionsCheckbox3
-Var OptionsCheckbox4
 
 ; ============================================================================
 ; INSTALLER CONFIGURATION
@@ -37,10 +33,8 @@ Var OptionsCheckbox4
     nsExec::ExecToStack 'taskkill /F /IM "Adzsend Bridge.exe"'
     Sleep 500
 
-    ; Initialize shortcut variables (defaults)
-    StrCpy $CreateDesktopShortcut "1"
+    ; Initialize variables (defaults)
     StrCpy $CreateStartMenuShortcut "1"
-    StrCpy $PinToTaskbar "0"
     StrCpy $RunAfterInstall "1"
 
     ; Check if already installed - show uninstall popup
@@ -108,39 +102,27 @@ Function OptionsPageCreate
 
     ; Run after install checkbox
     ${NSD_CreateCheckbox} 0 30u 100% 12u "Run Adzsend Bridge"
-    Pop $OptionsCheckbox4
-    ${NSD_SetState} $OptionsCheckbox4 ${BST_CHECKED}
-
-    ; Desktop shortcut checkbox
-    ${NSD_CreateCheckbox} 0 48u 100% 12u "Create desktop shortcut"
     Pop $OptionsCheckbox1
     ${NSD_SetState} $OptionsCheckbox1 ${BST_CHECKED}
 
     ; Start menu shortcut checkbox
-    ${NSD_CreateCheckbox} 0 66u 100% 12u "Create Start Menu shortcut"
+    ${NSD_CreateCheckbox} 0 48u 100% 12u "Create Start Menu shortcut"
     Pop $OptionsCheckbox2
     ${NSD_SetState} $OptionsCheckbox2 ${BST_CHECKED}
-
-    ; Pin to taskbar checkbox
-    ${NSD_CreateCheckbox} 0 84u 100% 12u "Pin to taskbar"
-    Pop $OptionsCheckbox3
-    ${NSD_SetState} $OptionsCheckbox3 ${BST_UNCHECKED}
 
     nsDialogs::Show
 FunctionEnd
 
 Function OptionsPageLeave
     ; Get checkbox states
-    ${NSD_GetState} $OptionsCheckbox1 $CreateDesktopShortcut
+    ${NSD_GetState} $OptionsCheckbox1 $RunAfterInstall
     ${NSD_GetState} $OptionsCheckbox2 $CreateStartMenuShortcut
-    ${NSD_GetState} $OptionsCheckbox3 $PinToTaskbar
-    ${NSD_GetState} $OptionsCheckbox4 $RunAfterInstall
 
     ; Convert BST_CHECKED (1) to "1", BST_UNCHECKED (0) to "0"
-    ${If} $CreateDesktopShortcut == ${BST_CHECKED}
-        StrCpy $CreateDesktopShortcut "1"
+    ${If} $RunAfterInstall == ${BST_CHECKED}
+        StrCpy $RunAfterInstall "1"
     ${Else}
-        StrCpy $CreateDesktopShortcut "0"
+        StrCpy $RunAfterInstall "0"
     ${EndIf}
 
     ${If} $CreateStartMenuShortcut == ${BST_CHECKED}
@@ -149,31 +131,14 @@ Function OptionsPageLeave
         StrCpy $CreateStartMenuShortcut "0"
     ${EndIf}
 
-    ${If} $PinToTaskbar == ${BST_CHECKED}
-        StrCpy $PinToTaskbar "1"
-    ${Else}
-        StrCpy $PinToTaskbar "0"
-    ${EndIf}
+    ; Always create desktop shortcut (like Discord)
+    CreateShortcut "$DESKTOP\Adzsend Bridge.lnk" "$INSTDIR\Adzsend Bridge.exe" "" "$INSTDIR\Adzsend Bridge.exe" 0
 
-    ${If} $RunAfterInstall == ${BST_CHECKED}
-        StrCpy $RunAfterInstall "1"
-    ${Else}
-        StrCpy $RunAfterInstall "0"
-    ${EndIf}
-
-    ; Create shortcuts now (after user selects options)
-    ${If} $CreateDesktopShortcut == "1"
-        CreateShortcut "$DESKTOP\Adzsend Bridge.lnk" "$INSTDIR\Adzsend Bridge.exe" "" "$INSTDIR\Adzsend Bridge.exe" 0
-    ${EndIf}
-
+    ; Create Start Menu shortcut if selected
     ${If} $CreateStartMenuShortcut == "1"
         CreateDirectory "$SMPROGRAMS\Adzsend Bridge"
         CreateShortcut "$SMPROGRAMS\Adzsend Bridge\Adzsend Bridge.lnk" "$INSTDIR\Adzsend Bridge.exe" "" "$INSTDIR\Adzsend Bridge.exe" 0
         CreateShortcut "$SMPROGRAMS\Adzsend Bridge\Uninstall Adzsend Bridge.lnk" "$INSTDIR\Uninstall Adzsend Bridge.exe"
-    ${EndIf}
-
-    ${If} $PinToTaskbar == "1"
-        nsExec::ExecToStack 'powershell -ExecutionPolicy Bypass -Command "(New-Object -ComObject Shell.Application).Namespace(\"$INSTDIR\").ParseName(\"Adzsend Bridge.exe\").InvokeVerb(\"taskbarpin\")"'
     ${EndIf}
 
     ; Launch app if checkbox is checked
@@ -188,7 +153,7 @@ FunctionEnd
 
 !macro customInstall
     ; Shortcuts and app launch are handled in OptionsPageLeave (after user selects options)
-    ; This macro runs during InstFiles, before the options page is shown
+    ; Desktop shortcut is always created, Start Menu is optional
 !macroend
 
 ; ============================================================================
@@ -199,9 +164,6 @@ FunctionEnd
     ; Kill running instance before uninstall
     nsExec::ExecToStack 'taskkill /F /IM "Adzsend Bridge.exe"'
     Sleep 1000
-
-    ; Unpin from taskbar BEFORE removing files (best effort)
-    nsExec::ExecToStack 'powershell -ExecutionPolicy Bypass -Command "try { (New-Object -ComObject Shell.Application).Namespace(\"$INSTDIR\").ParseName(\"Adzsend Bridge.exe\").InvokeVerb(\"taskbarunpin\") } catch {}"'
 
     ; Remove installation directory
     RMDir /r "$INSTDIR"

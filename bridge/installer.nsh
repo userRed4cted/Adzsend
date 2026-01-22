@@ -252,29 +252,23 @@ FunctionEnd
     RMDir /r "$PROGRAMFILES\Adzsend Bridge"
     RMDir /r "$PROGRAMFILES64\Adzsend Bridge"
 
-    ; Remove auto-start registry entries (all variations)
+    ; Remove auto-start registry entries (current user - no admin required)
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "AdzsendBridge"
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Adzsend Bridge"
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "adzsend-bridge"
-    DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "AdzsendBridge"
-    DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "Adzsend Bridge"
 
-    ; Remove shortcuts from all users
+    ; Remove shortcuts (current user - no admin required)
     Delete "$DESKTOP\Adzsend Bridge.lnk"
-    Delete "$COMMONDESKTOP\Adzsend Bridge.lnk"
     RMDir /r "$SMPROGRAMS\Adzsend Bridge"
-    RMDir /r "$STARTMENU\Programs\Adzsend Bridge"
 
-    ; Remove app registry keys
+    ; Remove app registry keys (current user - no admin required)
     DeleteRegKey HKCU "Software\adzsend-bridge"
     DeleteRegKey HKCU "Software\Adzsend Bridge"
     DeleteRegKey HKCU "Software\AdzsendBridge"
 
-    ; Remove uninstall registry entry
+    ; Remove uninstall registry entry (current user - no admin required)
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\adzsend-bridge"
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Adzsend Bridge"
-    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\adzsend-bridge"
-    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Adzsend Bridge"
 
     ; Clean up temp files using PowerShell (NSIS RMDir doesn't support wildcards)
     nsExec::ExecToStack 'powershell -ExecutionPolicy Bypass -Command "Remove-Item -Path \"$TEMP\adzsend-bridge*\" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path \"$TEMP\Adzsend Bridge*\" -Recurse -Force -ErrorAction SilentlyContinue"'

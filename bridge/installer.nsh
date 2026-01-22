@@ -240,23 +240,12 @@ FunctionEnd
     ; Remove installation directory
     RMDir /r "$INSTDIR"
 
-    ; Remove Electron/Chromium cache and app data
+    ; Remove Electron/Chromium app data (includes all cache subdirectories)
     RMDir /r "$APPDATA\adzsend-bridge"
     RMDir /r "$APPDATA\Adzsend Bridge"
     RMDir /r "$LOCALAPPDATA\adzsend-bridge"
     RMDir /r "$LOCALAPPDATA\Adzsend Bridge"
     RMDir /r "$LOCALAPPDATA\adzsend-bridge-updater"
-
-    ; Remove Electron cache directories
-    RMDir /r "$APPDATA\adzsend-bridge\Cache"
-    RMDir /r "$APPDATA\adzsend-bridge\Code Cache"
-    RMDir /r "$APPDATA\adzsend-bridge\GPUCache"
-    RMDir /r "$APPDATA\adzsend-bridge\Session Storage"
-    RMDir /r "$APPDATA\adzsend-bridge\Local Storage"
-    RMDir /r "$APPDATA\adzsend-bridge\IndexedDB"
-    RMDir /r "$APPDATA\adzsend-bridge\blob_storage"
-    RMDir /r "$APPDATA\adzsend-bridge\Network"
-    RMDir /r "$APPDATA\adzsend-bridge\Crashpad"
 
     ; Remove from all possible install locations
     RMDir /r "$LOCALAPPDATA\Programs\Adzsend Bridge"
@@ -287,7 +276,6 @@ FunctionEnd
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\adzsend-bridge"
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Adzsend Bridge"
 
-    ; Clean up any temp files
-    RMDir /r "$TEMP\adzsend-bridge*"
-    RMDir /r "$TEMP\Adzsend Bridge*"
+    ; Clean up temp files using PowerShell (NSIS RMDir doesn't support wildcards)
+    nsExec::ExecToStack 'powershell -ExecutionPolicy Bypass -Command "Remove-Item -Path \"$TEMP\adzsend-bridge*\" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path \"$TEMP\Adzsend Bridge*\" -Recurse -Force -ErrorAction SilentlyContinue"'
 !macroend

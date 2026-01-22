@@ -7,39 +7,54 @@ const VERSION_URL = 'https://raw.githubusercontent.com/userRed4cted/Adzsend/main
 // Check for updates
 function checkForUpdates(currentVersion) {
     return new Promise((resolve, reject) => {
-        const req = https.get(VERSION_URL, (res) => {
-            let data = '';
-
-            res.on('data', (chunk) => {
-                data += chunk;
-            });
-
-            res.on('end', () => {
-                try {
-                    const versionInfo = JSON.parse(data);
-                    const updateAvailable = compareVersions(versionInfo.version, currentVersion) > 0;
-
-                    resolve({
-                        updateAvailable,
-                        currentVersion,
-                        latestVersion: versionInfo.version,
-                        downloadUrl: versionInfo.download_url
-                    });
-                } catch (error) {
-                    reject(new Error('Failed to parse version info'));
+        const makeRequest = (url) => {
+            const req = https.get(url, (res) => {
+                // Handle redirects (301, 302, 307, 308)
+                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                    makeRequest(res.headers.location);
+                    return;
                 }
+
+                if (res.statusCode !== 200) {
+                    reject(new Error(`Server returned ${res.statusCode}`));
+                    return;
+                }
+
+                let data = '';
+
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    try {
+                        const versionInfo = JSON.parse(data);
+                        const updateAvailable = compareVersions(versionInfo.version, currentVersion) > 0;
+
+                        resolve({
+                            updateAvailable,
+                            currentVersion,
+                            latestVersion: versionInfo.version,
+                            downloadUrl: versionInfo.download_url
+                        });
+                    } catch (error) {
+                        reject(new Error('Failed to parse version info'));
+                    }
+                });
             });
-        });
 
-        // Set 10 second timeout
-        req.setTimeout(10000, () => {
-            req.destroy();
-            reject(new Error('Connection timeout'));
-        });
+            // Set 10 second timeout
+            req.setTimeout(10000, () => {
+                req.destroy();
+                reject(new Error('Connection timeout'));
+            });
 
-        req.on('error', (error) => {
-            reject(new Error('No internet connection'));
-        });
+            req.on('error', (error) => {
+                reject(new Error('No internet connection'));
+            });
+        };
+
+        makeRequest(VERSION_URL);
     });
 }
 

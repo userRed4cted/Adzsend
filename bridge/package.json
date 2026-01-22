@@ -58,7 +58,7 @@
       "deleteAppDataOnUninstall": true,
       "artifactName": "AdzsendBridgeSetup.exe",
       "include": "installer.nsh",
-      "runAfterFinish": false
+      "runAfterFinish": true
     },
     "mac": {
       "target": ["dmg"],

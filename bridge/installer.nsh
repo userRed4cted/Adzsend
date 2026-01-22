@@ -70,8 +70,7 @@
     ; Always create desktop shortcut (like Discord)
     CreateShortcut "$DESKTOP\Adzsend Bridge.lnk" "$INSTDIR\Adzsend Bridge.exe" "" "$INSTDIR\Adzsend Bridge.exe" 0
 
-    ; Auto-launch app after install
-    Exec '"$INSTDIR\Adzsend Bridge.exe"'
+    ; App launch handled by electron-builder's runAfterFinish (when user clicks Finish)
 !macroend
 
 ; ============================================================================

@@ -228,26 +228,18 @@ function updateUI() {
     activateBtn.textContent = 'Activate';
 }
 
-// Prompt for secret key using styled dialog
+// Prompt for secret key using styled dialog with validation
 async function promptForSecretKey() {
     if (isShowingDialog) return; // Prevent popup spam
 
     isShowingDialog = true;
-    const key = await window.bridge.showInputDialog(
-        'Secret key',
-        'Input your Adzsend Bridge secret key.',
-        'Paste your secret key',
-        'Update'
-    );
+    const result = await window.bridge.showSecretKeyDialog();
     isShowingDialog = false;
 
-    if (key) {
-        const trimmedKey = key.trim();
-        if (!trimmedKey) return; // Empty key, do nothing
-
-        secretKey = trimmedKey;
-        await window.bridge.saveSecretKey(trimmedKey);
-        // Automatically try to connect - server will validate the key
+    if (result.success && result.key) {
+        // Key was validated by server - save and connect
+        secretKey = result.key;
+        await window.bridge.saveSecretKey(result.key);
         handleActivate();
     }
 }

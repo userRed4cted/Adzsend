@@ -7,9 +7,11 @@
 Var CreateDesktopShortcut
 Var CreateStartMenuShortcut
 Var PinToTaskbar
+Var RunAfterInstall
 Var OptionsCheckbox1
 Var OptionsCheckbox2
 Var OptionsCheckbox3
+Var OptionsCheckbox4
 
 ; ============================================================================
 ; INSTALLER CONFIGURATION
@@ -39,6 +41,7 @@ Var OptionsCheckbox3
     StrCpy $CreateDesktopShortcut "1"
     StrCpy $CreateStartMenuShortcut "1"
     StrCpy $PinToTaskbar "0"
+    StrCpy $RunAfterInstall "1"
 
     ; Check if already installed - show uninstall popup
     IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Adzsend Bridge.exe" 0 check_programfiles_init
@@ -77,11 +80,13 @@ Var OptionsCheckbox3
 !macroend
 
 ; ============================================================================
-; CUSTOM PAGES - Options page for shortcuts
+; CUSTOM PAGES - Options page (shown after installation completes)
 ; ============================================================================
 
+; Page order: Welcome -> License -> Directory -> InstFiles -> [customHeader] -> Finish
+; Options page appears after files are installed, user selects options, then clicks Finish
+
 !macro customHeader
-    ; Insert options page into the installer flow
     Page custom OptionsPageCreate OptionsPageLeave
 !macroend
 
@@ -98,21 +103,26 @@ Function OptionsPageCreate
     ${EndIf}
 
     ; Title
-    ${NSD_CreateLabel} 0 0 100% 20u "Choose installation options:"
+    ${NSD_CreateLabel} 0 0 100% 20u "Installation complete! Choose your options:"
     Pop $0
 
+    ; Run after install checkbox
+    ${NSD_CreateCheckbox} 0 30u 100% 12u "Run Adzsend Bridge"
+    Pop $OptionsCheckbox4
+    ${NSD_SetState} $OptionsCheckbox4 ${BST_CHECKED}
+
     ; Desktop shortcut checkbox
-    ${NSD_CreateCheckbox} 0 30u 100% 12u "Create desktop shortcut"
+    ${NSD_CreateCheckbox} 0 48u 100% 12u "Create desktop shortcut"
     Pop $OptionsCheckbox1
     ${NSD_SetState} $OptionsCheckbox1 ${BST_CHECKED}
 
     ; Start menu shortcut checkbox
-    ${NSD_CreateCheckbox} 0 48u 100% 12u "Create Start Menu shortcut"
+    ${NSD_CreateCheckbox} 0 66u 100% 12u "Create Start Menu shortcut"
     Pop $OptionsCheckbox2
     ${NSD_SetState} $OptionsCheckbox2 ${BST_CHECKED}
 
     ; Pin to taskbar checkbox
-    ${NSD_CreateCheckbox} 0 66u 100% 12u "Pin to taskbar"
+    ${NSD_CreateCheckbox} 0 84u 100% 12u "Pin to taskbar"
     Pop $OptionsCheckbox3
     ${NSD_SetState} $OptionsCheckbox3 ${BST_UNCHECKED}
 
@@ -124,6 +134,7 @@ Function OptionsPageLeave
     ${NSD_GetState} $OptionsCheckbox1 $CreateDesktopShortcut
     ${NSD_GetState} $OptionsCheckbox2 $CreateStartMenuShortcut
     ${NSD_GetState} $OptionsCheckbox3 $PinToTaskbar
+    ${NSD_GetState} $OptionsCheckbox4 $RunAfterInstall
 
     ; Convert BST_CHECKED (1) to "1", BST_UNCHECKED (0) to "0"
     ${If} $CreateDesktopShortcut == ${BST_CHECKED}
@@ -143,14 +154,14 @@ Function OptionsPageLeave
     ${Else}
         StrCpy $PinToTaskbar "0"
     ${EndIf}
-FunctionEnd
 
-; ============================================================================
-; CUSTOM INSTALL - Create shortcuts based on user selection
-; ============================================================================
+    ${If} $RunAfterInstall == ${BST_CHECKED}
+        StrCpy $RunAfterInstall "1"
+    ${Else}
+        StrCpy $RunAfterInstall "0"
+    ${EndIf}
 
-!macro customInstall
-    ; Create shortcuts based on user selection
+    ; Create shortcuts now (after user selects options)
     ${If} $CreateDesktopShortcut == "1"
         CreateShortcut "$DESKTOP\Adzsend Bridge.lnk" "$INSTDIR\Adzsend Bridge.exe" "" "$INSTDIR\Adzsend Bridge.exe" 0
     ${EndIf}
@@ -162,9 +173,22 @@ FunctionEnd
     ${EndIf}
 
     ${If} $PinToTaskbar == "1"
-        ; Pin to taskbar using PowerShell (Windows 10/11)
         nsExec::ExecToStack 'powershell -ExecutionPolicy Bypass -Command "(New-Object -ComObject Shell.Application).Namespace(\"$INSTDIR\").ParseName(\"Adzsend Bridge.exe\").InvokeVerb(\"taskbarpin\")"'
     ${EndIf}
+
+    ; Launch app if checkbox is checked
+    ${If} $RunAfterInstall == "1"
+        Exec '"$INSTDIR\Adzsend Bridge.exe"'
+    ${EndIf}
+FunctionEnd
+
+; ============================================================================
+; CUSTOM INSTALL - Shortcuts and launch handled in OptionsPageLeave
+; ============================================================================
+
+!macro customInstall
+    ; Shortcuts and app launch are handled in OptionsPageLeave (after user selects options)
+    ; This macro runs during InstFiles, before the options page is shown
 !macroend
 
 ; ============================================================================

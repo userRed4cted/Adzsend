@@ -17,9 +17,9 @@ const store = new Store({
     encryptionKey: machineKey
 });
 
-// Constants - 4:3 ratio (wider than tall)
-const MIN_WIDTH = 520;
-const MIN_HEIGHT = 390;
+// Constants - 4:3 ratio (width:height = 4:3)
+const MIN_WIDTH = 1040;
+const MIN_HEIGHT = 780;
 const VERSION = require('./package.json').version;
 
 // Global references
@@ -48,8 +48,8 @@ if (!gotTheLock) {
 // Create the main window
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 580,
-        height: 420,
+        width: 1040,
+        height: 780,
         minWidth: MIN_WIDTH,
         minHeight: MIN_HEIGHT,
         frame: false, // Custom title bar
@@ -325,14 +325,14 @@ function getDialogParent() {
     return mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
 }
 
-// Native-style input prompt dialog (matches Discord token popup style)
+// Native-style input prompt dialog (matches website popup style)
 // Note: Windows doesn't have a native input prompt dialog, so we use a minimal BrowserWindow
 ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = '', buttonText = 'Update') => {
     return new Promise((resolve) => {
         const parent = getDialogParent();
         const promptWindow = new BrowserWindow({
-            width: 450,
-            height: 200,
+            width: 440,
+            height: 220,
             parent: parent,
             modal: true,
             show: false,
@@ -361,77 +361,96 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
             font-family: 'gg sans', 'Segoe UI', sans-serif;
             background: #1A1A1E;
             color: #fff;
-            padding: 24px;
+            padding: 1.25rem 1.5rem 1.5rem 1.5rem;
             -webkit-app-region: drag;
             border: 1px solid #222225;
             border-radius: 8px;
             height: 100vh;
             display: flex;
             flex-direction: column;
+            position: relative;
+        }
+        .close-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #81828A;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 300;
+            line-height: 1;
+            border-radius: 4px;
+            -webkit-app-region: no-drag;
+        }
+        .close-btn:hover {
+            background: #1A1A1E;
+            border-color: #222225;
+            color: white;
         }
         .title {
-            font-size: 18px;
+            font-size: 1.125rem;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 0.5rem;
             color: #ffffff;
+            padding-right: 2rem;
         }
         .message {
-            font-size: 14px;
-            color: #81838A;
-            margin-bottom: 20px;
+            font-size: 0.8925rem;
+            color: #81828A;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+            white-space: pre-wrap;
         }
         input {
             width: 100%;
-            padding: 12px 16px;
+            padding: 0.6rem 0.75rem;
             border: 1px solid #222225;
             border-radius: 6px;
             background: #121215;
-            color: #fff;
-            font-size: 14px;
+            color: #dcddde;
+            font-size: 0.875rem;
             font-family: 'gg sans', 'Segoe UI', sans-serif;
             outline: none;
             -webkit-app-region: no-drag;
         }
-        input:focus { border-color: #15d8bc; }
-        input::placeholder { color: #81838A; }
+        input:focus { border-color: #222225; }
+        input::placeholder { color: #81828A; }
         .buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
             margin-top: auto;
-            padding-top: 20px;
+            padding-top: 1rem;
             -webkit-app-region: no-drag;
         }
-        button {
-            padding: 10px 24px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            font-family: 'gg sans', 'Segoe UI', sans-serif;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .cancel {
-            background: transparent;
-            border: 1px solid #222225;
-            color: #dcddde;
-        }
-        .cancel:hover { background: #222225; }
-        .ok {
+        button.ok {
+            width: 100%;
             background: linear-gradient(to bottom, #15d8bc, #006e59);
             color: #121215;
+            border: none;
+            border-radius: 4px;
+            padding: 0.65rem 1.25rem;
+            font-size: 0.875rem;
             font-weight: 600;
+            font-family: 'gg sans', 'Segoe UI', sans-serif;
+            cursor: pointer;
+            transition: filter 0.2s ease;
         }
-        .ok:hover { background: linear-gradient(to bottom, #10b89e, #004e40); }
+        button.ok:hover { filter: brightness(1.1); }
+        button.ok:active { filter: brightness(0.9); }
     </style>
 </head>
 <body>
+    <button class="close-btn" onclick="cancel()">&times;</button>
     <div class="title">${title.replace(/</g, '&lt;')}</div>
     <div class="message">${message.replace(/</g, '&lt;')}</div>
     <input type="password" id="input" placeholder="${placeholder.replace(/"/g, '&quot;')}" autofocus>
     <div class="buttons">
-        <button class="cancel" onclick="cancel()">Cancel</button>
         <button class="ok" onclick="submit()">${buttonText.replace(/</g, '&lt;')}</button>
     </div>
     <script>
@@ -476,13 +495,13 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
     });
 });
 
-// Custom styled popup dialog (matches website style)
+// Custom styled popup dialog (matches website style exactly)
 function showCustomDialog(title, message, buttonText, showCancel = false) {
     return new Promise((resolve) => {
         const parent = getDialogParent();
         const dialogWindow = new BrowserWindow({
-            width: 450,
-            height: showCancel ? 180 : 160,
+            width: 440,
+            height: 180,
             parent: parent,
             modal: true,
             show: false,
@@ -496,8 +515,6 @@ function showCustomDialog(title, message, buttonText, showCancel = false) {
                 contextIsolation: false
             }
         });
-
-        const cancelButton = showCancel ? `<button class="cancel" onclick="cancel()">Cancel</button>` : '';
 
         const html = `
 <!DOCTYPE html>
@@ -513,62 +530,81 @@ function showCustomDialog(title, message, buttonText, showCancel = false) {
             font-family: 'gg sans', 'Segoe UI', sans-serif;
             background: #1A1A1E;
             color: #fff;
-            padding: 24px;
+            padding: 1.25rem 1.5rem 1.5rem 1.5rem;
             -webkit-app-region: drag;
             border: 1px solid #222225;
             border-radius: 8px;
             height: 100vh;
             display: flex;
             flex-direction: column;
+            position: relative;
+        }
+        .close-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #81828A;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 300;
+            line-height: 1;
+            border-radius: 4px;
+            -webkit-app-region: no-drag;
+            transition: all 0.2s ease;
+        }
+        .close-btn:hover {
+            background: #1A1A1E;
+            border-color: #222225;
+            color: white;
         }
         .title {
-            font-size: 18px;
+            font-size: 1.125rem;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 0.5rem;
             color: #ffffff;
+            padding-right: 2rem;
         }
         .message {
-            font-size: 14px;
-            color: #81838A;
-            line-height: 1.5;
+            font-size: 0.8925rem;
+            color: #81828A;
+            line-height: 1.4;
+            white-space: pre-wrap;
             flex: 1;
         }
         .buttons {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            margin-top: 20px;
+            margin-top: 1rem;
             -webkit-app-region: no-drag;
         }
-        button {
-            padding: 10px 24px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            font-family: 'gg sans', 'Segoe UI', sans-serif;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .cancel {
-            background: transparent;
-            border: 1px solid #222225;
-            color: #dcddde;
-        }
-        .cancel:hover { background: #222225; }
-        .ok {
+        button.ok {
+            width: 100%;
             background: linear-gradient(to bottom, #15d8bc, #006e59);
             color: #121215;
+            border: none;
+            border-radius: 4px;
+            padding: 0.65rem 1.25rem;
+            font-size: 0.875rem;
             font-weight: 600;
+            font-family: 'gg sans', 'Segoe UI', sans-serif;
+            cursor: pointer;
+            transition: filter 0.2s ease;
         }
-        .ok:hover { background: linear-gradient(to bottom, #10b89e, #004e40); }
+        button.ok:hover { filter: brightness(1.1); }
+        button.ok:active { filter: brightness(0.9); }
     </style>
 </head>
 <body>
+    <button class="close-btn" onclick="cancel()">&times;</button>
     <div class="title">${title.replace(/</g, '&lt;')}</div>
     <div class="message">${message.replace(/</g, '&lt;')}</div>
     <div class="buttons">
-        ${cancelButton}
         <button class="ok" onclick="submit()">${buttonText.replace(/</g, '&lt;')}</button>
     </div>
     <script>

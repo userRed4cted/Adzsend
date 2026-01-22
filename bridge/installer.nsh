@@ -11,6 +11,12 @@ Var OptionsCheckbox1
 Var OptionsCheckbox2
 Var OptionsCheckbox3
 
+; Variables for existing install dialog
+Var ExistingInstallPath
+Var ExistingInstallAction
+Var ReinstallRadio
+Var UninstallRadio
+
 ; ============================================================================
 ; INSTALLER CONFIGURATION
 ; ============================================================================
@@ -35,50 +41,111 @@ Var OptionsCheckbox3
     nsExec::ExecToStack 'taskkill /F /IM "Adzsend Bridge.exe"'
     Sleep 500
 
-    ; Check if already installed and prompt user
-    IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Adzsend Bridge.exe" 0 check_programfiles
-        MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to:$\r$\n$\r$\nYes - Uninstall the existing version first$\r$\nNo - Update/Reinstall over existing installation$\r$\nCancel - Cancel installation" IDYES uninstall_localappdata IDNO continue_install
-        Abort
-
-    check_programfiles:
-    IfFileExists "$PROGRAMFILES\Adzsend Bridge\Adzsend Bridge.exe" 0 check_programfiles64
-        MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to:$\r$\n$\r$\nYes - Uninstall the existing version first$\r$\nNo - Update/Reinstall over existing installation$\r$\nCancel - Cancel installation" IDYES uninstall_programfiles IDNO continue_install
-        Abort
-
-    check_programfiles64:
-    IfFileExists "$PROGRAMFILES64\Adzsend Bridge\Adzsend Bridge.exe" 0 continue_install
-        MessageBox MB_YESNOCANCEL|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to:$\r$\n$\r$\nYes - Uninstall the existing version first$\r$\nNo - Update/Reinstall over existing installation$\r$\nCancel - Cancel installation" IDYES uninstall_programfiles64 IDNO continue_install
-        Abort
-
-    uninstall_localappdata:
-        IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 continue_install
-            ExecWait '"$LOCALAPPDATA\Programs\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
-            Goto continue_install
-
-    uninstall_programfiles:
-        IfFileExists "$PROGRAMFILES\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 continue_install
-            ExecWait '"$PROGRAMFILES\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
-            Goto continue_install
-
-    uninstall_programfiles64:
-        IfFileExists "$PROGRAMFILES64\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 continue_install
-            ExecWait '"$PROGRAMFILES64\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
-
-    continue_install:
-    ; Initialize shortcut variables (defaults)
+    ; Initialize variables
+    StrCpy $ExistingInstallPath ""
+    StrCpy $ExistingInstallAction "reinstall"
     StrCpy $CreateDesktopShortcut "1"
     StrCpy $CreateStartMenuShortcut "1"
     StrCpy $PinToTaskbar "0"
+
+    ; Check if already installed - store path for later
+    IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Adzsend Bridge.exe" 0 check_programfiles_init
+        StrCpy $ExistingInstallPath "$LOCALAPPDATA\Programs\Adzsend Bridge"
+        Goto done_check_init
+
+    check_programfiles_init:
+    IfFileExists "$PROGRAMFILES\Adzsend Bridge\Adzsend Bridge.exe" 0 check_programfiles64_init
+        StrCpy $ExistingInstallPath "$PROGRAMFILES\Adzsend Bridge"
+        Goto done_check_init
+
+    check_programfiles64_init:
+    IfFileExists "$PROGRAMFILES64\Adzsend Bridge\Adzsend Bridge.exe" 0 done_check_init
+        StrCpy $ExistingInstallPath "$PROGRAMFILES64\Adzsend Bridge"
+
+    done_check_init:
 !macroend
 
 ; ============================================================================
-; CUSTOM OPTIONS PAGE - Inserted via customHeader
+; CUSTOM PAGES - Using customWelcome to insert before directory page
 ; ============================================================================
 
+; customWelcome inserts pages right after Welcome/License, before Directory
+!macro customWelcome
+    ; Insert existing install page (shown only if already installed)
+    Page custom ExistingInstallPageCreate ExistingInstallPageLeave
+!macroend
+
+; customHeader inserts pages after Directory, before InstFiles
 !macro customHeader
-    ; Insert custom page into the installer flow
+    ; Insert options page into the installer flow
     Page custom OptionsPageCreate OptionsPageLeave
 !macroend
+
+; ============================================================================
+; EXISTING INSTALLATION PAGE
+; ============================================================================
+
+Function ExistingInstallPageCreate
+    ; Skip this page if no existing installation
+    StrCmp $ExistingInstallPath "" skip_existing_page
+
+    nsDialogs::Create 1018
+    Pop $0
+
+    ${If} $0 == error
+        Abort
+    ${EndIf}
+
+    ; Title
+    ${NSD_CreateLabel} 0 0 100% 24u "Adzsend Bridge is already installed"
+    Pop $0
+    CreateFont $1 "Segoe UI" 12 700
+    SendMessage $0 ${WM_SETFONT} $1 0
+
+    ; Description
+    ${NSD_CreateLabel} 0 30u 100% 24u "Choose how you want to proceed with the installation:"
+    Pop $0
+
+    ; Reinstall radio button (default selected)
+    ${NSD_CreateRadioButton} 0 60u 100% 12u "Reinstall (install over existing)"
+    Pop $ReinstallRadio
+    ${NSD_SetState} $ReinstallRadio ${BST_CHECKED}
+
+    ; Uninstall radio button
+    ${NSD_CreateRadioButton} 0 78u 100% 12u "Uninstall first (clean install)"
+    Pop $UninstallRadio
+
+    ; Info text
+    ${NSD_CreateLabel} 0 105u 100% 36u "Note: Reinstalling will keep your settings. Uninstalling first will remove all data and provide a fresh installation."
+    Pop $0
+
+    nsDialogs::Show
+    Return
+
+    skip_existing_page:
+        Abort ; Skip this page
+FunctionEnd
+
+Function ExistingInstallPageLeave
+    ; Check which option was selected
+    ${NSD_GetState} $UninstallRadio $0
+
+    ${If} $0 == ${BST_CHECKED}
+        ; User chose to uninstall first
+        StrCpy $ExistingInstallAction "uninstall"
+        ; Run the uninstaller silently
+        IfFileExists "$ExistingInstallPath\Uninstall Adzsend Bridge.exe" 0 done_uninstall
+            ExecWait '"$ExistingInstallPath\Uninstall Adzsend Bridge.exe" /S'
+        done_uninstall:
+    ${Else}
+        ; User chose to reinstall
+        StrCpy $ExistingInstallAction "reinstall"
+    ${EndIf}
+FunctionEnd
+
+; ============================================================================
+; OPTIONS PAGE
+; ============================================================================
 
 Function OptionsPageCreate
     nsDialogs::Create 1018
@@ -159,36 +226,68 @@ FunctionEnd
 !macroend
 
 ; ============================================================================
-; CUSTOM UNINSTALL
+; CUSTOM UNINSTALL - Comprehensive cleanup
 ; ============================================================================
 
 !macro customUnInstall
     ; Kill running instance before uninstall
     nsExec::ExecToStack 'taskkill /F /IM "Adzsend Bridge.exe"'
-    Sleep 500
+    Sleep 1000
+
+    ; Unpin from taskbar BEFORE removing files (best effort)
+    nsExec::ExecToStack 'powershell -ExecutionPolicy Bypass -Command "try { (New-Object -ComObject Shell.Application).Namespace(\"$INSTDIR\").ParseName(\"Adzsend Bridge.exe\").InvokeVerb(\"taskbarunpin\") } catch {}"'
 
     ; Remove installation directory
     RMDir /r "$INSTDIR"
 
-    ; Remove app data
+    ; Remove Electron/Chromium cache and app data
     RMDir /r "$APPDATA\adzsend-bridge"
     RMDir /r "$APPDATA\Adzsend Bridge"
     RMDir /r "$LOCALAPPDATA\adzsend-bridge"
     RMDir /r "$LOCALAPPDATA\Adzsend Bridge"
     RMDir /r "$LOCALAPPDATA\adzsend-bridge-updater"
 
-    ; Remove auto-start registry entries
+    ; Remove Electron cache directories
+    RMDir /r "$APPDATA\adzsend-bridge\Cache"
+    RMDir /r "$APPDATA\adzsend-bridge\Code Cache"
+    RMDir /r "$APPDATA\adzsend-bridge\GPUCache"
+    RMDir /r "$APPDATA\adzsend-bridge\Session Storage"
+    RMDir /r "$APPDATA\adzsend-bridge\Local Storage"
+    RMDir /r "$APPDATA\adzsend-bridge\IndexedDB"
+    RMDir /r "$APPDATA\adzsend-bridge\blob_storage"
+    RMDir /r "$APPDATA\adzsend-bridge\Network"
+    RMDir /r "$APPDATA\adzsend-bridge\Crashpad"
+
+    ; Remove from all possible install locations
+    RMDir /r "$LOCALAPPDATA\Programs\Adzsend Bridge"
+    RMDir /r "$PROGRAMFILES\Adzsend Bridge"
+    RMDir /r "$PROGRAMFILES64\Adzsend Bridge"
+
+    ; Remove auto-start registry entries (all variations)
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "AdzsendBridge"
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Adzsend Bridge"
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "adzsend-bridge"
+    DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "AdzsendBridge"
+    DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "Adzsend Bridge"
 
-    ; Remove shortcuts
+    ; Remove shortcuts from all users
     Delete "$DESKTOP\Adzsend Bridge.lnk"
+    Delete "$COMMONDESKTOP\Adzsend Bridge.lnk"
     RMDir /r "$SMPROGRAMS\Adzsend Bridge"
-
-    ; Unpin from taskbar (best effort)
-    nsExec::ExecToStack 'powershell -ExecutionPolicy Bypass -Command "try { (New-Object -ComObject Shell.Application).Namespace(\"$INSTDIR\").ParseName(\"Adzsend Bridge.exe\").InvokeVerb(\"taskbarunpin\") } catch {}"'
+    RMDir /r "$STARTMENU\Programs\Adzsend Bridge"
 
     ; Remove app registry keys
     DeleteRegKey HKCU "Software\adzsend-bridge"
     DeleteRegKey HKCU "Software\Adzsend Bridge"
+    DeleteRegKey HKCU "Software\AdzsendBridge"
+
+    ; Remove uninstall registry entry
+    DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\adzsend-bridge"
+    DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Adzsend Bridge"
+    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\adzsend-bridge"
+    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Adzsend Bridge"
+
+    ; Clean up any temp files
+    RMDir /r "$TEMP\adzsend-bridge*"
+    RMDir /r "$TEMP\Adzsend Bridge*"
 !macroend

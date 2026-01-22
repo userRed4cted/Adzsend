@@ -27,15 +27,6 @@ Var OptionsCheckbox3
 !define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of Adzsend Bridge.$\r$\n$\r$\nAdzsend Bridge allows you to send Discord messages directly from your desktop.$\r$\n$\r$\nClick Next to continue."
 
 ; ============================================================================
-; CUSTOM FINISH PAGE
-; ============================================================================
-
-!define MUI_FINISHPAGE_TITLE "Adzsend Bridge Installation Complete"
-!define MUI_FINISHPAGE_TEXT "Adzsend Bridge has been installed on your computer.$\r$\n$\r$\nClick Finish to close this wizard."
-!define MUI_FINISHPAGE_RUN "$INSTDIR\Adzsend Bridge.exe"
-!define MUI_FINISHPAGE_RUN_TEXT "Launch Adzsend Bridge"
-
-; ============================================================================
 ; MACROS FOR ELECTRON-BUILDER
 ; ============================================================================
 

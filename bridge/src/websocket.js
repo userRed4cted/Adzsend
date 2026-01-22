@@ -160,8 +160,8 @@ class WebSocketClient {
                 // Send typing indicator first
                 await sendTypingIndicator(task.discord_token, task.channel_id);
 
-                // Wait for typing simulation (0.5 - 1.5 seconds)
-                const typingDelay = 500 + Math.random() * 1000;
+                // Wait for typing simulation (0.5 - 0.8 seconds, randomized)
+                const typingDelay = 500 + Math.random() * 300;
                 await this.sleep(typingDelay);
 
                 // Send the message

@@ -1017,7 +1017,6 @@ def set_plan():
 
                 # Auto-deny any pending team invitations since user is now a business owner
                 auto_deny_pending_invitations(session['user']['id'])
-            else:
 
         return jsonify({
             'success': True,
@@ -1379,6 +1378,7 @@ def bridge_websocket(ws):
             # Add more message handlers here as needed
 
     except Exception as e:
+        pass
     finally:
         # Always mark bridge as offline when connection ends
         if user_id:

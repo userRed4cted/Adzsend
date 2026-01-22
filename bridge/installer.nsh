@@ -116,4 +116,7 @@
 
     ; Clean up temp files using PowerShell (NSIS RMDir doesn't support wildcards)
     nsExec::ExecToStack 'powershell -ExecutionPolicy Bypass -Command "Remove-Item -Path \"$TEMP\adzsend-bridge*\" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path \"$TEMP\Adzsend Bridge*\" -Recurse -Force -ErrorAction SilentlyContinue"'
+
+    ; Show success message
+    MessageBox MB_OK|MB_ICONINFORMATION "Adzsend Bridge has been successfully uninstalled."
 !macroend

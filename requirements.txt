@@ -3,3 +3,6 @@ gunicorn
 python-dotenv
 requests
 cryptography
+flask-sock
+gevent
+gevent-websocket

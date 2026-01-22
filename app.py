@@ -1,4 +1,5 @@
 from flask import Flask, render_template, redirect, url_for, session, request, jsonify
+from flask_sock import Sock
 import os
 import secrets
 from dotenv import load_dotenv
@@ -60,6 +61,7 @@ from security import (
 load_dotenv()
 
 app = Flask(__name__)
+sock = Sock(app)
 
 # Apply secure session configuration
 secure_session_config(app)

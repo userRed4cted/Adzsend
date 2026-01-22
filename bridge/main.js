@@ -533,8 +533,8 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
             promptWindow.show();
         });
 
-        const cleanup = () => {
-            isCancelled = true;
+        // Clear resources without setting cancelled flag
+        const clearResources = () => {
             if (validationTimeout) {
                 clearTimeout(validationTimeout);
                 validationTimeout = null;
@@ -545,26 +545,31 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
             }
         };
 
+        // Full cleanup - also marks as cancelled (for user-initiated cancel)
+        const cleanup = () => {
+            isCancelled = true;
+            clearResources();
+        };
+
         const submitHandler = (event, secretKey) => {
             if (isCancelled) return;
 
             const WebSocket = require('ws');
             const SERVER_URL = 'ws://127.0.0.1:5000/bridge/ws';
 
-            // Helper to safely show dialog only if not cancelled
-            const showDialogIfNotCancelled = (title, message, buttonText) => {
-                if (!isCancelled && !promptWindow.isDestroyed()) {
-                    promptWindow.webContents.send('secret-key-validation-failed');
-                    showCustomDialog(title, message, buttonText).then(() => {});
-                }
+            // Helper to show dialog and reset loading state
+            const showValidationError = (title, message, buttonText) => {
+                if (isCancelled || promptWindow.isDestroyed()) return;
+                clearResources();
+                promptWindow.webContents.send('secret-key-validation-failed');
+                showCustomDialog(title, message, buttonText).then(() => {});
             };
 
-            // Set 15 second timeout
+            // Set 20 second timeout
             validationTimeout = setTimeout(() => {
                 if (isCancelled) return;
-                cleanup();
-                showDialogIfNotCancelled('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK');
-            }, 15000);
+                showValidationError('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK');
+            }, 20000);
 
             try {
                 validationWs = new WebSocket(SERVER_URL);
@@ -583,15 +588,15 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
                         const message = JSON.parse(data.toString());
                         if (message.type === 'auth_success') {
                             // Valid key - close validation connection, save key, resolve
-                            cleanup();
+                            clearResources();
+                            isCancelled = true; // Prevent further callbacks
                             ipcMain.removeListener('secret-key-submit', submitHandler);
                             ipcMain.removeListener('secret-key-cancel', cancelHandler);
                             if (!promptWindow.isDestroyed()) promptWindow.close();
                             resolve({ success: true, key: secretKey });
                         } else if (message.type === 'auth_failed') {
                             // Invalid key
-                            cleanup();
-                            showDialogIfNotCancelled('Invalid', 'Not a valid Adzsend Bridge secret key.', 'OK');
+                            showValidationError('Invalid', 'Not a valid Adzsend Bridge secret key.', 'OK');
                         }
                     } catch (e) {}
                 });
@@ -600,21 +605,18 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
                     if (isCancelled) return;
                     if (code === 4001 || code === 4003) {
                         // Invalid secret key
-                        cleanup();
-                        showDialogIfNotCancelled('Invalid', 'Not a valid Adzsend Bridge secret key.', 'OK');
+                        showValidationError('Invalid', 'Not a valid Adzsend Bridge secret key.', 'OK');
                     }
                 });
 
                 validationWs.on('error', (error) => {
                     if (isCancelled) return;
-                    cleanup();
-                    showDialogIfNotCancelled('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK');
+                    showValidationError('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK');
                 });
 
             } catch (error) {
                 if (isCancelled) return;
-                cleanup();
-                showDialogIfNotCancelled('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK');
+                showValidationError('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK');
             }
         };
 

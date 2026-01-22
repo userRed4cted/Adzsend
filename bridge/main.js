@@ -549,15 +549,21 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
             if (isCancelled) return;
 
             const WebSocket = require('ws');
-            const SERVER_URL = 'wss://adzsend.com/bridge/ws';
+            const SERVER_URL = 'ws://127.0.0.1:5000/bridge/ws';
+
+            // Helper to safely show dialog only if not cancelled
+            const showDialogIfNotCancelled = (title, message, buttonText) => {
+                if (!isCancelled && !promptWindow.isDestroyed()) {
+                    promptWindow.webContents.send('secret-key-validation-failed');
+                    showCustomDialog(title, message, buttonText).then(() => {});
+                }
+            };
 
             // Set 15 second timeout
             validationTimeout = setTimeout(() => {
                 if (isCancelled) return;
                 cleanup();
-                promptWindow.webContents.send('secret-key-validation-failed');
-                // Show connection error
-                showCustomDialog('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK').then(() => {});
+                showDialogIfNotCancelled('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK');
             }, 15000);
 
             try {
@@ -580,13 +586,12 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
                             cleanup();
                             ipcMain.removeListener('secret-key-submit', submitHandler);
                             ipcMain.removeListener('secret-key-cancel', cancelHandler);
-                            promptWindow.close();
+                            if (!promptWindow.isDestroyed()) promptWindow.close();
                             resolve({ success: true, key: secretKey });
                         } else if (message.type === 'auth_failed') {
                             // Invalid key
                             cleanup();
-                            promptWindow.webContents.send('secret-key-validation-failed');
-                            showCustomDialog('Invalid', 'Not a valid Adzsend Bridge secret key.', 'OK').then(() => {});
+                            showDialogIfNotCancelled('Invalid', 'Not a valid Adzsend Bridge secret key.', 'OK');
                         }
                     } catch (e) {}
                 });
@@ -596,22 +601,20 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
                     if (code === 4001 || code === 4003) {
                         // Invalid secret key
                         cleanup();
-                        promptWindow.webContents.send('secret-key-validation-failed');
-                        showCustomDialog('Invalid', 'Not a valid Adzsend Bridge secret key.', 'OK').then(() => {});
+                        showDialogIfNotCancelled('Invalid', 'Not a valid Adzsend Bridge secret key.', 'OK');
                     }
                 });
 
                 validationWs.on('error', (error) => {
                     if (isCancelled) return;
                     cleanup();
-                    promptWindow.webContents.send('secret-key-validation-failed');
-                    showCustomDialog('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK').then(() => {});
+                    showDialogIfNotCancelled('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK');
                 });
 
             } catch (error) {
+                if (isCancelled) return;
                 cleanup();
-                promptWindow.webContents.send('secret-key-validation-failed');
-                showCustomDialog('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK').then(() => {});
+                showDialogIfNotCancelled('Connection error', 'Could not connect to server. Please check your internet connection.', 'OK');
             }
         };
 

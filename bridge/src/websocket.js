@@ -2,9 +2,9 @@ const WebSocket = require('ws');
 const { sendDiscordMessage, sendTypingIndicator } = require('./discord');
 
 // Server URL - update this for production
-const SERVER_URL = 'wss://adzsend.com/bridge/ws';
+// const SERVER_URL = 'wss://adzsend.com/bridge/ws';
 // For development:
-// const SERVER_URL = 'ws://localhost:5000/bridge/ws';
+const SERVER_URL = 'ws://127.0.0.1:5000/bridge/ws';
 
 class WebSocketClient {
     constructor(secretKey, callbacks) {

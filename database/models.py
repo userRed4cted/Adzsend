@@ -3255,14 +3255,18 @@ def _get_bridge_hmac_secret():
     return secret
 
 
-def generate_bridge_secret_key(adzsend_id):
+def generate_bridge_secret_key(adzsend_id, timestamp=None):
     """
     Generate a Discord-style token for bridge authentication.
     Format: base64(adzsend_id).base64(timestamp).hmac_signature
+
+    If timestamp is provided, uses that timestamp (for regenerating the same key).
+    If timestamp is None, generates a new timestamp.
     """
     import hmac
 
-    timestamp = str(int(datetime.now().timestamp()))
+    if timestamp is None:
+        timestamp = str(int(datetime.now().timestamp()))
 
     # Base64 encode parts
     part1 = base64.urlsafe_b64encode(adzsend_id.encode()).decode().rstrip('=')
@@ -3347,15 +3351,16 @@ def create_or_get_bridge_connection(user_id):
         conn.close()
         return None
 
-    # Generate new secret key
-    secret_key = generate_bridge_secret_key(user['adzsend_id'])
+    # Generate new secret key with a specific timestamp
+    key_timestamp = str(int(datetime.now().timestamp()))
+    secret_key = generate_bridge_secret_key(user['adzsend_id'], key_timestamp)
     secret_key_hash = hash_bridge_secret_key(secret_key)
-    timestamp = datetime.now().isoformat()
+    created_at = datetime.now().isoformat()
 
     cursor.execute('''
         INSERT INTO bridge_connections (user_id, secret_key_hash, secret_key_timestamp, created_at)
         VALUES (?, ?, ?, ?)
-    ''', (user_id, secret_key_hash, timestamp, timestamp))
+    ''', (user_id, secret_key_hash, key_timestamp, created_at))
 
     conn.commit()
 
@@ -3407,15 +3412,9 @@ def regenerate_bridge_secret_key(user_id):
     conn = get_db()
     cursor = conn.cursor()
 
-    # Check rate limit (5 minutes)
-    cursor.execute('SELECT last_regenerated FROM bridge_connections WHERE user_id = ?', (user_id,))
+    # Check if connection exists
+    cursor.execute('SELECT * FROM bridge_connections WHERE user_id = ?', (user_id,))
     connection = cursor.fetchone()
-
-    if connection and connection['last_regenerated']:
-        last_regen = datetime.fromisoformat(connection['last_regenerated'])
-        if datetime.now() - last_regen < timedelta(minutes=5):
-            conn.close()
-            return {'success': False, 'error': 'Rate limited - please wait 5 minutes'}
 
     # Get user's adzsend_id
     cursor.execute('SELECT adzsend_id FROM users WHERE id = ?', (user_id,))
@@ -3425,10 +3424,11 @@ def regenerate_bridge_secret_key(user_id):
         conn.close()
         return {'success': False, 'error': 'User not found'}
 
-    # Generate new secret key
-    secret_key = generate_bridge_secret_key(user['adzsend_id'])
+    # Generate new secret key with new timestamp
+    key_timestamp = str(int(datetime.now().timestamp()))
+    secret_key = generate_bridge_secret_key(user['adzsend_id'], key_timestamp)
     secret_key_hash = hash_bridge_secret_key(secret_key)
-    timestamp = datetime.now().isoformat()
+    now_iso = datetime.now().isoformat()
 
     if connection:
         # Update existing
@@ -3436,13 +3436,13 @@ def regenerate_bridge_secret_key(user_id):
             UPDATE bridge_connections
             SET secret_key_hash = ?, secret_key_timestamp = ?, last_regenerated = ?, is_online = 0
             WHERE user_id = ?
-        ''', (secret_key_hash, timestamp, timestamp, user_id))
+        ''', (secret_key_hash, key_timestamp, now_iso, user_id))
     else:
         # Create new
         cursor.execute('''
             INSERT INTO bridge_connections (user_id, secret_key_hash, secret_key_timestamp, created_at, last_regenerated)
             VALUES (?, ?, ?, ?, ?)
-        ''', (user_id, secret_key_hash, timestamp, timestamp, timestamp))
+        ''', (user_id, secret_key_hash, key_timestamp, now_iso, now_iso))
 
     conn.commit()
     conn.close()

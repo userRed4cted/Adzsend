@@ -2427,9 +2427,9 @@
 
             const regenerateBtn = document.getElementById('bridge-regenerate-key');
             const keyInput = document.getElementById('bridge-secret-key');
+            const toggleBtn = document.getElementById('bridge-toggle-key');
 
             if (regenerateBtn) regenerateBtn.disabled = true;
-            if (keyInput) keyInput.value = 'Regenerating...';
 
             try {
                 const response = await fetch('/api/bridge/regenerate', {
@@ -2450,20 +2450,19 @@
 
                 if (data.success) {
                     bridgeSecretKey = data.secret_key;
-                    keyInput.value = isKeyVisible ? bridgeSecretKey : maskKey(bridgeSecretKey);
+                    // Always show masked after regenerate, reset visibility state
+                    isKeyVisible = false;
+                    keyInput.value = maskKey(bridgeSecretKey);
+                    if (toggleBtn) toggleBtn.textContent = 'Show';
 
                     // Refresh status (will show offline since key changed)
                     setTimeout(loadBridgeStatus, 1000);
                 } else {
                     await customAlert('Error', data.error || 'Failed to regenerate secret key');
-                    keyInput.value = isKeyVisible ? bridgeSecretKey : maskKey(bridgeSecretKey);
                 }
             } catch (error) {
                 console.error('Error regenerating secret key:', error);
                 await customAlert('Error', 'Failed to regenerate secret key');
-                if (bridgeSecretKey) {
-                    keyInput.value = isKeyVisible ? bridgeSecretKey : maskKey(bridgeSecretKey);
-                }
             } finally {
                 if (regenerateBtn) regenerateBtn.disabled = false;
                 AsyncButton.endOperation('regenerate_secret_key');

@@ -33,7 +33,7 @@ from database import (
     # Bridge connection functions
     generate_bridge_secret_key, validate_bridge_secret_key,
     create_or_get_bridge_connection, get_bridge_connection,
-    regenerate_bridge_secret_key, get_bridge_status, can_regenerate_bridge_key,
+    regenerate_bridge_secret_key, get_bridge_status,
     set_bridge_online, set_bridge_offline
 )
 
@@ -4489,8 +4489,9 @@ def get_bridge_secret_key():
     if not connection:
         return {'error': 'Failed to create bridge connection'}, 500
 
-    # Generate secret key using HMAC
-    secret_key = generate_bridge_secret_key(user['adzsend_id'])
+    # Generate secret key using stored timestamp (so key is always the same)
+    stored_timestamp = connection.get('secret_key_timestamp')
+    secret_key = generate_bridge_secret_key(user['adzsend_id'], stored_timestamp)
 
     return {
         'success': True,
@@ -4567,7 +4568,7 @@ def bridge_deactivate():
 @app.route('/api/bridge/regenerate', methods=['POST'])
 @rate_limit('api')
 def regenerate_bridge_key():
-    """Regenerate the user's bridge secret key (5-minute cooldown)."""
+    """Regenerate the user's bridge secret key."""
     csrf_error = check_csrf()
     if csrf_error:
         return csrf_error
@@ -4580,30 +4581,17 @@ def regenerate_bridge_key():
     if not user:
         return {'error': 'User not found'}, 404
 
-    # Check if user can regenerate (5-minute cooldown)
-    can_regen, wait_seconds = can_regenerate_bridge_key(user_id)
-    if not can_regen:
-        minutes = int(wait_seconds // 60)
-        seconds = int(wait_seconds % 60)
-        return {
-            'error': f'Please wait {minutes}m {seconds}s before regenerating',
-            'wait_seconds': wait_seconds
-        }, 429
-
     # Disconnect any active bridge connection before regenerating
     disconnect_bridge_for_user(user_id)
 
-    # Regenerate the key
+    # Regenerate the key (returns the new key directly)
     result = regenerate_bridge_secret_key(user_id)
     if not result['success']:
         return {'error': result.get('error', 'Failed to regenerate key')}, 500
 
-    # Generate new secret key
-    new_secret_key = generate_bridge_secret_key(user['adzsend_id'])
-
     return {
         'success': True,
-        'secret_key': new_secret_key,
+        'secret_key': result['secret_key'],
         'message': 'Secret key regenerated successfully'
     }
 

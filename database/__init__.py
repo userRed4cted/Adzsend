@@ -46,5 +46,5 @@ from .models import (
     generate_bridge_secret_key, verify_bridge_secret_key, validate_bridge_secret_key,
     create_or_get_bridge_connection, get_bridge_connection, get_bridge_connection_by_adzsend_id,
     regenerate_bridge_secret_key, set_bridge_online, set_bridge_offline,
-    is_bridge_online, get_bridge_status, can_regenerate_bridge_key
+    is_bridge_online, get_bridge_status
 )

@@ -169,7 +169,7 @@ function getDialogWindowOptions(parent, customOptions = {}) {
         backgroundColor: '#00000000',
         hasShadow: false,
         skipTaskbar: true,
-        alwaysOnTop: true,
+        alwaysOnTop: false, // Don't show on top of other apps
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false
@@ -180,6 +180,7 @@ function getDialogWindowOptions(parent, customOptions = {}) {
     // Only set parent if valid (prevents flickering issues)
     if (parent && !parent.isDestroyed()) {
         options.parent = parent;
+        options.modal = true; // Makes dialog stay with parent window only
         // Center on parent window
         const parentBounds = parent.getBounds();
         options.x = Math.round(parentBounds.x + (parentBounds.width - options.width) / 2);

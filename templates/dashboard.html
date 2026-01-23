@@ -344,11 +344,13 @@
             flex-direction: column;
             align-items: center;
             padding: 0.5rem 0;
+            padding-left: 12px; /* Space for pill indicator */
             gap: 0.5rem;
             overflow-y: auto;
             overflow-x: visible;
             flex-shrink: 0;
             position: relative;
+            box-sizing: border-box;
         }
 
         .server-icon-wrapper {
@@ -2259,11 +2261,16 @@
             const MESSAGE_LIMIT = 2000; // Character limit for messages
             const currentDiscordAccountId = {{ primary_account.id if primary_account else 'null' }};
 
-            let guilds = [];
-            let serverChannels = {}; // Cache for channels by guild ID
-            let channelsLoadingComplete = false; // Track if all channels have finished loading
-            let selectedChannels = []; // Array for multiple channel selection
-            let teamSelectedChannels = []; // Team panel selected channels - declare early so DB load works
+            // Shared data - stored in window so team panel can access the same data
+            window.guilds = window.guilds || [];
+            window.serverChannels = window.serverChannels || {};
+            window.channelsLoadingComplete = false;
+            window.guildsLoaded = false;
+
+            // Local references for convenience
+            const guilds = window.guilds;
+            const serverChannels = window.serverChannels;
+            let selectedChannels = []; // Personal panel selected channels
             let selectedGuild = null; // Currently selected guild
             let searchTags = []; // Search filter tags
             let currentServerColor = 'rgba(21, 216, 188, 0.6)'; // Current server's dominant color
@@ -2315,11 +2322,19 @@
                     } else if (mode === 'channels') {
                         channelsOnlyHeader.style.display = '';
                         channelsOnlySection.style.display = 'flex';
-                        renderChannelsOnlyMode();
+                        // Show loading dots immediately, then render asynchronously
+                        channelsOnlyList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
+                        requestAnimationFrame(() => {
+                            setTimeout(() => renderChannelsOnlyMode(), 0);
+                        });
                     } else if (mode === 'selected') {
                         selectedChannelsModeHeader.style.display = '';
                         selectedChannelsModeSection.style.display = 'flex';
-                        renderSelectedChannelsMode();
+                        // Show loading dots immediately, then render asynchronously
+                        selectedChannelsModeList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
+                        requestAnimationFrame(() => {
+                            setTimeout(() => renderSelectedChannelsMode(), 0);
+                        });
                     }
                 });
             });
@@ -2332,7 +2347,7 @@
                 });
             }
 
-            // Render channels in selected channels mode (shows selected channels with x.png to remove)
+            // Render channels in selected channels mode (with event delegation)
             function renderSelectedChannelsMode() {
                 if (!selectedChannelsModeList) return;
 
@@ -2359,44 +2374,43 @@
                     const iconUrl = channel.guildIcon
                         ? `https://cdn.discordapp.com/icons/${channel.guildId}/${channel.guildIcon}.png`
                         : null;
-
                     const serverIconHtml = iconUrl
                         ? `<img class="server-icon-small" src="${iconUrl}" alt="">`
                         : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
-
-                    // Check if channel failed
                     const channelKey = `${channel.guildId}-${channel.id}`;
                     const failedInfo = failedChannels.get(channelKey);
                     const isFailed = !!failedInfo;
                     const failedClass = isFailed ? ' failed' : '';
                     const statusText = failedInfo?.type === 'ratelimit' ? 'Rate limited' : 'Missing permission';
                     const statusTagHtml = isFailed ? `<span class="channel-status-tag">${statusText}</span>` : '';
-
                     return `<div class="channel-item selected${failedClass}" data-channel-id="${channel.id}" data-channel-name="${channel.name}" data-guild-id="${channel.guildId}" data-guild-name="${channel.guildName}" data-guild-icon="${channel.guildIcon || ''}">${serverIconHtml}<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right">${statusTagHtml}<img class="channel-tick" src="{{ url_for('static', filename='x.png') }}" alt="x"></div></div>`;
                 }).join('');
+            }
 
-                // Add click handlers to remove channels
-                selectedChannelsModeList.querySelectorAll('.channel-item').forEach(item => {
-                    item.addEventListener('click', () => {
-                        const channelId = item.dataset.channelId;
-                        const guildId = item.dataset.guildId;
+            // Event delegation for selected channels mode clicks (remove channel)
+            if (selectedChannelsModeList) {
+                selectedChannelsModeList.addEventListener('click', (e) => {
+                    const item = e.target.closest('.channel-item');
+                    if (!item) return;
 
-                        // Remove from selected channels
-                        selectedChannels = selectedChannels.filter(ch =>
-                            !(ch.id === channelId && ch.guildId === guildId)
-                        );
+                    const channelId = item.dataset.channelId;
+                    const guildId = item.dataset.guildId;
 
-                        saveSelectedChannels();
-                        saveUserDataToDB();
-                        renderSelectedChannelsMode();
-                        updateServerCount(guildId);
-                        updateSendButton();
+                    // Remove from selected channels
+                    selectedChannels = selectedChannels.filter(ch =>
+                        !(ch.id === channelId && ch.guildId === guildId)
+                    );
 
-                        // Also update other views if they exist
-                        if (selectedGuild && selectedGuild.id === guildId) {
-                            renderChannels();
-                        }
-                    });
+                    saveSelectedChannels();
+                    saveUserDataToDB();
+                    renderSelectedChannelsMode();
+                    updateServerCount(guildId);
+                    updateSendButton();
+
+                    // Also update other views if they exist
+                    if (selectedGuild && selectedGuild.id === guildId) {
+                        renderChannels();
+                    }
                 });
             }
 
@@ -2453,7 +2467,7 @@
                 });
             }
 
-            // Render channels in channels-only mode (with server icons)
+            // Render channels in channels-only mode (with event delegation)
             function renderChannelsOnlyMode() {
                 if (!channelsOnlyList) return;
 
@@ -2490,58 +2504,58 @@
                 }
 
                 if (allChannels.length === 0) {
-                    if (!channelsLoadingComplete) {
-                        // Channels are still being loaded - show loading message
+                    if (!window.channelsLoadingComplete) {
                         channelsOnlyList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
                     } else if (channelsOnlySearchText || channelsOnlySearchTags.length > 0) {
-                        // Channels loaded but filtered to empty
                         channelsOnlyList.innerHTML = '<div class="no-selection">No channels match search</div>';
                     } else {
-                        // Channels loaded but none available
                         channelsOnlyList.innerHTML = '<div class="no-selection">No channels found</div>';
                     }
                     return;
                 }
 
-                channelsOnlyList.innerHTML = allChannels.map(channel => {
-                    const isSelected = selectedChannels.some(ch => ch.id === channel.id);
-                    const iconUrl = channel.guildIcon
-                        ? `https://cdn.discordapp.com/icons/${channel.guildId}/${channel.guildIcon}.png`
-                        : null;
+                channelsOnlyList.innerHTML = allChannels.map(channel => renderChannelItemHtml(channel, selectedChannels)).join('');
+            }
 
-                    const serverIconHtml = iconUrl
-                        ? `<img class="server-icon-small" src="${iconUrl}" alt="">`
-                        : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
+            // Helper function to render a single channel item HTML (shared via window)
+            window.renderChannelItemHtml = function(channel, selectedList) {
+                const isSelected = selectedList.some(ch => ch.id === channel.id);
+                const iconUrl = channel.guildIcon
+                    ? `https://cdn.discordapp.com/icons/${channel.guildId}/${channel.guildIcon}.png`
+                    : null;
+                const serverIconHtml = iconUrl
+                    ? `<img class="server-icon-small" src="${iconUrl}" alt="">`
+                    : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
+                return `<div class="channel-item ${isSelected ? 'selected' : ''}" data-channel-id="${channel.id}" data-channel-name="${channel.name}" data-guild-id="${channel.guildId}" data-guild-name="${channel.guildName}" data-guild-icon="${channel.guildIcon || ''}">${serverIconHtml}<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right"><img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓"></div></div>`;
+            };
+            const renderChannelItemHtml = window.renderChannelItemHtml;
 
-                    // No failed status shown in channels-only mode
-                    return `<div class="channel-item ${isSelected ? 'selected' : ''}" data-channel-id="${channel.id}" data-channel-name="${channel.name}" data-guild-id="${channel.guildId}" data-guild-name="${channel.guildName}" data-guild-icon="${channel.guildIcon || ''}">${serverIconHtml}<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right"><img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓"></div></div>`;
-                }).join('');
+            // Event delegation for channels-only list clicks (much faster than individual handlers)
+            if (channelsOnlyList) {
+                channelsOnlyList.addEventListener('click', (e) => {
+                    const item = e.target.closest('.channel-item');
+                    if (!item) return;
 
-                // Add click handlers
-                channelsOnlyList.querySelectorAll('.channel-item').forEach(item => {
-                    item.addEventListener('click', () => {
-                        const channelId = item.dataset.channelId;
-                        const channelName = item.dataset.channelName;
-                        const guildId = item.dataset.guildId;
-                        const guildName = item.dataset.guildName;
-                        const guildIcon = item.dataset.guildIcon;
+                    const channelId = item.dataset.channelId;
+                    const channelName = item.dataset.channelName;
+                    const guildId = item.dataset.guildId;
+                    const guildName = item.dataset.guildName;
+                    const guildIcon = item.dataset.guildIcon;
 
-                        toggleChannelSelection({
-                            id: channelId,
-                            name: channelName,
-                            guildId: guildId,
-                            guildName: guildName,
-                            guildIcon: guildIcon
-                        });
-
-                        // Update selection state (no glow effects)
-                        const isNowSelected = selectedChannels.some(ch => ch.id === channelId);
-                        if (isNowSelected) {
-                            item.classList.add('selected');
-                        } else {
-                            item.classList.remove('selected');
-                        }
+                    toggleChannelSelection({
+                        id: channelId,
+                        name: channelName,
+                        guildId: guildId,
+                        guildName: guildName,
+                        guildIcon: guildIcon
                     });
+
+                    const isNowSelected = selectedChannels.some(ch => ch.id === channelId);
+                    if (isNowSelected) {
+                        item.classList.add('selected');
+                    } else {
+                        item.classList.remove('selected');
+                    }
                 });
             }
 
@@ -2800,40 +2814,75 @@
                 });
             }
 
-            // Preload all channels for all guilds (for channels-only mode)
+            // Preload all channels for all guilds (shared data in window.serverChannels)
             async function preloadAllChannels() {
+                const failedGuilds = [];
+
+                // First pass: load all in parallel (fast)
                 const promises = guilds.map(async (guild) => {
-                    if (!serverChannels[guild.id]) {
-                        try {
-                            const response = await fetch(`/api/guild/${guild.id}/channels`);
-                            const data = await response.json();
+                    if (serverChannels[guild.id] !== undefined) return;
 
-                            if (data.token_invalid) {
-                                serverChannels[guild.id] = []; // Mark as loaded (empty) to prevent re-fetch
-                                return;
-                            }
+                    try {
+                        const response = await fetch(`/api/guild/${guild.id}/channels`);
 
-                            if (data.channels) {
-                                serverChannels[guild.id] = data.channels.filter(ch => ch.type === 0).sort((a, b) => a.position - b.position);
-                            } else {
-                                serverChannels[guild.id] = [];
-                            }
+                        // Track rate limited for retry
+                        if (response.status === 429) {
+                            failedGuilds.push(guild);
+                            return;
+                        }
 
-                            // Update channels-only view progressively as each guild loads
-                            if (viewMode === 'channels') {
-                                renderChannelsOnlyMode();
-                            }
-                        } catch (error) {
-                            console.error(`Error preloading channels for ${guild.name}:`, error);
+                        const data = await response.json();
+
+                        if (data.token_invalid) {
+                            serverChannels[guild.id] = [];
+                            return;
+                        }
+
+                        if (data.channels) {
+                            serverChannels[guild.id] = data.channels.sort((a, b) => a.position - b.position);
+                        } else {
                             serverChannels[guild.id] = [];
                         }
+
+                        // Update view progressively
+                        if (viewMode === 'channels') {
+                            renderChannelsOnlyMode();
+                        } else if (viewMode === 'servers' && selectedGuild && selectedGuild.id === guild.id) {
+                            renderChannels();
+                        }
+                    } catch (error) {
+                        console.error(`Error loading channels for ${guild.name}:`, error);
+                        failedGuilds.push(guild);
                     }
                 });
 
                 await Promise.all(promises);
 
-                // Mark loading as complete and do final render
-                channelsLoadingComplete = true;
+                // Retry failed guilds one by one with delay
+                for (const guild of failedGuilds) {
+                    await new Promise(r => setTimeout(r, 1000));
+                    try {
+                        const response = await fetch(`/api/guild/${guild.id}/channels`);
+                        const data = await response.json();
+
+                        if (data.channels) {
+                            serverChannels[guild.id] = data.channels.sort((a, b) => a.position - b.position);
+                        } else {
+                            serverChannels[guild.id] = [];
+                        }
+
+                        if (viewMode === 'channels') {
+                            renderChannelsOnlyMode();
+                        } else if (viewMode === 'servers' && selectedGuild && selectedGuild.id === guild.id) {
+                            renderChannels();
+                        }
+                    } catch (error) {
+                        serverChannels[guild.id] = [];
+                    }
+                }
+
+                // Mark loading as complete
+                window.channelsLoadingComplete = true;
                 if (viewMode === 'channels') {
                     renderChannelsOnlyMode();
                 }
@@ -2867,12 +2916,18 @@
             }
 
             async function loadGuildsAsync() {
+                // If already loaded, skip
+                if (window.guildsLoaded) return;
+
                 try {
                     const response = await fetch('/api/guilds');
                     const data = await response.json();
 
                     if (data.success) {
-                        guilds = data.guilds || [];
+                        // Update shared array (clear and push to keep reference)
+                        guilds.length = 0;
+                        (data.guilds || []).forEach(g => guilds.push(g));
+                        window.guildsLoaded = true;
 
                         // Update global hasGuilds flag
                         if (window.updateHasGuilds) {
@@ -2891,13 +2946,12 @@
                         const guildIds = new Set(guilds.map(g => g.id));
                         const originalLength = selectedChannels.length;
                         selectedChannels = selectedChannels.filter(ch => guildIds.has(ch.guildId));
-
                         if (selectedChannels.length !== originalLength) {
                             saveSelectedChannels();
                             saveUserDataToDB();
                         }
 
-                        // Render servers and update UI
+                        // Render personal panel
                         renderServers();
                         updateSelectedDisplay();
                         updateSendButton();
@@ -2905,14 +2959,10 @@
                         // Preload channels in background
                         preloadAllChannels().catch(err => console.error('Error preloading channels:', err));
                     } else if (data.token_invalid) {
-                        // Show token update popup
                         showTokenUpdatePopup(data.account_info, (success) => {
-                            if (success) {
-                                window.location.reload();
-                            }
+                            if (success) window.location.reload();
                         });
                     } else if (data.suspended) {
-                        // Show suspended account popup
                         await showSuspendedAccountPopup(data.account_info);
                         window.location.reload();
                     }
@@ -2962,8 +3012,8 @@
                 selectedGuild = guild;
                 const guildId = guild.id;
 
-                // Update active state in server sidebar
-                document.querySelectorAll('.server-icon-wrapper').forEach(item => {
+                // Update active state in server sidebar (only personal panel, not team panel)
+                document.querySelectorAll('#server-sidebar .server-icon-wrapper').forEach(item => {
                     item.classList.remove('active');
                 });
 
@@ -3050,14 +3100,14 @@
                 }
             }
 
-            // Render channels for selected server
+            // Render channels for selected server (with event delegation)
             function renderChannels() {
                 if (!selectedGuild) {
                     channelsList.innerHTML = '<div class="no-selection">Select a server to view channels</div>';
                     return;
                 }
 
-                channelsList.innerHTML = '';
+                const currentGuildId = selectedGuild.id;
                 const channels = serverChannels[selectedGuild.id] || [];
 
                 if (channels.length === 0) {
@@ -3078,28 +3128,28 @@
                     return;
                 }
 
-                filteredChannels.forEach(channel => {
-                    const isSelected = selectedChannels.some(ch =>
+                channelsList.innerHTML = filteredChannels.map(channel => {
+                    const isSelected = selectedChannels.some(ch => ch.id === channel.id && ch.guildId === currentGuildId);
+                    return `<div class="channel-item ${isSelected ? 'selected' : ''}" data-channel-id="${channel.id}" data-channel-name="${channel.name}"><span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right"><img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓"></div></div>`;
+                }).join('');
+            }
+
+            // Event delegation for server channels list clicks
+            if (channelsList) {
+                channelsList.addEventListener('click', (e) => {
+                    const item = e.target.closest('.channel-item');
+                    if (!item || !selectedGuild) return;
+
+                    const channelId = item.dataset.channelId;
+                    const channelName = item.dataset.channelName;
+                    const channels = serverChannels[selectedGuild.id] || [];
+                    const channel = channels.find(ch => ch.id === channelId);
+                    if (!channel) return;
+
+                    const currentlySelected = selectedChannels.some(ch =>
                         ch.id === channel.id && ch.guildId === selectedGuild.id
                     );
-
-                    const channelItem = document.createElement('div');
-                    channelItem.className = `channel-item ${isSelected ? 'selected' : ''}`;
-                    channelItem.dataset.channelId = channel.id;
-
-                    // Discord-style layout: # name tick (no failed status in servers mode)
-                    channelItem.innerHTML = `<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right"><img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓"></div>`;
-
-                    // Click anywhere on channel item to toggle selection
-                    channelItem.addEventListener('click', () => {
-                        // Check current selection state at click time, not render time
-                        const currentlySelected = selectedChannels.some(ch =>
-                            ch.id === channel.id && ch.guildId === selectedGuild.id
-                        );
-                        toggleChannel(channel, !currentlySelected);
-                    });
-
-                    channelsList.appendChild(channelItem);
+                    toggleChannel(channel, !currentlySelected);
                 });
             }
 
@@ -3470,24 +3520,26 @@
                                 }
                             }
 
-                            // Update local guilds data
-                            guilds = refreshData.guilds.map(g => ({
+                            // Update shared guilds array (clear and push to keep reference)
+                            guilds.length = 0;
+                            refreshData.guilds.forEach(g => guilds.push({
                                 id: g.id,
                                 name: g.name,
                                 icon: g.icon
                             }));
 
-                            // Update serverChannels cache
-                            for (const guild of refreshData.guilds) {
-                                serverChannels[guild.id] = guild.channels;
-                            }
-
-                            // Remove channels from old guilds that no longer exist
+                            // Update shared serverChannels cache
+                            // First remove old guilds that no longer exist
                             const oldGuildIds = Object.keys(serverChannels);
                             for (const guildId of oldGuildIds) {
                                 if (!validGuilds.has(guildId)) {
                                     delete serverChannels[guildId];
                                 }
+                            }
+
+                            // Then update with fresh channel data
+                            for (const guild of refreshData.guilds) {
+                                serverChannels[guild.id] = guild.channels;
                             }
 
                             // Filter out selected channels that no longer exist
@@ -3520,12 +3572,19 @@
                                 }
                             }
 
-                            // Re-render servers list to show updated data
+                            // Re-render personal panel with updated data
                             renderServers();
                             if (viewMode === 'channels') {
                                 renderChannelsOnlyMode();
                             } else if (viewMode === 'selected') {
                                 renderSelectedChannelsMode();
+                            }
+
+                            // Also update team panel UI if functions are available
+                            if (typeof window.teamRenderServers === 'function') {
+                                window.teamRenderServers();
+                                window.teamUpdateSelectedDisplay();
+                                window.teamUpdateSendButton();
                             }
 
                             isChecking = false;
@@ -3762,6 +3821,13 @@
                 });
             }
 
+            // Expose personal panel render functions for team panel to call after refresh
+            window.personalRenderServers = renderServers;
+            window.personalRenderChannelsOnlyMode = renderChannelsOnlyMode;
+            window.personalRenderSelectedChannelsMode = renderSelectedChannelsMode;
+            window.personalUpdateSelectedDisplay = updateSelectedDisplay;
+            window.personalUpdateSendButton = updateSendButton;
+
             // Initialize on load
             initializeUI();
         });
@@ -3783,10 +3849,10 @@
             const teamSearchTagsContainer = document.getElementById('team-search-tags');
             const MESSAGE_LIMIT = 2000;
 
-            let teamGuilds = [];
-            let teamServerChannels = {}; // Cache for channels by guild ID
-            let teamChannelsLoadingComplete = false; // Track if all team channels have finished loading
-            // teamSelectedChannels already declared at top // Array for multiple channel selection
+            // Team panel uses shared data from window (loaded by personal panel)
+            const guilds = window.guilds;
+            const serverChannels = window.serverChannels;
+            let teamSelectedChannels = []; // Team's own selected channels
             let teamSelectedGuild = null; // Currently selected guild
             let teamSearchTags = []; // Search filter tags
             let teamCurrentServerColor = 'rgba(21, 216, 188, 0.6)';
@@ -3836,11 +3902,19 @@
                     } else if (mode === 'channels') {
                         teamChannelsOnlyHeader.style.display = '';
                         teamChannelsOnlySection.style.display = 'flex';
-                        teamRenderChannelsOnlyMode();
+                        // Show loading dots immediately, then render asynchronously
+                        teamChannelsOnlyList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
+                        requestAnimationFrame(() => {
+                            setTimeout(() => teamRenderChannelsOnlyMode(), 0);
+                        });
                     } else if (mode === 'selected') {
                         teamSelectedChannelsModeHeader.style.display = '';
                         teamSelectedChannelsModeSection.style.display = 'flex';
-                        teamRenderSelectedChannelsMode();
+                        // Show loading dots immediately, then render asynchronously
+                        teamSelectedChannelsModeList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
+                        requestAnimationFrame(() => {
+                            setTimeout(() => teamRenderSelectedChannelsMode(), 0);
+                        });
                     }
                 });
             });
@@ -3853,7 +3927,7 @@
                 });
             }
 
-            // Render channels in team selected channels mode
+            // Render channels in team selected channels mode (with event delegation)
             function teamRenderSelectedChannelsMode() {
                 if (!teamSelectedChannelsModeList) return;
 
@@ -3879,40 +3953,40 @@
                     const iconUrl = channel.guildIcon
                         ? `https://cdn.discordapp.com/icons/${channel.guildId}/${channel.guildIcon}.png`
                         : null;
-
                     const serverIconHtml = iconUrl
                         ? `<img class="server-icon-small" src="${iconUrl}" alt="">`
                         : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
-
                     const channelKey = `${channel.guildId}-${channel.id}`;
                     const failedInfo = teamFailedChannels.get(channelKey);
                     const isFailed = !!failedInfo;
                     const failedClass = isFailed ? ' failed' : '';
                     const statusText = failedInfo?.type === 'ratelimit' ? 'Rate limited' : 'Missing permission';
                     const statusTagHtml = isFailed ? `<span class="channel-status-tag">${statusText}</span>` : '';
-
                     return `<div class="channel-item selected${failedClass}" data-channel-id="${channel.id}" data-channel-name="${channel.name}" data-guild-id="${channel.guildId}" data-guild-name="${channel.guildName}" data-guild-icon="${channel.guildIcon || ''}">${serverIconHtml}<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right">${statusTagHtml}<img class="channel-tick" src="{{ url_for('static', filename='x.png') }}" alt="x"></div></div>`;
                 }).join('');
+            }
 
-                // Add click handlers to remove channels
-                teamSelectedChannelsModeList.querySelectorAll('.channel-item').forEach(item => {
-                    item.addEventListener('click', () => {
-                        const channelId = item.dataset.channelId;
-                        const guildId = item.dataset.guildId;
+            // Event delegation for team selected channels mode clicks (remove channel)
+            if (teamSelectedChannelsModeList) {
+                teamSelectedChannelsModeList.addEventListener('click', (e) => {
+                    const item = e.target.closest('.channel-item');
+                    if (!item) return;
 
-                        teamSelectedChannels = teamSelectedChannels.filter(ch =>
-                            !(ch.id === channelId && ch.guildId === guildId)
-                        );
+                    const channelId = item.dataset.channelId;
+                    const guildId = item.dataset.guildId;
 
-                        teamSaveSelectedChannels();
-                        teamRenderSelectedChannelsMode();
-                        teamUpdateServerCount(guildId);
-                        teamUpdateSendButton();
+                    teamSelectedChannels = teamSelectedChannels.filter(ch =>
+                        !(ch.id === channelId && ch.guildId === guildId)
+                    );
 
-                        if (teamSelectedGuild && teamSelectedGuild.id === guildId) {
-                            teamRenderChannels();
-                        }
-                    });
+                    teamSaveSelectedChannels();
+                    teamRenderSelectedChannelsMode();
+                    teamUpdateServerCount(guildId);
+                    teamUpdateSendButton();
+
+                    if (teamSelectedGuild && teamSelectedGuild.id === guildId) {
+                        teamRenderChannels();
+                    }
                 });
             }
 
@@ -3966,13 +4040,15 @@
                 });
             }
 
-            // Render channels in team channels-only mode
+            // Render channels in team channels-only mode (with event delegation)
+            const renderChannelItemHtml = window.renderChannelItemHtml;
+
             function teamRenderChannelsOnlyMode() {
                 if (!teamChannelsOnlyList) return;
 
                 let allChannels = [];
-                for (const guild of teamGuilds) {
-                    const channels = teamServerChannels[guild.id] || [];
+                for (const guild of guilds) {
+                    const channels = serverChannels[guild.id] || [];
                     for (const channel of channels) {
                         allChannels.push({
                             ...channel,
@@ -4000,8 +4076,7 @@
                 }
 
                 if (allChannels.length === 0) {
-                    if (!teamChannelsLoadingComplete) {
-                        // Channels are still being loaded - show loading message
+                    if (!window.channelsLoadingComplete) {
                         teamChannelsOnlyList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
                     } else if (teamChannelsOnlySearchText || teamChannelsOnlySearchTags.length > 0) {
                         teamChannelsOnlyList.innerHTML = '<div class="no-selection">No channels match search</div>';
@@ -4011,42 +4086,35 @@
                     return;
                 }
 
-                teamChannelsOnlyList.innerHTML = allChannels.map(channel => {
-                    const isSelected = teamSelectedChannels.some(ch => ch.id === channel.id);
-                    const iconUrl = channel.guildIcon
-                        ? `https://cdn.discordapp.com/icons/${channel.guildId}/${channel.guildIcon}.png`
-                        : null;
+                teamChannelsOnlyList.innerHTML = allChannels.map(channel => renderChannelItemHtml(channel, teamSelectedChannels)).join('');
+            }
 
-                    const serverIconHtml = iconUrl
-                        ? `<img class="server-icon-small" src="${iconUrl}" alt="">`
-                        : `<div class="server-icon-placeholder-small">${channel.guildName[0].toUpperCase()}</div>`;
+            // Event delegation for team channels-only list clicks
+            if (teamChannelsOnlyList) {
+                teamChannelsOnlyList.addEventListener('click', (e) => {
+                    const item = e.target.closest('.channel-item');
+                    if (!item) return;
 
-                    return `<div class="channel-item ${isSelected ? 'selected' : ''}" data-channel-id="${channel.id}" data-channel-name="${channel.name}" data-guild-id="${channel.guildId}" data-guild-name="${channel.guildName}" data-guild-icon="${channel.guildIcon || ''}">${serverIconHtml}<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right"><img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓"></div></div>`;
-                }).join('');
+                    const channelId = item.dataset.channelId;
+                    const channelName = item.dataset.channelName;
+                    const guildId = item.dataset.guildId;
+                    const guildName = item.dataset.guildName;
+                    const guildIcon = item.dataset.guildIcon;
 
-                teamChannelsOnlyList.querySelectorAll('.channel-item').forEach(item => {
-                    item.addEventListener('click', () => {
-                        const channelId = item.dataset.channelId;
-                        const channelName = item.dataset.channelName;
-                        const guildId = item.dataset.guildId;
-                        const guildName = item.dataset.guildName;
-                        const guildIcon = item.dataset.guildIcon;
-
-                        teamToggleChannelSelection({
-                            id: channelId,
-                            name: channelName,
-                            guildId: guildId,
-                            guildName: guildName,
-                            guildIcon: guildIcon
-                        });
-
-                        const isNowSelected = teamSelectedChannels.some(ch => ch.id === channelId);
-                        if (isNowSelected) {
-                            item.classList.add('selected');
-                        } else {
-                            item.classList.remove('selected');
-                        }
+                    teamToggleChannelSelection({
+                        id: channelId,
+                        name: channelName,
+                        guildId: guildId,
+                        guildName: guildName,
+                        guildIcon: guildIcon
                     });
+
+                    const isNowSelected = teamSelectedChannels.some(ch => ch.id === channelId);
+                    if (isNowSelected) {
+                        item.classList.add('selected');
+                    } else {
+                        item.classList.remove('selected');
+                    }
                 });
             }
 
@@ -4147,11 +4215,11 @@
 
                 teamServerSidebar.innerHTML = '';
 
-                if (!teamGuilds || teamGuilds.length === 0) {
+                if (!guilds || guilds.length === 0) {
                     return;
                 }
 
-                teamGuilds.forEach(guild => {
+                guilds.forEach(guild => {
                     const wrapper = document.createElement('div');
                     wrapper.className = 'server-icon-wrapper';
                     wrapper.dataset.guildId = guild.id;
@@ -4177,48 +4245,9 @@
                 });
             }
 
-            // Preload all channels for team guilds
-            async function teamPreloadAllChannels() {
-                const promises = teamGuilds.map(async (guild) => {
-                    if (!teamServerChannels[guild.id]) {
-                        try {
-                            const response = await fetch(`/api/guild/${guild.id}/channels`);
-                            const data = await response.json();
-
-                            if (data.token_invalid) {
-                                teamServerChannels[guild.id] = []; // Mark as loaded (empty) to prevent re-fetch
-                                return;
-                            }
-
-                            if (data.channels) {
-                                teamServerChannels[guild.id] = data.channels.filter(ch => ch.type === 0).sort((a, b) => a.position - b.position);
-                            } else {
-                                teamServerChannels[guild.id] = [];
-                            }
-
-                            if (teamViewMode === 'channels') {
-                                teamRenderChannelsOnlyMode();
-                            }
-                        } catch (error) {
-                            console.error(`Error preloading team channels for ${guild.name}:`, error);
-                            teamServerChannels[guild.id] = [];
-                        }
-                    }
-                });
-
-                await Promise.all(promises);
-
-                // Mark loading as complete and do final render
-                teamChannelsLoadingComplete = true;
-                if (teamViewMode === 'channels') {
-                    teamRenderChannelsOnlyMode();
-                }
-            }
-
-            // Initialize team UI
+            // Initialize team UI (uses shared guilds/channels data from window)
             async function teamInitializeUI() {
                 teamLoadSelectedChannels();
-
                 teamUpdateSelectedDisplay();
                 teamUpdateSendButton();
 
@@ -4231,37 +4260,29 @@
                     teamMsgContentEl.style.pointerEvents = 'auto';
                 }
 
-                // Load guilds asynchronously
-                teamLoadGuildsAsync();
+                // Wait for shared data to be loaded by personal panel, then render
+                await waitForGuildsAndRender();
             }
 
-            async function teamLoadGuildsAsync() {
-                try {
-                    const response = await fetch('/api/guilds');
-                    const data = await response.json();
-
-                    if (data.success) {
-                        teamGuilds = data.guilds || [];
-
-                        // Remove selected channels from servers that no longer exist
-                        const guildIds = new Set(teamGuilds.map(g => g.id));
-                        const originalLength = teamSelectedChannels.length;
-                        teamSelectedChannels = teamSelectedChannels.filter(ch => guildIds.has(ch.guildId));
-
-                        if (teamSelectedChannels.length !== originalLength) {
-                            teamSaveSelectedChannels();
-                        }
-
-                        teamRenderServers();
-                        teamUpdateSelectedDisplay();
-                        teamUpdateSendButton();
-
-                        // Preload channels in background
-                        teamPreloadAllChannels();
-                    }
-                } catch (error) {
-                    console.error('Error loading team guilds:', error);
+            // Wait for guilds to load, then render team panel
+            async function waitForGuildsAndRender() {
+                // Poll until guilds are loaded (personal panel loads them)
+                while (!window.guildsLoaded) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 }
+
+                // Clean up selected channels for servers that no longer exist
+                const guildIds = new Set(guilds.map(g => g.id));
+                const originalLength = teamSelectedChannels.length;
+                teamSelectedChannels = teamSelectedChannels.filter(ch => guildIds.has(ch.guildId));
+                if (teamSelectedChannels.length !== originalLength) {
+                    teamSaveSelectedChannels();
+                }
+
+                // Render team panel
+                teamRenderServers();
+                teamUpdateSelectedDisplay();
+                teamUpdateSendButton();
             }
 
             // Extract dominant color from image (team version)
@@ -4323,7 +4344,7 @@
                     teamCurrentServerColor = 'rgba(21, 216, 188, 0.6)';
                 }
 
-                if (!teamServerChannels[guildId]) {
+                if (!serverChannels[guildId]) {
                     teamChannelsList.innerHTML = '<div class="loading-container"><div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
 
                     try {
@@ -4345,13 +4366,13 @@
                         }
 
                         if (data.channels) {
-                            teamServerChannels[guildId] = data.channels.filter(ch => ch.type === 0).sort((a, b) => a.position - b.position);
+                            serverChannels[guildId] = data.channels.filter(ch => ch.type === 0).sort((a, b) => a.position - b.position);
                         } else {
-                            teamServerChannels[guildId] = [];
+                            serverChannels[guildId] = [];
                         }
                     } catch (error) {
                         console.error(`Error fetching team channels:`, error);
-                        teamServerChannels[guildId] = [];
+                        serverChannels[guildId] = [];
                     }
                 }
 
@@ -4364,15 +4385,15 @@
                 }
             }
 
-            // Render channels for selected team server
+            // Render channels for selected team server (with event delegation)
             function teamRenderChannels() {
                 if (!teamSelectedGuild) {
                     teamChannelsList.innerHTML = '<div class="no-selection">Select a server to view channels</div>';
                     return;
                 }
 
-                teamChannelsList.innerHTML = '';
-                const channels = teamServerChannels[teamSelectedGuild.id] || [];
+                const currentGuildId = teamSelectedGuild.id;
+                const channels = serverChannels[teamSelectedGuild.id] || [];
 
                 if (channels.length === 0) {
                     teamChannelsList.innerHTML = '<div class="no-selection">No channels found</div>';
@@ -4391,25 +4412,27 @@
                     return;
                 }
 
-                filteredChannels.forEach(channel => {
-                    const isSelected = teamSelectedChannels.some(ch =>
+                teamChannelsList.innerHTML = filteredChannels.map(channel => {
+                    const isSelected = teamSelectedChannels.some(ch => ch.id === channel.id && ch.guildId === currentGuildId);
+                    return `<div class="channel-item ${isSelected ? 'selected' : ''}" data-channel-id="${channel.id}" data-channel-name="${channel.name}"><span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right"><img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓"></div></div>`;
+                }).join('');
+            }
+
+            // Event delegation for team server channels list clicks
+            if (teamChannelsList) {
+                teamChannelsList.addEventListener('click', (e) => {
+                    const item = e.target.closest('.channel-item');
+                    if (!item || !teamSelectedGuild) return;
+
+                    const channelId = item.dataset.channelId;
+                    const channels = serverChannels[teamSelectedGuild.id] || [];
+                    const channel = channels.find(ch => ch.id === channelId);
+                    if (!channel) return;
+
+                    const currentlySelected = teamSelectedChannels.some(ch =>
                         ch.id === channel.id && ch.guildId === teamSelectedGuild.id
                     );
-
-                    const channelItem = document.createElement('div');
-                    channelItem.className = `channel-item ${isSelected ? 'selected' : ''}`;
-                    channelItem.dataset.channelId = channel.id;
-
-                    channelItem.innerHTML = `<span class="channel-hash">#</span><span class="channel-name">${channel.name}</span><div class="channel-right"><img class="channel-tick" src="{{ url_for('static', filename='tick.png') }}" alt="✓"></div>`;
-
-                    channelItem.addEventListener('click', () => {
-                        const currentlySelected = teamSelectedChannels.some(ch =>
-                            ch.id === channel.id && ch.guildId === teamSelectedGuild.id
-                        );
-                        teamToggleChannel(channel, !currentlySelected);
-                    });
-
-                    teamChannelsList.appendChild(channelItem);
+                    teamToggleChannel(channel, !currentlySelected);
                 });
             }
 
@@ -4538,8 +4561,12 @@
                     teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessage;
                 }
             }
-            // Expose globally for page switch handler
+            // Expose team functions globally so personal panel can update team UI after refresh
             window.teamUpdateSendButton = teamUpdateSendButton;
+            window.teamRenderServers = teamRenderServers;
+            window.teamRenderChannelsOnlyMode = teamRenderChannelsOnlyMode;
+            window.teamRenderSelectedChannelsMode = teamRenderSelectedChannelsMode;
+            window.teamUpdateSelectedDisplay = teamUpdateSelectedDisplay;
 
             // Team send button handler - uses AsyncButton for double-click prevention
             if (teamSendBtn) {
@@ -4567,6 +4594,106 @@
                     if (teamSelectedChannels.length > 0 && teamMessage) {
                         // Mark operation as started
                         AsyncButton.startOperation('team_send');
+
+                        // Phase 1: Check and refresh guilds/channels
+                        teamSendBtn.innerHTML = '<span id="team-send-progress">Checking</span>';
+
+                        try {
+                            const refreshResponse = await fetch('/api/refresh-guilds-channels', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-Token': '{{ csrf_token }}'
+                                }
+                            });
+
+                            const refreshData = await refreshResponse.json();
+
+                            if (refreshData.token_invalid || refreshData.account_suspended || !refreshResponse.ok || !refreshData.guilds) {
+                                teamSendBtn.innerHTML = 'Send';
+                                AsyncButton.endOperation('team_send');
+                                if (refreshData.token_invalid) {
+                                    await customAlert('Error', 'Discord token is invalid. Please reconnect your account.');
+                                } else {
+                                    await customAlert('Error', 'Failed to verify channels. Please try again.');
+                                }
+                                return;
+                            }
+
+                            // Build a map of valid guild IDs and channel IDs
+                            const validGuilds = new Map();
+                            const validChannels = new Set();
+                            for (const guild of refreshData.guilds) {
+                                validGuilds.set(guild.id, guild);
+                                for (const channel of guild.channels) {
+                                    validChannels.add(`${guild.id}-${channel.id}`);
+                                }
+                            }
+
+                            // Update shared guilds array
+                            guilds.length = 0;
+                            refreshData.guilds.forEach(g => guilds.push({
+                                id: g.id,
+                                name: g.name,
+                                icon: g.icon
+                            }));
+
+                            // Update shared serverChannels
+                            const oldGuildIds = Object.keys(serverChannels);
+                            for (const guildId of oldGuildIds) {
+                                if (!validGuilds.has(guildId)) {
+                                    delete serverChannels[guildId];
+                                }
+                            }
+                            for (const guild of refreshData.guilds) {
+                                serverChannels[guild.id] = guild.channels;
+                            }
+
+                            // Filter out team selected channels that no longer exist
+                            const removedChannels = [];
+                            teamSelectedChannels = teamSelectedChannels.filter(ch => {
+                                const key = `${ch.guildId}-${ch.id}`;
+                                const exists = validChannels.has(key);
+                                if (!exists) removedChannels.push(ch);
+                                return exists;
+                            });
+
+                            if (removedChannels.length > 0) {
+                                teamSaveSelectedChannels();
+                                teamRenderServers();
+                                teamUpdateSelectedDisplay();
+                                teamUpdateSendButton();
+
+                                // If no channels left after cleanup, stop
+                                if (teamSelectedChannels.length === 0) {
+                                    teamSendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('team_send');
+                                    await customAlert('Channels Removed', `${removedChannels.length} channel(s) were removed because they no longer exist.`);
+                                    return;
+                                }
+                            }
+
+                            // Re-render team panel with fresh data
+                            teamRenderServers();
+                            if (teamViewMode === 'channels') {
+                                teamRenderChannelsOnlyMode();
+                            } else if (teamViewMode === 'selected') {
+                                teamRenderSelectedChannelsMode();
+                            }
+
+                            // Also update personal panel UI if functions are available
+                            if (typeof window.personalRenderServers === 'function') {
+                                window.personalRenderServers();
+                                window.personalUpdateSelectedDisplay();
+                                window.personalUpdateSendButton();
+                            }
+                        } catch (error) {
+                            console.error('Error checking guilds/channels:', error);
+                            teamSendBtn.innerHTML = 'Send';
+                            AsyncButton.endOperation('team_send');
+                            await customAlert('Error', 'Failed to verify channels. Please try again.');
+                            return;
+                        }
 
                         // Check for filtered content before proceeding
                         const filteredWords = {{ BLACKLISTED_WORDS|tojson }};

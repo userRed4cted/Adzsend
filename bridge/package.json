@@ -1,6 +1,6 @@
 {
   "name": "adzsend-bridge",
-  "version": "1.6.23",
+  "version": "1.0.0",
   "description": "Adzsend Bridge - Desktop application for sending Discord messages",
   "main": "main.js",
   "scripts": {

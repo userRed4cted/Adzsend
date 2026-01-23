@@ -3,17 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bridge - Ad Z send</title>
+    <title>Bridge - Adzsend</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     {% include 'partials/base_scripts.html' %}
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121215;
+            color: #ffffff;
+            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .page-scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-top: 60px;
+        }
+
+        .bridge-content {
+            display: flex;
+            flex-direction: column;
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Hero Section */
+        .bridge-hero {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem 0 2rem 0;
+            margin-bottom: 0;
+        }
+
+        .bridge-logo {
+            height: 109px;
+            width: auto;
+            margin-bottom: -10px;
+        }
+
+        .bridge-title {
+            font-size: 48px;
+            font-family: 'ABC Ginto Nord', 'gg sans Bold', sans-serif !important;
+            color: #ffffff;
+            text-align: center;
+            line-height: 1;
+            margin: 0;
+        }
+
+        /* Download Button */
+        .bridge-download-section {
+            display: flex;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        /* Description Section */
+        .bridge-description {
+            font-size: 1.225rem;
+            font-weight: 400;
+            color: #ffffff;
+            text-align: center;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            font-family: 'gg sans Medium', sans-serif;
+        }
+
+        /* Info Sections */
+        .bridge-info-sections {
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .bridge-info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bridge-info-subheader {
+            color: #dcddde;
+            font-size: 0.85rem;
+            font-family: 'gg sans Semibold', sans-serif;
+            margin-bottom: 0.5rem;
+        }
+
+        .bridge-info-text {
+            color: #81828A;
+            font-size: 0.8925rem;
+            font-family: 'gg sans Medium', sans-serif;
+            margin: 0;
+        }
+    </style>
 </head>
 <body>
-    {% include 'partials/settings_popup.html' %}
+    <div class="page-wrapper">
+        {% include 'navbar.html' %}
 
-    <!-- Navbar -->
-    {% include 'navbar.html' %}
+        <div class="page-scroll-container">
+            <div class="bridge-content">
+                <!-- Hero Section -->
+                <div class="bridge-hero">
+                    <img src="{{ url_for('static', filename='AdzsendDiscordTextLogoStyle.png') }}" alt="Adzsend" class="bridge-logo hero-fade-in">
+                    <h1 class="bridge-title hero-fade-in" style="animation-delay: 0.3s;">BRIDGE</h1>
+                </div>
+
+                <!-- Download Button -->
+                <div class="bridge-download-section hero-fade-in" style="animation-delay: 0.6s;">
+                    <a href="{{ bridge_download_url }}" class="view-pricing-btn">Download</a>
+                </div>
+
+                <!-- Description -->
+                <p class="bridge-description hero-fade-in" style="animation-delay: 0.9s;">{{ bridge_description }}</p>
+
+                <!-- Info Sections -->
+                <div class="bridge-info-sections">
+                    {% for section in bridge_info_sections %}
+                    <div class="bridge-info-item hero-fade-in" style="animation-delay: {{ 1.2 + loop.index0 * 0.3 }}s;">
+                        <div class="bridge-info-subheader">{{ section.title }}</div>
+                        <p class="bridge-info-text">{{ section.text }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% include 'partials/footer.html' %}
+        </div>
+    </div>
+
+    {% include 'partials/settings_popup.html' %}
 </body>
 </html>

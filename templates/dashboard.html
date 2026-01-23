@@ -3613,6 +3613,11 @@
                                     await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
                                     window.location.href = '/settings#billing';
                                     return; // Stop execution
+                                } else if (result.bridge_required) {
+                                    // Bridge not connected - user must connect bridge to send
+                                    isSending = false;
+                                    await customAlert('Bridge Required', 'Your Adzsend Bridge app is not connected.\n\nPlease open the Bridge app and activate it to send messages.');
+                                    return; // Stop execution
                                 } else if (result.user_flagged) {
                                     // User was flagged - update UI immediately
                                     isSending = false;
@@ -4615,6 +4620,10 @@
                                 } else if (result.limit_reached) {
                                     await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
                                     window.location.href = '/settings#billing';
+                                    return;
+                                } else if (result.bridge_required) {
+                                    // Bridge not connected - user must connect bridge to send
+                                    await customAlert('Bridge Required', 'Your Adzsend Bridge app is not connected.\n\nPlease open the Bridge app and activate it to send messages.');
                                     return;
                                 } else if (result.user_flagged) {
                                     // User was flagged - update UI immediately

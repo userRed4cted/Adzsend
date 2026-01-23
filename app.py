@@ -42,7 +42,8 @@ from config import (
     BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, get_all_config, is_admin,
     DATABASE_VERSION, DATABASE_WIPE_MESSAGE, SITE,
     get_page_description, get_page_embed,
-    SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS
+    SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS,
+    BRIDGE_DOWNLOAD_URL, BRIDGE_DESCRIPTION, BRIDGE_INFO_SECTIONS
 )
 from config.footer import (
     FOOTER_LOGO, FOOTER_BACKGROUND, FOOTER_SECTION_TITLE_COLOR,
@@ -1327,7 +1328,10 @@ def bridge():
     response = app.make_response(render_template('bridge.html',
         user=user,
         user_data=user_data,
-        csrf_token=csrf_token
+        csrf_token=csrf_token,
+        bridge_download_url=BRIDGE_DOWNLOAD_URL,
+        bridge_description=BRIDGE_DESCRIPTION,
+        bridge_info_sections=BRIDGE_INFO_SECTIONS
     ))
     # Prevent caching
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -1340,9 +1344,15 @@ def bridge():
 # BRIDGE WEBSOCKET ENDPOINT
 # ============================================================================
 import json
+import threading
+import uuid
 
 # Track active bridge WebSocket connections by user_id
 active_bridge_connections = {}
+
+# Track pending bridge requests waiting for responses
+# Format: {request_id: {'event': threading.Event(), 'result': None}}
+pending_bridge_requests = {}
 
 def disconnect_bridge_for_user(user_id):
     """Disconnect an active bridge connection for a user (e.g., when key is regenerated)"""
@@ -1355,6 +1365,54 @@ def disconnect_bridge_for_user(user_id):
             print(f'[Bridge] Error disconnecting user {user_id}: {e}')
         finally:
             active_bridge_connections.pop(user_id, None)
+
+
+def send_message_via_bridge(user_id, discord_token, channel_id, message, timeout=30):
+    """
+    Send a message through the user's bridge connection.
+    Returns: {'success': True/False, 'message_id': str, 'error': str}
+    """
+    if user_id not in active_bridge_connections:
+        return {'success': False, 'error': 'Bridge not connected'}
+
+    ws = active_bridge_connections[user_id]
+    request_id = str(uuid.uuid4())
+
+    # Create event to wait for response
+    pending_bridge_requests[request_id] = {
+        'event': threading.Event(),
+        'result': None
+    }
+
+    try:
+        # Send command to bridge
+        command = {
+            'type': 'send',
+            'id': request_id,
+            'tasks': [{
+                'discord_token': discord_token,
+                'channel_id': channel_id,
+                'message': message,
+                'delay': 0
+            }]
+        }
+        ws.send(json.dumps(command))
+
+        # Wait for response with timeout
+        event = pending_bridge_requests[request_id]['event']
+        if event.wait(timeout=timeout):
+            result = pending_bridge_requests[request_id]['result']
+            if result and result.get('results') and len(result['results']) > 0:
+                return result['results'][0]
+            return {'success': False, 'error': 'Invalid response from bridge'}
+        else:
+            return {'success': False, 'error': 'Bridge request timeout'}
+    except Exception as e:
+        print(f'[Bridge] Error sending via bridge for user {user_id}: {e}')
+        return {'success': False, 'error': str(e)}
+    finally:
+        # Clean up pending request
+        pending_bridge_requests.pop(request_id, None)
 
 @sock.route('/bridge/ws')
 def bridge_websocket(ws):
@@ -1392,7 +1450,12 @@ def bridge_websocket(ws):
             elif msg_type == 'ping':
                 ws.send(json.dumps({'type': 'pong'}))
 
-            # Add more message handlers here as needed
+            elif msg_type == 'send_result':
+                # Bridge is responding to a send command
+                request_id = message.get('id')
+                if request_id and request_id in pending_bridge_requests:
+                    pending_bridge_requests[request_id]['result'] = message
+                    pending_bridge_requests[request_id]['event'].set()
 
     except Exception as e:
         print(f'[Bridge WebSocket] Error for user {user_id}: {e}')
@@ -1876,23 +1939,26 @@ def send_message_single():
     channel_id = channel.get('id')
     channel_name = channel.get('name')
 
+    # BRIDGE-ONLY: Messages must be sent through the bridge, never directly to Discord
+    # Check if user has an active bridge connection
+    if user['id'] not in active_bridge_connections:
+        return {'success': False, 'error': 'Bridge not connected', 'bridge_required': True}, 400
+
     try:
-        resp = requests.post(
-            f'https://discord.com/api/v10/channels/{channel_id}/messages',
-            headers=headers,
-            json={'content': message_content},
-            timeout=10
+        # Send message through bridge
+        bridge_result = send_message_via_bridge(
+            user_id=user['id'],
+            discord_token=user_token,
+            channel_id=channel_id,
+            message=message_content,
+            timeout=30
         )
 
-        if resp.status_code == 200 or resp.status_code == 201:
+        if bridge_result.get('success'):
             try:
                 # Log the sent message ID for verification feature
-                try:
-                    message_data = resp.json()
-                    if message_data.get('id'):
-                        log_sent_message(message_data['id'])
-                except:
-                    pass  # Don't fail if we can't log the message
+                if bridge_result.get('message_id'):
+                    log_sent_message(bridge_result['message_id'])
 
                 if is_business and owner_user_id:
                     # For business sends: update owner's and member's business stats
@@ -1914,67 +1980,40 @@ def send_message_single():
                 traceback.print_exc()
                 # Message was sent successfully, return success anyway
             return {'success': True, 'channel': channel_name}, 200
-        elif resp.status_code == 401:
-            # Token is invalid/expired - mark account as needing token update
-            account_info = None
-            if account_used:
-                from database import get_db
-                conn = get_db()
-                cursor = conn.cursor()
-                cursor.execute('UPDATE linked_discord_accounts SET is_valid = 0 WHERE id = ?', (account_used['id'],))
-                conn.commit()
-                conn.close()
-                account_info = {
-                    'account_id': account_used['id'],
-                    'username': account_used.get('username', 'Unknown'),
-                    'discord_id': account_used.get('discord_id', 'Unknown')
-                }
-            return {'success': False, 'error': 'Token invalid', 'token_invalid': True, 'account_info': account_info}, 401
-        elif resp.status_code == 403:
-            # Check if account is suspended/deleted/disabled
-            try:
-                error_data = resp.json()
-                error_code = error_data.get('code', 0)
-                # Discord error codes for account issues:
-                # 40001 = Unauthorized (account disabled)
-                # 40002 = You need to verify your account
-                # 40007 = User is banned from this guild
-                # 50001 = Missing Access
-                if error_code in [40001, 40002] and account_used:
-                    # Account is suspended/disabled - unlink it
-                    from database.models import unlink_discord_account
-                    unlink_discord_account(user['id'], account_used['id'])
-                    return {
-                        'success': False,
-                        'error': 'Account unavailable',
-                        'account_suspended': True,
-                        'account_info': {
-                            'account_id': account_used['id'],
-                            'username': account_used.get('username', 'Unknown'),
-                            'discord_id': account_used.get('discord_id', 'Unknown')
-                        }
-                    }, 403
-            except:
-                pass
-            return {'success': False, 'error': 'Access denied'}, 403
-        elif resp.status_code == 429:
-            # Extract retry_after from Discord's response
-            try:
-                rate_limit_data = resp.json()
-                retry_after = rate_limit_data.get('retry_after', 1.0)  # Discord returns seconds as float
-                # Convert to milliseconds for JavaScript
-                retry_after_ms = int(retry_after * 1000)
-            except:
-                retry_after_ms = 1000  # Default to 1 second
-            return {'success': False, 'error': 'Rate limited', 'retry_after': retry_after_ms}, 429
         else:
-            try:
-                error_msg = resp.json().get('message', 'Unknown error')
-            except:
-                error_msg = f'HTTP {resp.status_code}'
-            return {'success': False, 'error': error_msg}, resp.status_code
-    except requests.exceptions.Timeout:
-        return {'success': False, 'error': 'Request timeout'}, 500
+            # Handle bridge errors
+            error = bridge_result.get('error', 'Unknown error')
+
+            if error == 'token_invalid':
+                # Token is invalid/expired - mark account as needing token update
+                account_info = None
+                if account_used:
+                    from database import get_db
+                    conn = get_db()
+                    cursor = conn.cursor()
+                    cursor.execute('UPDATE linked_discord_accounts SET is_valid = 0 WHERE id = ?', (account_used['id'],))
+                    conn.commit()
+                    conn.close()
+                    account_info = {
+                        'account_id': account_used['id'],
+                        'username': account_used.get('username', 'Unknown'),
+                        'discord_id': account_used.get('discord_id', 'Unknown')
+                    }
+                return {'success': False, 'error': 'Token invalid', 'token_invalid': True, 'account_info': account_info}, 401
+
+            elif 'rate_limit' in error.lower() or 'retry_after' in str(bridge_result):
+                retry_after_ms = bridge_result.get('retry_after', 1000)
+                return {'success': False, 'error': 'Rate limited', 'retry_after': retry_after_ms}, 429
+
+            elif error == 'Bridge not connected':
+                return {'success': False, 'error': 'Bridge not connected', 'bridge_required': True}, 400
+
+            elif error == 'Bridge request timeout':
+                return {'success': False, 'error': 'Bridge request timeout'}, 504
+
+            else:
+                return {'success': False, 'error': error}, 500
+
     except Exception as e:
         return {'success': False, 'error': str(e)}, 500
 
@@ -2062,6 +2101,11 @@ def send_message():
     if not channels:
         return {'error': 'No channels selected'}, 400
 
+    # BRIDGE-ONLY: Messages must be sent through the bridge, never directly to Discord
+    # Check if user has an active bridge connection
+    if user['id'] not in active_bridge_connections:
+        return {'success': False, 'error': 'Bridge not connected', 'bridge_required': True}, 400
+
     results = {'success': [], 'failed': []}
 
     for channel in channels:
@@ -2077,23 +2121,21 @@ def send_message():
         channel_name = channel.get('name')
 
         try:
-            resp = requests.post(
-                f'https://discord.com/api/v10/channels/{channel_id}/messages',
-                headers=headers,
-                json={'content': message_content},
-                timeout=10
+            # Send message through bridge instead of direct Discord API
+            bridge_result = send_message_via_bridge(
+                user_id=user['id'],
+                discord_token=user_token,
+                channel_id=channel_id,
+                message=message_content,
+                timeout=30
             )
 
-            if resp.status_code == 200 or resp.status_code == 201:
+            if bridge_result.get('success'):
                 results['success'].append(channel_name)
 
                 # Log the sent message ID for verification feature
-                try:
-                    message_data = resp.json()
-                    if message_data.get('id'):
-                        log_sent_message(message_data['id'])
-                except:
-                    pass  # Don't fail if we can't log the message
+                if bridge_result.get('message_id'):
+                    log_sent_message(bridge_result['message_id'])
 
                 # Track successful send in database
                 if is_business and owner_user_id:
@@ -2111,17 +2153,17 @@ def send_message():
                     session['sent_count'] = 0
                 session['sent_count'] += 1
                 session.modified = True
-            elif resp.status_code == 429:
-                results['failed'].append(f'{channel_name} (Rate limited)')
             else:
-                try:
-                    error_data = resp.json()
-                    error_msg = error_data.get('message', 'Unknown error')
-                except:
-                    error_msg = f'HTTP {resp.status_code}'
-                results['failed'].append(f'{channel_name} ({error_msg})')
-        except requests.exceptions.Timeout:
-            results['failed'].append(f'{channel_name} (Request timeout)')
+                error = bridge_result.get('error', 'Unknown error')
+                if 'rate_limit' in error.lower():
+                    results['failed'].append(f'{channel_name} (Rate limited)')
+                elif error == 'Bridge not connected':
+                    results['failed'].append(f'{channel_name} (Bridge disconnected)')
+                    break  # Stop sending if bridge disconnected
+                elif error == 'Bridge request timeout':
+                    results['failed'].append(f'{channel_name} (Request timeout)')
+                else:
+                    results['failed'].append(f'{channel_name} ({error})')
         except Exception as e:
             results['failed'].append(f'{channel_name} ({str(e)})')
 

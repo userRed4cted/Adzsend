@@ -22,6 +22,7 @@ from .support import SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT
 from .terms import TERMS_SECTIONS
 from .guidelines import GUIDELINES_SECTIONS
 from .paid_services_terms import PAID_SERVICES_TERMS_SECTIONS
+from .bridge import BRIDGE_DOWNLOAD_URL, BRIDGE_DESCRIPTION, BRIDGE_INFO_SECTIONS
 
 # Import site-wide settings
 from .site import (

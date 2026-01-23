@@ -7,6 +7,7 @@
 (function() {
     // Store initial state
     let lastStatus = null;
+    let pollIntervalId = null;
     const POLL_INTERVAL = 5000; // 5 seconds
 
     async function checkStatus() {
@@ -81,13 +82,21 @@
         setTimeout(checkStatus, 1000);
 
         // Then poll every 5 seconds
-        setInterval(checkStatus, POLL_INTERVAL);
+        pollIntervalId = setInterval(checkStatus, POLL_INTERVAL);
     });
 
     // Also check when page becomes visible again (user switches back to tab)
     document.addEventListener('visibilitychange', function() {
         if (!document.hidden) {
             checkStatus();
+        }
+    });
+
+    // Cleanup interval on page unload to prevent memory leaks
+    window.addEventListener('beforeunload', function() {
+        if (pollIntervalId) {
+            clearInterval(pollIntervalId);
+            pollIntervalId = null;
         }
     });
 })();

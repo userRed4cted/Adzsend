@@ -4518,6 +4518,52 @@ def get_bridge_status_api():
     }
 
 
+@app.route('/api/bridge/activate', methods=['POST'])
+@rate_limit('api')
+def bridge_activate():
+    """Called by bridge when activated to immediately update status."""
+    data = request.json
+    secret_key = data.get('secret_key') if data else None
+
+    if not secret_key:
+        return {'error': 'Secret key required'}, 400
+
+    # Validate secret key and get user
+    user_id = validate_bridge_secret_key(secret_key)
+    if not user_id:
+        return {'error': 'Invalid secret key'}, 401
+
+    # Update bridge status to online
+    set_bridge_online(user_id, request.remote_addr)
+
+    return {'success': True}
+
+
+@app.route('/api/bridge/deactivate', methods=['POST'])
+@rate_limit('api')
+def bridge_deactivate():
+    """Called by bridge when deactivated to immediately update status."""
+    data = request.json
+    secret_key = data.get('secret_key') if data else None
+
+    if not secret_key:
+        return {'error': 'Secret key required'}, 400
+
+    # Validate secret key and get user
+    user_id = validate_bridge_secret_key(secret_key)
+    if not user_id:
+        return {'error': 'Invalid secret key'}, 401
+
+    # Update bridge status to offline
+    set_bridge_offline(user_id)
+
+    # Remove from active connections if exists
+    if user_id in active_bridge_connections:
+        active_bridge_connections.pop(user_id, None)
+
+    return {'success': True}
+
+
 @app.route('/api/bridge/regenerate', methods=['POST'])
 @rate_limit('api')
 def regenerate_bridge_key():

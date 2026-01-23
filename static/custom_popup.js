@@ -35,6 +35,7 @@ function sanitizeHtml(html) {
 let currentPopup = null;
 let popupResolve = null;
 let tokenUpdateCallback = null;
+let tokenDebounceTimer = null; // Track debounce timer for cleanup
 
 // Create popup overlay and structure
 function initCustomPopup() {
@@ -166,6 +167,12 @@ function closePopup(result) {
     const overlay = document.getElementById('custom-popup-overlay');
     if (!overlay) return;
 
+    // Clear any pending debounce timer
+    if (tokenDebounceTimer) {
+        clearTimeout(tokenDebounceTimer);
+        tokenDebounceTimer = null;
+    }
+
     // Prevent double-closing
     if (!overlay.classList.contains('active')) {
         // Still resolve if there's a pending promise
@@ -249,8 +256,13 @@ function showTokenUpdatePopup(accountInfo, onClose) {
         currentPopup = overlay;
         popupResolve = resolve;
 
+        // Clear any previous debounce timer
+        if (tokenDebounceTimer) {
+            clearTimeout(tokenDebounceTimer);
+            tokenDebounceTimer = null;
+        }
+
         // Token input handler with debounce
-        let debounceTimer = null;
         const handleTokenInput = async () => {
             const token = tokenInput.value.trim();
 
@@ -311,8 +323,8 @@ function showTokenUpdatePopup(accountInfo, onClose) {
         const newInput = tokenInput.cloneNode(true);
         tokenInput.parentNode.replaceChild(newInput, tokenInput);
         newInput.addEventListener('input', () => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(handleTokenInput, 500);
+            clearTimeout(tokenDebounceTimer);
+            tokenDebounceTimer = setTimeout(handleTokenInput, 500);
         });
 
         // Show popup

@@ -235,7 +235,6 @@ function getGatewayConnectionCount() {
 // Cleanup all Gateway connections
 function cleanupGateway() {
     gatewayManager.disconnectAll();
-    gatewayManager.stopCleanup();
 }
 
 module.exports = {

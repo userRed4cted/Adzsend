@@ -106,7 +106,18 @@ async function handleActivate() {
         // Deactivate
         frameStatus.textContent = 'Bridge disconnecting';
         activateBtn.disabled = true;
-        await window.bridge.disconnect();
+        try {
+            await window.bridge.disconnect();
+        } catch (error) {
+            console.error('Disconnect error:', error);
+        }
+        // Reset state regardless of disconnect result
+        isActivated = false;
+        frameStatus.textContent = 'Bridge offline';
+        statusValue.textContent = 'offline';
+        statusValue.classList.remove('online');
+        activateBtn.textContent = 'Activate';
+        activateBtn.disabled = false;
     } else {
         // Check if we have a secret key
         if (!secretKey) {

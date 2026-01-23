@@ -2263,6 +2263,7 @@
             let isSending = false; // Track if messages are being sent
             let isChecking = false; // Track if checking guilds/channels before send
             let shouldCancelSend = false; // Track if user wants to cancel
+            let sendAbortController = null; // AbortController for cancelling fetch requests
             let failedChannels = new Map(); // Track channels that failed to send with failure type
             let viewMode = 'servers'; // 'servers', 'channels', or 'selected'
             let channelsOnlySearchText = ''; // Search filter for channels-only mode
@@ -3264,8 +3265,33 @@
             // Send button handler - uses AsyncButton for double-click prevention
             if (sendBtn) {
                 sendBtn.addEventListener('click', async function() {
-                    // If currently sending or checking, handle cancel
-                    if (isSending || isChecking) {
+                    // If cancelled during checking, allow user to continue
+                    if (shouldCancelSend && isChecking) {
+                        const continueConfirmed = await customConfirm('Continue', 'You have cancelled this operation, would you like for it to continue?', 'Yes');
+                        if (continueConfirmed) {
+                            shouldCancelSend = false;
+                            sendBtn.innerHTML = '<span id="send-progress">Checking...</span>';
+                        }
+                        return;
+                    }
+
+                    // If already cancelling during send, ignore further clicks
+                    if (shouldCancelSend) {
+                        return;
+                    }
+
+                    // If currently checking, handle cancel (checking continues but send will be skipped)
+                    if (isChecking) {
+                        const cancelConfirmed = await customConfirm('Message sending', 'Are you sure you would like to cancel? This will stop any further actions.', 'Yes');
+                        if (cancelConfirmed) {
+                            shouldCancelSend = true;
+                            sendBtn.innerHTML = '<span id="send-progress">Checking (messages wont send)</span>';
+                        }
+                        return;
+                    }
+
+                    // If currently sending, cancel instantly
+                    if (isSending) {
                         const cancelConfirmed = await customConfirm('Message sending', 'Are you sure you would like to cancel? This will stop any further actions.', 'Yes');
                         if (cancelConfirmed) {
                             shouldCancelSend = true;
@@ -3281,13 +3307,6 @@
                     if (selectedChannels.length > 0 && messageInput && messageInput.value.trim()) {
                         // Mark operation as started to prevent duplicate clicks
                         AsyncButton.startOperation('personal_send');
-
-                        // Check if bridge is connected before sending
-                        const bridgeConnected = await checkBridgeConnected();
-                        if (!bridgeConnected) {
-                            AsyncButton.endOperation('personal_send');
-                            return;
-                        }
 
                         // Check for filtered content before proceeding
                         const message = messageInput.value.trim();
@@ -3509,6 +3528,16 @@
                                 shouldCancelSend = false;
                                 sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
                                 sendBtn.innerHTML = 'Send';
+                                AsyncButton.endOperation('personal_send');
+                                return;
+                            }
+
+                            // Check if bridge is still connected after checking phase
+                            const bridgeStillConnected = await checkBridgeConnected();
+                            if (!bridgeStillConnected) {
+                                sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                sendBtn.innerHTML = 'Send';
+                                AsyncButton.endOperation('personal_send');
                                 return;
                             }
 
@@ -3542,6 +3571,17 @@
                             // Get progress element for smooth updates
                             const progressEl = document.getElementById('send-progress');
 
+                            // Helper to check bridge status quickly (without showing popup)
+                            const quickBridgeCheck = async () => {
+                                try {
+                                    const resp = await fetch('/api/bridge/status');
+                                    const data = await resp.json();
+                                    return data.success && data.is_online;
+                                } catch {
+                                    return false;
+                                }
+                            };
+
                             for (let i = 0; i < selectedChannels.length; i++) {
                                 // Check for cancel before each message
                                 if (shouldCancelSend) {
@@ -3549,10 +3589,23 @@
                                     isSending = false;
                                     sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
                                     sendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('personal_send');
                                     // Show partial results if any
                                     if (succeededChannels.length > 0 || rateLimitedChannels.length > 0 || failedChannelsList.length > 0) {
                                         await showSendResults(succeededChannels, rateLimitedChannels, failedChannelsList, true);
                                     }
+                                    return;
+                                }
+
+                                // Check if bridge is still connected before each message
+                                const bridgeOk = await quickBridgeCheck();
+                                if (!bridgeOk) {
+                                    isSending = false;
+                                    sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                    sendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('personal_send');
+                                    // Show bridge disconnected popup only (no partial results)
+                                    await checkBridgeConnected();
                                     return;
                                 }
 
@@ -3714,6 +3767,7 @@
             let teamSearchTags = []; // Search filter tags
             let teamCurrentServerColor = 'rgba(21, 216, 188, 0.6)';
             let teamIsSending = false;
+            let teamShouldCancelSend = false; // Track if user wants to cancel team send
             let teamFailedChannels = new Map();
             let teamViewMode = 'servers';
             let teamChannelsOnlySearchText = '';
@@ -4466,6 +4520,20 @@
             // Team send button handler - uses AsyncButton for double-click prevention
             if (teamSendBtn) {
                 teamSendBtn.addEventListener('click', async function() {
+                    // If already cancelling during send, ignore further clicks
+                    if (teamShouldCancelSend) {
+                        return;
+                    }
+
+                    // If currently sending, cancel instantly
+                    if (teamIsSending) {
+                        const cancelConfirmed = await customConfirm('Message sending', 'Are you sure you would like to cancel? This will stop any further actions.', 'Yes');
+                        if (cancelConfirmed) {
+                            teamShouldCancelSend = true;
+                        }
+                        return;
+                    }
+
                     // Prevent double-clicks
                     if (AsyncButton.isProcessing('team_send')) {
                         return;
@@ -4475,13 +4543,6 @@
                     if (teamSelectedChannels.length > 0 && teamMessage) {
                         // Mark operation as started
                         AsyncButton.startOperation('team_send');
-
-                        // Check if bridge is connected before sending
-                        const bridgeConnected = await checkBridgeConnected();
-                        if (!bridgeConnected) {
-                            AsyncButton.endOperation('team_send');
-                            return;
-                        }
 
                         // Check for filtered content before proceeding
                         const filteredWords = {{ BLACKLISTED_WORDS|tojson }};
@@ -4558,8 +4619,15 @@
 
                         teamFailedChannels.clear();
 
+                        // Check if bridge is still connected before starting to send
+                        const bridgeStillConnected = await checkBridgeConnected();
+                        if (!bridgeStillConnected) {
+                            AsyncButton.endOperation('team_send');
+                            return;
+                        }
+
                         teamIsSending = true;
-                        teamSendBtn.disabled = true;
+                        teamSendBtn.disabled = false; // Keep enabled for cancel
                         teamSendBtn.innerHTML = '<span id="team-send-progress">Sending...</span>';
 
                         let succeededChannels = [];
@@ -4570,8 +4638,45 @@
                         const getCustomDelay = () => window.userMessageDelay || 1000;
                         const progressEl = document.getElementById('team-send-progress');
 
+                        // Helper to check bridge status quickly (without showing popup)
+                        const quickBridgeCheck = async () => {
+                            try {
+                                const resp = await fetch('/api/bridge/status');
+                                const data = await resp.json();
+                                return data.success && data.is_online;
+                            } catch {
+                                return false;
+                            }
+                        };
+
                         try {
                             for (let i = 0; i < teamSelectedChannels.length; i++) {
+                                // Check for cancel before each message
+                                if (teamShouldCancelSend) {
+                                    teamShouldCancelSend = false;
+                                    teamIsSending = false;
+                                    teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessageInput.value.trim();
+                                    teamSendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('team_send');
+                                    // Show partial results if any
+                                    if (succeededChannels.length > 0 || rateLimitedChannels.length > 0 || failedChannelsList.length > 0) {
+                                        await showSendResults(succeededChannels, rateLimitedChannels, failedChannelsList, true);
+                                    }
+                                    return;
+                                }
+
+                                // Check if bridge is still connected before each message
+                                const bridgeOk = await quickBridgeCheck();
+                                if (!bridgeOk) {
+                                    teamIsSending = false;
+                                    teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessageInput.value.trim();
+                                    teamSendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('team_send');
+                                    // Show bridge disconnected popup only (no partial results)
+                                    await checkBridgeConnected();
+                                    return;
+                                }
+
                                 const channel = teamSelectedChannels[i];
 
                                 if (progressEl) {
@@ -4677,6 +4782,7 @@
                             await customAlert('Error', `Error sending message: ${error.message}`);
                         } finally {
                             teamIsSending = false;
+                            teamShouldCancelSend = false;
                             teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessage;
                             teamSendBtn.innerHTML = 'Send';
                             AsyncButton.endOperation('team_send');

@@ -49,6 +49,10 @@ GUIDELINES_SECTIONS = [
             {
                 "number": 7,
                 "content": "Do not upload or share any material depicting violence, gore or animal cruelty, especially with the intention to harass or shock others."
+            },
+            {
+                "number": 8,
+                "content": "Do not upload, share, or distribute downloadable files, including but not limited to executables, installers, scripts, archives, or other file formats intended to be downloaded or run on a device."
             }
         ]
      },
@@ -56,31 +60,31 @@ GUIDELINES_SECTIONS = [
         "title": "RESPECT ADZSEND",
         "rules": [
             {
-                "number": 8,
+                "number": 9,
                 "content": "Do not send unsolicited bulk messages (or spam). Also, do not facilitate this activity, such as by selling spambots, server 'raid' tools, account-creation tools, token generators, CAPTCHA-solving services or other spam tools."
             },
             {
-                "number": 9,
+                "number": 10,
                 "content": "Do not share false or misleading information (otherwise known as misinformation). Content that is false, misleading and can lead to significant risk of physical or societal harm may not be shared."
             },
             {
-                "number": 10,
+                "number": 11,
                 "content": "Do not post messages which misrepresent your identity in a deceptive or harmful way, this includes to impersonate an individual, group or organisation."
             },
             {
-                "number": 11,
+                "number": 12,
                 "content": "Do not engage in activities that could damage or compromise the security of an account, network or system. This includes using deceptive techniques to trick others into revealing sensitive information (phishing), using malicious software (malware) and flooding a target with traffic in order to make a resource unavailable (denial-of-service attacks)."
             },
             {
-                "number": 12,
+                "number": 13,
                 "content": "Do not use or attempt to use Adzsend to promote, coordinate or execute financial scams. A financial scam is any intentionally deceptive act taken with the intent to receive an illegal, unethical or otherwise dishonest gain."
             },
             {
-                "number": 13,
+                "number": 14,
                 "content": "Do not engage in activities that fraudulently generate a profit at the expense of others. This includes facilitating, providing instructions for and participating in fraud. We do not allow coordinated efforts to defraud businesses, price gouging, forgery, money laundering, counterfeit goods or tools that facilitate illegal behaviour."
             },
             {
-                "number": 14,
+                "number": 15,
                 "content": "Do not submit false, misleading or abusive reports or requests to Adzsend's support teams. A report or request will be considered false or misleading if it contains demonstrably untrue information submitted with the intent to manipulate staff into taking a desired action."
             }
         ]
@@ -89,15 +93,15 @@ GUIDELINES_SECTIONS = [
         "title": "FOLLOW APPLICABLE LAWS",
         "rules": [
             {
-                "number": 15,
+                "number": 16,
                 "content": "Do not share content that violates anyone's intellectual property or other rights. This includes sharing or selling game cheats or hacks."
             },
             {
-                "number": 16,
+                "number": 17,
                 "content": "Do not organise, promote or engage in the selling or facilitation of sales of regulated or potentially dangerous goods. Regulated goods have laws in place that restrict the purchase, sale, trade or ownership of the goods. Dangerous goods have a reasonable potential to cause real-world, physical harm to individuals."
             },
             {
-                "number": 17,
+                "number": 18,
                 "content": "Do not organise, promote or engage in any illegal activity that harms the dignity, safety or well-being of another person. This includes but is not limited to human trafficking and sexual solicitation."
             },
             {

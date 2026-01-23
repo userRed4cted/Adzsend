@@ -5,6 +5,9 @@ const WebSocketClient = require('./src/websocket');
 const { checkForUpdates, downloadUpdate } = require('./src/updater');
 const { cleanupGateway } = require('./src/discord');
 const { getDialogStyles, getDialogWindowOptions, escapeHtml, loadingDotsHTML } = require('./src/dialogStyles');
+const { API_URL } = require('./src/config');
+const http = require('http');
+const https = require('https');
 
 // Initialize store for persistent data
 // Use machine-specific encryption key derived from app path and user data path
@@ -176,6 +179,54 @@ async function checkForUpdatesOnStartup() {
     }
 }
 
+// Helper function to call bridge status API
+function callBridgeStatusAPI(endpoint, secretKey) {
+    return new Promise((resolve) => {
+        try {
+            const url = new URL(`/api/bridge/${endpoint}`, API_URL);
+            const isHttps = url.protocol === 'https:';
+            const lib = isHttps ? https : http;
+
+            const postData = JSON.stringify({ secret_key: secretKey });
+
+            const options = {
+                hostname: url.hostname,
+                port: url.port || (isHttps ? 443 : 80),
+                path: url.pathname,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(postData)
+                },
+                timeout: 5000
+            };
+
+            const req = lib.request(options, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    try {
+                        resolve(JSON.parse(data));
+                    } catch {
+                        resolve({ success: false });
+                    }
+                });
+            });
+
+            req.on('error', () => resolve({ success: false }));
+            req.on('timeout', () => {
+                req.destroy();
+                resolve({ success: false });
+            });
+
+            req.write(postData);
+            req.end();
+        } catch {
+            resolve({ success: false });
+        }
+    });
+}
+
 // IPC Handlers
 
 // Window controls
@@ -221,8 +272,15 @@ ipcMain.handle('set-auto-start', (event, enabled) => {
 // Connect to server
 ipcMain.handle('connect', async (event, secretKey) => {
     return new Promise((resolve) => {
+        // Already connected
         if (wsClient && wsClient.isConnected()) {
             resolve({ success: true });
+            return;
+        }
+
+        // Already connecting - prevent double-connect race condition
+        if (connectionStatus === 'connecting') {
+            resolve({ success: false, error: 'Connection in progress' });
             return;
         }
 
@@ -237,6 +295,8 @@ ipcMain.handle('connect', async (event, secretKey) => {
             onConnected: () => {
                 connectionStatus = 'connected';
                 updateTrayMenu();
+                // Call API to immediately update status on server
+                callBridgeStatusAPI('activate', secretKey);
                 if (mainWindow) {
                     mainWindow.webContents.send('connection-status', 'connected');
                 }
@@ -245,6 +305,10 @@ ipcMain.handle('connect', async (event, secretKey) => {
             onDisconnected: (reason) => {
                 connectionStatus = 'disconnected';
                 updateTrayMenu();
+                // Call API to immediately update status on server
+                callBridgeStatusAPI('deactivate', secretKey);
+                // Clean up Discord gateway connections
+                cleanupGateway();
                 if (mainWindow) {
                     mainWindow.webContents.send('connection-status', 'disconnected', reason);
                 }
@@ -293,9 +357,17 @@ ipcMain.handle('connect', async (event, secretKey) => {
 
 // Disconnect from server
 ipcMain.handle('disconnect', async () => {
+    // Get secret key before disconnecting to call API
+    const secretKey = store.get('secretKey');
     if (wsClient) {
         wsClient.disconnect();
         wsClient = null;
+    }
+    // Clean up all Discord gateway connections when deactivating
+    cleanupGateway();
+    // Call API to immediately update status on server
+    if (secretKey) {
+        callBridgeStatusAPI('deactivate', secretKey);
     }
     connectionStatus = 'disconnected';
     updateTrayMenu();

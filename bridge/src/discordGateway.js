@@ -41,11 +41,9 @@ class DiscordGatewayClient {
         this.sequence = null;
         this.sessionId = null;
         this.resumeGatewayUrl = null;
-        this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
         this.lastHeartbeatSent = null;
         this.latency = 0;
-        this.currentStatus = 'online'; // Track current status for reconnects
+        this.currentStatus = 'online'; // Track current status
     }
 
     /**
@@ -59,7 +57,7 @@ class DiscordGatewayClient {
                 return;
             }
 
-            // Store status for reconnects
+            // Store status
             this.currentStatus = status;
             this.state = ConnectionState.CONNECTING;
             const url = this.resumeGatewayUrl || GATEWAY_URL;
@@ -175,7 +173,6 @@ class DiscordGatewayClient {
                 this.state = ConnectionState.CONNECTED;
                 this.sessionId = data.session_id;
                 this.resumeGatewayUrl = data.resume_gateway_url;
-                this.reconnectAttempts = 0;
 
                 // If user's status from settings is available, update presence to match
                 // This makes the bridge appear exactly as the user's Discord app would
@@ -192,7 +189,6 @@ class DiscordGatewayClient {
             case 'RESUMED':
                 console.log('[Gateway] Session resumed');
                 this.state = ConnectionState.CONNECTED;
-                this.reconnectAttempts = 0;
                 clearTimeout(timeout);
                 resolve(true);
                 break;
@@ -218,16 +214,10 @@ class DiscordGatewayClient {
             console.log('[Gateway] Non-recoverable close code:', code);
             this.sessionId = null;
             this.sequence = null;
-            return;
         }
 
-        // Attempt reconnect for recoverable errors
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
-            const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-            this.reconnectAttempts++;
-            console.log(`[Gateway] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
-            setTimeout(() => this.connect(this.currentStatus), delay);
-        }
+        // No auto-reconnect - user must manually reactivate bridge
+        console.log('[Gateway] Connection closed, no auto-reconnect');
     }
 
     sendIdentify(status = 'online') {
@@ -368,9 +358,35 @@ class DiscordGatewayClient {
 class GatewayManager {
     constructor() {
         this.connections = new Map(); // token -> DiscordGatewayClient
-        this.connectionTimestamps = new Map(); // token -> last used timestamp
-        this.cleanupInterval = null;
-        this.startCleanup();
+        this.cleanupTimeouts = new Map(); // token -> cleanup timeout
+    }
+
+    /**
+     * Get random idle timeout between 3-6 minutes (looks more natural)
+     */
+    getRandomIdleTimeout() {
+        const minMs = 3 * 60 * 1000; // 3 minutes
+        const maxMs = 6 * 60 * 1000; // 6 minutes
+        return minMs + Math.random() * (maxMs - minMs);
+    }
+
+    /**
+     * Schedule cleanup for a specific token
+     */
+    scheduleCleanup(token) {
+        // Clear existing timeout for this token
+        if (this.cleanupTimeouts.has(token)) {
+            clearTimeout(this.cleanupTimeouts.get(token));
+        }
+
+        // Schedule new cleanup with random delay
+        const delay = this.getRandomIdleTimeout();
+        const timeout = setTimeout(() => {
+            console.log(`[GatewayManager] Cleaning up idle connection after ${Math.round(delay / 1000)}s`);
+            this.disconnect(token);
+        }, delay);
+
+        this.cleanupTimeouts.set(token, timeout);
     }
 
     /**
@@ -379,8 +395,8 @@ class GatewayManager {
      * @param {string} status - Presence status ('online', 'idle', 'dnd', 'invisible')
      */
     async ensureConnection(token, status = 'online') {
-        // Update timestamp
-        this.connectionTimestamps.set(token, Date.now());
+        // Reset cleanup timer (message was sent, so keep connection alive)
+        this.scheduleCleanup(token);
 
         // Check if already connected
         if (this.connections.has(token)) {
@@ -410,10 +426,16 @@ class GatewayManager {
      * Disconnect a specific token
      */
     disconnect(token) {
+        // Clear cleanup timeout
+        if (this.cleanupTimeouts.has(token)) {
+            clearTimeout(this.cleanupTimeouts.get(token));
+            this.cleanupTimeouts.delete(token);
+        }
+
+        // Disconnect and remove connection
         if (this.connections.has(token)) {
             this.connections.get(token).disconnect();
             this.connections.delete(token);
-            this.connectionTimestamps.delete(token);
         }
     }
 
@@ -421,35 +443,17 @@ class GatewayManager {
      * Disconnect all tokens
      */
     disconnectAll() {
+        // Clear all cleanup timeouts
+        for (const timeout of this.cleanupTimeouts.values()) {
+            clearTimeout(timeout);
+        }
+        this.cleanupTimeouts.clear();
+
+        // Disconnect all connections
         for (const client of this.connections.values()) {
             client.disconnect();
         }
         this.connections.clear();
-        this.connectionTimestamps.clear();
-    }
-
-    /**
-     * Clean up idle connections (not used in 5 minutes)
-     */
-    startCleanup() {
-        this.cleanupInterval = setInterval(() => {
-            const now = Date.now();
-            const maxIdle = 5 * 60 * 1000; // 5 minutes
-
-            for (const [token, timestamp] of this.connectionTimestamps.entries()) {
-                if (now - timestamp > maxIdle) {
-                    console.log(`[GatewayManager] Cleaning up idle connection`);
-                    this.disconnect(token);
-                }
-            }
-        }, 60000); // Check every minute
-    }
-
-    stopCleanup() {
-        if (this.cleanupInterval) {
-            clearInterval(this.cleanupInterval);
-            this.cleanupInterval = null;
-        }
     }
 
     /**

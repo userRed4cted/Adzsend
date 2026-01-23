@@ -189,6 +189,11 @@ class WebSocketClient {
                         });
                     }
                     break; // Stop the loop
+                } else if (result.error === 'rate_limited') {
+                    // Rate limited - wait and continue with remaining tasks
+                    const retryAfter = (result.retry_after || 5) * 1000;
+                    console.log(`[WebSocket] Rate limited, waiting ${retryAfter}ms before next message`);
+                    await this.sleep(retryAfter);
                 }
 
                 // Wait before next message (if there is one)

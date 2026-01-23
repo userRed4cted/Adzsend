@@ -1858,62 +1858,23 @@ def send_message_single():
         return {'error': f'Cannot send message: {reason}', 'limit_reached': True}, 403
 
     channel = data.get('channel', {})
-    guild_id = channel.get('guildId')
+    requested_discord_account_id = data.get('discord_account_id')
 
+    # Require explicit discord_account_id from frontend
+    if not requested_discord_account_id:
+        return {'error': 'No Discord account specified'}, 400
 
-    # Get token from linked Discord accounts based on which account has this guild
-    from database import get_linked_discord_accounts, get_linked_discord_account_by_id
-    linked_accounts = get_linked_discord_accounts(user['id'])
+    # Get token for the specified account
+    from database import get_linked_discord_account_by_id
+    account_details = get_linked_discord_account_by_id(requested_discord_account_id)
 
+    if not account_details:
+        return {'error': 'Discord account not found'}, 401
 
-    if not linked_accounts:
-        return {'error': 'No Discord account linked'}, 401
-
-    # Find which account has access to this guild
-    user_token = None
-    account_used = None
-
-    for acc in linked_accounts:
-
-        # Don't skip based on is_valid - try all accounts
-        # if not acc.get('is_valid', True):
-        #     continue
-
-        account_details = get_linked_discord_account_by_id(acc['id'])
-        if not account_details or not account_details.get('discord_token'):
-            continue
-
-
-        # Fetch guilds for this account to check if it has the target guild
-        try:
-            token = account_details['discord_token']
-            headers_check = {'Authorization': token}
-            guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers_check, timeout=5)
-
-            if guilds_resp.status_code == 200:
-                account_guilds = guilds_resp.json()
-                guild_ids = [g['id'] for g in account_guilds]
-
-
-                if guild_id in guild_ids:
-                    user_token = token
-                    account_used = acc
-                    break
-            else:
-                pass
-        except Exception as e:
-            continue
-
-    if not user_token:
-        # Fallback to selected account if guild not found in any account
-        primary_account = get_primary_discord_account(user, linked_accounts)
-        if primary_account:
-            account_details = get_linked_discord_account_by_id(primary_account['id'])
-            if account_details and account_details.get('discord_token'):
-                user_token = account_details['discord_token']
-
-    if not user_token:
+    if not account_details.get('discord_token'):
         return {'error': 'Discord account token not found'}, 401
+
+    user_token = account_details['discord_token']
 
     headers = {'Authorization': user_token, 'Content-Type': 'application/json'}
     message_content = data.get('message', '').strip()

@@ -2000,9 +2000,16 @@
                     ? `https://cdn.discordapp.com/avatars/${account.discord_id}/${account.avatar}.png?size=64`
                     : `https://cdn.discordapp.com/embed/avatars/0.png`;
 
+                const decorationHtml = account.avatar_decoration
+                    ? `<img class="avatar-decoration" src="https://cdn.discordapp.com/avatar-decoration-presets/${account.avatar_decoration}.png?size=160&passthrough=true" alt="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 120%; height: 120%; pointer-events: none; z-index: 1;">`
+                    : '';
+
                 contentHTML += `
                     <div class="account-switcher-card" data-account-id="${account.id}" style="display: flex; align-items: center; gap: 10px; padding: 13px; cursor: pointer; border-radius: 6px; border: 1px solid #222225; margin-bottom: 8px;">
-                        <img src="${avatarUrl}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;">
+                        <div style="position: relative; width: 32px; height: 32px; flex-shrink: 0; overflow: visible;">
+                            <img src="${avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; border-radius: 50%;">
+                            ${decorationHtml}
+                        </div>
                         <div style="flex: 1; min-width: 0;">
                             <div style="color: #dcddde; font-size: 0.85rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${account.username}</div>
                             <div style="color: #81828A; font-size: 0.75rem;">${account.discord_id}</div>
@@ -3270,7 +3277,7 @@
                         const continueConfirmed = await customConfirm('Continue', 'You have cancelled this operation, would you like for it to continue?', 'Yes');
                         if (continueConfirmed) {
                             shouldCancelSend = false;
-                            sendBtn.innerHTML = '<span id="send-progress">Checking...</span>';
+                            sendBtn.innerHTML = '<span id="send-progress">Checking</span>';
                         }
                         return;
                     }
@@ -3395,7 +3402,7 @@
                         // Phase 1: Check and refresh guilds/channels
                         isChecking = true;
                         sendBtn.disabled = false; // Keep enabled for cancel
-                        sendBtn.innerHTML = '<span id="send-progress">Checking...</span>';
+                        sendBtn.innerHTML = '<span id="send-progress">Checking</span>';
 
                         try {
                             const refreshResponse = await fetch('/api/refresh-guilds-channels', {
@@ -3555,7 +3562,7 @@
                             // Phase 2: Start sending
                             isSending = true;
                             sendBtn.disabled = false; // Keep enabled for cancel
-                            sendBtn.innerHTML = '<span id="send-progress">Sending...</span>';
+                            sendBtn.innerHTML = `<span id="send-progress">Sending (1/${selectedChannels.length})</span>`;
 
                             // Send messages one by one for real-time usage tracking
                             let succeededChannels = [];
@@ -3613,7 +3620,7 @@
 
                                 // Update progress text only (keeps spinner smooth)
                                 if (progressEl) {
-                                    progressEl.textContent = `Sending ${i + 1}/${selectedChannels.length}...`;
+                                    progressEl.textContent = `Sending (${i + 1}/${selectedChannels.length})`;
                                 }
 
                                 // Send message (no retry for rate limits)
@@ -3625,7 +3632,8 @@
                                     },
                                     body: JSON.stringify({
                                         channel: channel,
-                                        message: messageInput.value
+                                        message: messageInput.value,
+                                        discord_account_id: currentDiscordAccountId
                                     })
                                 });
 
@@ -3639,45 +3647,59 @@
                                     failedChannels.delete(channelKey);
                                     updateFailedChannelStatus(channel);
                                 } else if (result.account_suspended) {
-                                    // Account is suspended/deleted - show popup and reload
+                                    // Account is suspended/deleted - cancel all and show popup
                                     const accountInfo = result.account_info || {
                                         username: 'Unknown',
                                         discord_id: 'Unknown'
                                     };
                                     isSending = false;
+                                    sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                    sendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('personal_send');
                                     await showSuspendedAccountPopup(accountInfo);
                                     window.location.reload();
                                     return; // Stop execution
                                 } else if (result.token_invalid) {
-                                    // Token is invalid - show token update popup with input
+                                    // Token is invalid - cancel all and show token update popup
                                     const accountInfo = result.account_info || {
                                         username: 'Unknown',
                                         discord_id: result.account_id || 'Unknown',
                                         account_id: result.account_id
                                     };
                                     isSending = false;
+                                    sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                    sendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('personal_send');
                                     await showTokenUpdatePopup(accountInfo, () => {
                                         window.location.reload();
                                     });
                                     return; // Stop execution
                                 } else if (result.limit_reached) {
-                                    // Usage limit reached - redirect to billing in settings
+                                    // Usage limit reached - cancel all and redirect to billing
                                     isSending = false;
+                                    sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                    sendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('personal_send');
                                     await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
                                     window.location.href = '/settings#billing';
                                     return; // Stop execution
                                 } else if (result.bridge_required) {
-                                    // Bridge not connected - user must connect bridge to send
+                                    // Bridge not connected - cancel all and show popup
                                     isSending = false;
+                                    sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                    sendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('personal_send');
                                     await customAlert('Bridge Required', 'Your Adzsend Bridge app is not connected.\n\nPlease open the Bridge app and activate it to send messages.');
                                     return; // Stop execution
                                 } else if (result.user_flagged) {
-                                    // User was flagged - update UI immediately
+                                    // User was flagged - cancel all and update UI
                                     isSending = false;
+                                    AsyncButton.endOperation('personal_send');
                                     if (result.user_banned) {
                                         // Auto-banned - BLOCK EVERYTHING IMMEDIATELY
                                         // Disable send button and message input
                                         if (sendBtn) sendBtn.disabled = true;
+                                        sendBtn.innerHTML = 'Send';
                                         if (messageInput) {
                                             messageInput.disabled = true;
                                             messageInput.value = '';
@@ -3694,6 +3716,8 @@
                                         window.location.href = '/dashboard?page=analytics';
                                     } else {
                                         // Just flagged - update status bar to show flagged
+                                        sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                        sendBtn.innerHTML = 'Send';
                                         updateAccountStatus('flagged');
                                         // Show warning
                                         await customAlert('Content Violation', result.error || 'Your message contains prohibited content and your account has been flagged.');
@@ -4628,7 +4652,7 @@
 
                         teamIsSending = true;
                         teamSendBtn.disabled = false; // Keep enabled for cancel
-                        teamSendBtn.innerHTML = '<span id="team-send-progress">Sending...</span>';
+                        teamSendBtn.innerHTML = `<span id="team-send-progress">Sending (1/${teamSelectedChannels.length})</span>`;
 
                         let succeededChannels = [];
                         let rateLimitedChannels = [];
@@ -4680,7 +4704,7 @@
                                 const channel = teamSelectedChannels[i];
 
                                 if (progressEl) {
-                                    progressEl.textContent = `Sending ${i + 1}/${teamSelectedChannels.length}...`;
+                                    progressEl.textContent = `Sending (${i + 1}/${teamSelectedChannels.length})`;
                                 }
 
                                 const response = await fetch('/api/send-message-single', {
@@ -4691,7 +4715,8 @@
                                     },
                                     body: JSON.stringify({
                                         channel: channel,
-                                        message: teamMessage
+                                        message: teamMessage,
+                                        discord_account_id: currentDiscordAccountId
                                     })
                                 });
 
@@ -4703,39 +4728,59 @@
                                     teamFailedChannels.delete(channelKey);
                                     teamUpdateFailedChannelStatus(channel);
                                 } else if (result.account_suspended) {
-                                    // Account is suspended/deleted - show popup and reload
+                                    // Account is suspended/deleted - cancel all and show popup
                                     const accountInfo = result.account_info || {
                                         username: 'Unknown',
                                         discord_id: 'Unknown'
                                     };
+                                    teamIsSending = false;
+                                    teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessageInput.value.trim();
+                                    teamSendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('team_send');
                                     await showSuspendedAccountPopup(accountInfo);
                                     window.location.reload();
                                     return;
                                 } else if (result.token_invalid) {
-                                    // Token is invalid - show token update popup with input
+                                    // Token is invalid - cancel all and show token update popup
                                     const accountInfo = result.account_info || {
                                         username: 'Unknown',
                                         discord_id: result.account_id || 'Unknown',
                                         account_id: result.account_id
                                     };
+                                    teamIsSending = false;
+                                    teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessageInput.value.trim();
+                                    teamSendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('team_send');
                                     await showTokenUpdatePopup(accountInfo, () => {
                                         window.location.reload();
                                     });
                                     return;
                                 } else if (result.limit_reached) {
+                                    // Usage limit reached - cancel all and redirect to billing
+                                    teamIsSending = false;
+                                    teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessageInput.value.trim();
+                                    teamSendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('team_send');
                                     await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
                                     window.location.href = '/settings#billing';
                                     return;
                                 } else if (result.bridge_required) {
-                                    // Bridge not connected - user must connect bridge to send
+                                    // Bridge not connected - cancel all and show popup
+                                    teamIsSending = false;
+                                    teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessageInput.value.trim();
+                                    teamSendBtn.innerHTML = 'Send';
+                                    AsyncButton.endOperation('team_send');
                                     await customAlert('Bridge Required', 'Your Adzsend Bridge app is not connected.\n\nPlease open the Bridge app and activate it to send messages.');
                                     return;
                                 } else if (result.user_flagged) {
-                                    // User was flagged - update UI immediately
+                                    // User was flagged - cancel all and update UI
+                                    teamIsSending = false;
+                                    AsyncButton.endOperation('team_send');
                                     if (result.user_banned) {
                                         // Auto-banned - BLOCK EVERYTHING IMMEDIATELY
                                         // Disable team send button and message
                                         if (teamSendBtn) teamSendBtn.disabled = true;
+                                        teamSendBtn.innerHTML = 'Send';
                                         const teamMessageEl = document.getElementById('team-message');
                                         if (teamMessageEl) {
                                             teamMessageEl.disabled = true;
@@ -4753,6 +4798,8 @@
                                         window.location.href = '/dashboard?page=analytics';
                                     } else {
                                         // Just flagged - update status bar to show flagged
+                                        teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessageInput.value.trim();
+                                        teamSendBtn.innerHTML = 'Send';
                                         updateAccountStatus('flagged');
                                         // Show warning
                                         await customAlert('Content Violation', result.error || 'Your message contains prohibited content and your account has been flagged.');

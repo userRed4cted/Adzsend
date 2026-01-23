@@ -251,10 +251,9 @@ async function promptForSecretKey() {
     isShowingDialog = false;
 
     if (result.success && result.key) {
-        // Key was validated by server - save and connect
+        // Key was validated by server - save it (user must manually activate)
         secretKey = result.key;
         await window.bridge.saveSecretKey(result.key);
-        handleActivate();
     }
 }
 

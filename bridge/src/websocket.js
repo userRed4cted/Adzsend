@@ -1,5 +1,5 @@
 const WebSocket = require('ws');
-const { sendDiscordMessage, sendTypingIndicator } = require('./discord');
+const { sendDiscordMessage, sendTypingIndicator, ensureGatewayConnection } = require('./discord');
 const { SERVER_URL } = require('./config');
 
 class WebSocketClient {
@@ -98,6 +98,12 @@ class WebSocketClient {
                 // Heartbeat acknowledged
                 break;
 
+            case 'prepare':
+                // Server wants us to pre-connect Gateway before validation
+                // This makes the user appear online before messages are sent (more human-like)
+                this.handlePrepareCommand(message);
+                break;
+
             case 'send':
                 // Server wants us to send messages
                 this.handleSendCommand(message);
@@ -115,6 +121,30 @@ class WebSocketClient {
 
             default:
                 console.log('Unknown message type:', message.type);
+        }
+    }
+
+    async handlePrepareCommand(command) {
+        // Pre-connect Gateway for tokens before validation completes
+        // This makes the user appear online before messages are sent
+
+        // Only prepare if bridge is connected/active
+        if (!this.isConnectedFlag) {
+            console.log('[WebSocket] Ignoring prepare command - bridge not active');
+            return;
+        }
+
+        if (!command || !Array.isArray(command.tokens) || command.tokens.length === 0) {
+            return;
+        }
+
+        console.log(`[WebSocket] Pre-connecting Gateway for ${command.tokens.length} token(s)`);
+
+        // Connect all tokens in parallel (don't wait, just start connections)
+        for (const token of command.tokens) {
+            ensureGatewayConnection(token).catch(err => {
+                console.warn('[WebSocket] Gateway pre-connect failed:', err.message);
+            });
         }
     }
 

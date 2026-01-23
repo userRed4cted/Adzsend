@@ -182,8 +182,9 @@ function getDialogWindowOptions(parent, customOptions = {}) {
         ...customOptions
     };
 
-    // Center on parent window (but don't use modal to avoid parent flickering)
+    // Set parent to keep dialog with main window when switching apps
     if (parent && !parent.isDestroyed()) {
+        options.parent = parent;
         const parentBounds = parent.getBounds();
         options.x = Math.round(parentBounds.x + (parentBounds.width - options.width) / 2);
         options.y = Math.round(parentBounds.y + (parentBounds.height - options.height) / 2);

@@ -164,11 +164,11 @@ function createAccountCardList(account) {
 
     const avatarUrl = getDiscordAvatarUrl(account.discord_id, account.avatar);
     const decorationHtml = account.avatar_decoration
-        ? `<img src="https://cdn.discordapp.com/avatar-decoration-presets/${account.avatar_decoration}.png" alt="Decoration" style="position: absolute; top: -4px; left: -4px; width: calc(100% + 8px); height: calc(100% + 8px); pointer-events: none;">`
+        ? `<img class="avatar-decoration" src="https://cdn.discordapp.com/avatar-decoration-presets/${account.avatar_decoration}.png?size=160&passthrough=true" alt="">`
         : '';
 
     card.innerHTML = `
-        <div class="team-current-avatar" style="background: #1A1A1E; position: relative;">
+        <div class="team-current-avatar" style="background: #1A1A1E;">
             <img src="${avatarUrl}" alt="${escapeHtml(account.username)}">
             ${decorationHtml}
         </div>

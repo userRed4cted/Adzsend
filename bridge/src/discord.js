@@ -244,5 +244,6 @@ module.exports = {
     setGatewayMode,
     isGatewayEnabled,
     getGatewayConnectionCount,
-    cleanupGateway
+    cleanupGateway,
+    ensureGatewayConnection
 };

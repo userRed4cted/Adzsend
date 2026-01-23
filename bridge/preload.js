@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('bridge', {
     showInputDialog: (title, message, placeholder, buttonText) => ipcRenderer.invoke('show-input-dialog', title, message, placeholder, buttonText),
     showSecretKeyDialog: () => ipcRenderer.invoke('show-secret-key-dialog'),
     showUpdateDialog: (currentVersion, latestVersion) => ipcRenderer.invoke('show-update-dialog', currentVersion, latestVersion),
+    showSkippableUpdateDialog: (currentVersion, latestVersion) => ipcRenderer.invoke('show-skippable-update-dialog', currentVersion, latestVersion),
     showNetworkErrorDialog: () => ipcRenderer.invoke('show-network-error-dialog'),
     showLoggedOutDialog: () => ipcRenderer.invoke('show-logged-out-dialog'),
 

@@ -35,7 +35,8 @@ function checkForUpdates(currentVersion) {
                             updateAvailable,
                             currentVersion,
                             latestVersion: versionInfo.version,
-                            downloadUrl: versionInfo.download_url
+                            downloadUrl: versionInfo.download_url,
+                            forceUpdate: versionInfo.force_update || false
                         });
                     } catch (error) {
                         reject(new Error('Failed to parse version info'));

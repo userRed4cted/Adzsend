@@ -651,12 +651,22 @@ ipcMain.handle('show-confirm-dialog', async (event, title, message, confirmText 
     return await showCustomDialog(title, message, confirmText, true);
 });
 
-// Update dialog
+// Update dialog (forced - unskippable)
 ipcMain.handle('show-update-dialog', async (event, currentVersion, latestVersion) => {
     return await showCustomDialog(
-        'Update',
-        `To continue using Adzsend Bridge you need to update from v${currentVersion} to v${latestVersion}.`,
+        'Important update',
+        'To continue using you must update to the latest version.',
         'Update'
+    );
+});
+
+// Update dialog (skippable)
+ipcMain.handle('show-skippable-update-dialog', async (event, currentVersion, latestVersion) => {
+    return await showCustomDialog(
+        'There is a new update',
+        'Would you like to update to the latest version? If not you can safely close this popup.',
+        'Update',
+        true  // show cancel button
     );
 });
 

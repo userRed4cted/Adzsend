@@ -69,10 +69,22 @@ function setupIPCListeners() {
     });
 
     window.bridge.onUpdateAvailable(async (info) => {
-        // Show native update dialog
-        const shouldUpdate = await window.bridge.showUpdateDialog(info.currentVersion, info.latestVersion);
-        if (shouldUpdate) {
-            handleUpdate(info.downloadUrl);
+        if (info.forceUpdate) {
+            // Forced update - unskippable
+            const shouldUpdate = await window.bridge.showUpdateDialog(info.currentVersion, info.latestVersion);
+            if (shouldUpdate) {
+                handleUpdate(info.downloadUrl);
+            } else {
+                // User closed dialog without updating - quit the app completely
+                window.bridge.quitForUpdate();
+            }
+        } else {
+            // Skippable update
+            const shouldUpdate = await window.bridge.showSkippableUpdateDialog(info.currentVersion, info.latestVersion);
+            if (shouldUpdate) {
+                handleUpdate(info.downloadUrl);
+            }
+            // If not updating, just continue normally
         }
     });
 

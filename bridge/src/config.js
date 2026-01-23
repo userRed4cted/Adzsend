@@ -1,18 +1,19 @@
 // =============================================================================
 // BRIDGE CONFIGURATION
 // =============================================================================
-// Centralized config for the bridge app - edit URLs here for production/dev
 
-// Server URLs
+// =====================
+// EDIT THIS LINE ONLY:
+// =====================
+// Set to true for local Flask testing, false for production (adzsend.com)
+const USE_LOCAL_SERVER = true;
+
+// Server URLs (don't edit these)
 const PRODUCTION_WS_URL = 'wss://adzsend.com/bridge/ws';
 const DEVELOPMENT_WS_URL = 'ws://127.0.0.1:5000/bridge/ws';
 
-// Detect if running in development
-// Only use local server if explicitly set via environment variable
-const isDevelopment = process.env.ADZSEND_DEV === 'true';
-
-// Export the appropriate URL based on environment
-// Default to production for safety (npm start will use production)
+// Uses the setting above
+const isDevelopment = USE_LOCAL_SERVER || process.env.ADZSEND_DEV === 'true';
 const SERVER_URL = isDevelopment ? DEVELOPMENT_WS_URL : PRODUCTION_WS_URL;
 
 module.exports = {

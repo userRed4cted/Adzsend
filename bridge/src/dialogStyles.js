@@ -10,20 +10,22 @@ const baseStyles = `
         src: local('Segoe UI'), local('Arial');
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html {
-        background: transparent;
-        border-radius: 8px;
+    html, body {
+        background: transparent !important;
+        height: 100%;
         overflow: hidden;
     }
     body {
         font-family: 'gg sans', 'Segoe UI', sans-serif;
-        background: #1A1A1E;
         color: #fff;
+        padding: 1px;
+    }
+    .dialog-container {
+        background: #1A1A1E;
         padding: 1.25rem 1.5rem 1.5rem 1.5rem;
-        -webkit-app-region: drag;
         border: 1px solid #222225;
         border-radius: 8px;
-        height: 100vh;
+        height: calc(100% - 2px);
         display: flex;
         flex-direction: column;
         position: relative;
@@ -47,13 +49,18 @@ const baseStyles = `
         font-weight: 300;
         line-height: 1;
         border-radius: 4px;
-        -webkit-app-region: no-drag;
         transition: all 0.2s ease;
     }
     .close-btn:hover {
         background: #1A1A1E;
         border-color: #222225;
         color: white;
+    }
+    .close-btn:active, .close-btn:focus {
+        background: #1A1A1E;
+        border-color: #222225;
+        color: white;
+        outline: none;
     }
     .title {
         font-size: 1.125rem;
@@ -71,7 +78,6 @@ const baseStyles = `
     .buttons {
         margin-top: auto;
         padding-top: 1rem;
-        -webkit-app-region: no-drag;
     }
     button.ok {
         width: 100%;
@@ -103,7 +109,6 @@ const inputStyles = `
         font-size: 0.875rem;
         font-family: 'gg sans', 'Segoe UI', sans-serif;
         outline: none;
-        -webkit-app-region: no-drag;
     }
     input:focus { border-color: #222225; }
     input::placeholder { color: #81828A; }
@@ -177,17 +182,25 @@ function getDialogWindowOptions(parent, customOptions = {}) {
         ...customOptions
     };
 
-    // Only set parent if valid (prevents flickering issues)
+    // Center on parent window (but don't use modal to avoid parent flickering)
     if (parent && !parent.isDestroyed()) {
-        options.parent = parent;
-        options.modal = true; // Makes dialog stay with parent window only
-        // Center on parent window
         const parentBounds = parent.getBounds();
         options.x = Math.round(parentBounds.x + (parentBounds.width - options.width) / 2);
         options.y = Math.round(parentBounds.y + (parentBounds.height - options.height) / 2);
     }
 
     return options;
+}
+
+// Safely close a dialog window (hide first to prevent visual glitches)
+function closeDialog(window) {
+    if (!window || window.isDestroyed()) return;
+    window.hide();
+    setImmediate(() => {
+        if (!window.isDestroyed()) {
+            window.close();
+        }
+    });
 }
 
 module.exports = {
@@ -197,5 +210,6 @@ module.exports = {
     loadingDotsHTML,
     escapeHtml,
     getDialogStyles,
-    getDialogWindowOptions
+    getDialogWindowOptions,
+    closeDialog
 };

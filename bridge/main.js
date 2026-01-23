@@ -4,7 +4,7 @@ const Store = require('electron-store');
 const WebSocketClient = require('./src/websocket');
 const { checkForUpdates, downloadUpdate } = require('./src/updater');
 const { cleanupGateway } = require('./src/discord');
-const { getDialogStyles, getDialogWindowOptions, escapeHtml, loadingDotsHTML } = require('./src/dialogStyles');
+const { getDialogStyles, getDialogWindowOptions, escapeHtml, loadingDotsHTML, closeDialog } = require('./src/dialogStyles');
 const { API_URL } = require('./src/config');
 const http = require('http');
 const https = require('https');
@@ -418,12 +418,14 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
     </style>
 </head>
 <body>
-    <button class="close-btn" onclick="cancel()">&times;</button>
-    <div class="title">Secret key</div>
-    <div class="message">Input your Adzsend Bridge secret key.</div>
-    <input type="password" id="input" placeholder="Paste your secret key" autofocus>
-    <div class="buttons">
-        <button class="ok" id="submitBtn" onclick="submit()">Update</button>
+    <div class="dialog-container">
+        <button class="close-btn" onclick="cancel()">&times;</button>
+        <div class="title">Secret key</div>
+        <div class="message">Input your Adzsend Bridge secret key.</div>
+        <input type="password" id="input" placeholder="Paste your secret key" autofocus>
+        <div class="buttons">
+            <button class="ok" id="submitBtn" onclick="submit()">Update</button>
+        </div>
     </div>
     <script>
         const { ipcRenderer } = require('electron');
@@ -458,6 +460,7 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
         }
 
         function cancel() {
+            window.close();
             ipcRenderer.send('secret-key-cancel');
         }
 
@@ -534,7 +537,7 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
                             isCancelled = true; // Prevent further callbacks
                             ipcMain.removeListener('secret-key-submit', submitHandler);
                             ipcMain.removeListener('secret-key-cancel', cancelHandler);
-                            if (!promptWindow.isDestroyed()) promptWindow.close();
+                            closeDialog(promptWindow);
                             resolve({ success: true, key: secretKey });
                         } else if (message.type === 'auth_failed') {
                             // Invalid key
@@ -566,7 +569,7 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
             cleanup();
             ipcMain.removeListener('secret-key-submit', submitHandler);
             ipcMain.removeListener('secret-key-cancel', cancelHandler);
-            promptWindow.close();
+            closeDialog(promptWindow);
             resolve({ success: false, key: null });
         };
 
@@ -598,12 +601,14 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
     </style>
 </head>
 <body>
-    <button class="close-btn" onclick="cancel()">&times;</button>
-    <div class="title">${escapeHtml(title)}</div>
-    <div class="message">${escapeHtml(message)}</div>
-    <input type="password" id="input" placeholder="${escapeHtml(placeholder)}" autofocus>
-    <div class="buttons">
-        <button class="ok" onclick="submit()">${escapeHtml(buttonText)}</button>
+    <div class="dialog-container">
+        <button class="close-btn" onclick="cancel()">&times;</button>
+        <div class="title">${escapeHtml(title)}</div>
+        <div class="message">${escapeHtml(message)}</div>
+        <input type="password" id="input" placeholder="${escapeHtml(placeholder)}" autofocus>
+        <div class="buttons">
+            <button class="ok" onclick="submit()">${escapeHtml(buttonText)}</button>
+        </div>
     </div>
     <script>
         const { ipcRenderer } = require('electron');
@@ -617,10 +622,12 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
         function submit() {
             const val = input.value.trim();
             if (val) {
+                window.close();
                 ipcRenderer.send('prompt-response', val);
             }
         }
         function cancel() {
+            window.close();
             ipcRenderer.send('prompt-response', null);
         }
     </script>
@@ -635,7 +642,7 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
 
         const responseHandler = (event, value) => {
             resolve(value);
-            promptWindow.close();
+            closeDialog(promptWindow);
         };
 
         ipcMain.once('prompt-response', responseHandler);
@@ -650,6 +657,11 @@ ipcMain.handle('show-input-dialog', async (event, title, message, placeholder = 
 // Custom styled popup dialog (matches website style exactly)
 function showCustomDialog(title, message, buttonText, showCancel = false) {
     return new Promise((resolve) => {
+        // Show main window if hidden (useful for connection errors while in tray)
+        if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+            mainWindow.show();
+        }
+
         const parent = getDialogParent();
         const dialogWindow = new BrowserWindow(getDialogWindowOptions(parent));
 
@@ -664,11 +676,13 @@ function showCustomDialog(title, message, buttonText, showCancel = false) {
     </style>
 </head>
 <body>
-    <button class="close-btn" onclick="cancel()">&times;</button>
-    <div class="title">${escapeHtml(title)}</div>
-    <div class="message">${escapeHtml(message)}</div>
-    <div class="buttons">
-        <button class="ok" onclick="submit()">${escapeHtml(buttonText)}</button>
+    <div class="dialog-container">
+        <button class="close-btn" onclick="cancel()">&times;</button>
+        <div class="title">${escapeHtml(title)}</div>
+        <div class="message">${escapeHtml(message)}</div>
+        <div class="buttons">
+            <button class="ok" onclick="submit()">${escapeHtml(buttonText)}</button>
+        </div>
     </div>
     <script>
         const { ipcRenderer } = require('electron');
@@ -677,9 +691,11 @@ function showCustomDialog(title, message, buttonText, showCancel = false) {
             if (e.key === 'Enter') submit();
         });
         function submit() {
+            window.close();
             ipcRenderer.send('dialog-response', true);
         }
         function cancel() {
+            window.close();
             ipcRenderer.send('dialog-response', false);
         }
     </script>
@@ -694,7 +710,7 @@ function showCustomDialog(title, message, buttonText, showCancel = false) {
 
         const responseHandler = (event, value) => {
             resolve(value);
-            dialogWindow.close();
+            closeDialog(dialogWindow);
         };
 
         ipcMain.once('dialog-response', responseHandler);

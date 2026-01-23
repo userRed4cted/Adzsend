@@ -12,6 +12,8 @@ const baseStyles = `
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html {
         background: transparent;
+        border-radius: 8px;
+        overflow: hidden;
     }
     body {
         font-family: 'gg sans', 'Segoe UI', sans-serif;
@@ -155,11 +157,9 @@ function getDialogStyles(options = {}) {
 
 // Get standard dialog window options
 function getDialogWindowOptions(parent, customOptions = {}) {
-    return {
+    const options = {
         width: customOptions.width || 440,
         height: customOptions.height || 180,
-        parent: parent,
-        modal: true,
         show: false,
         resizable: false,
         minimizable: false,
@@ -168,12 +168,25 @@ function getDialogWindowOptions(parent, customOptions = {}) {
         transparent: true,
         backgroundColor: '#00000000',
         hasShadow: false,
+        skipTaskbar: true,
+        alwaysOnTop: true,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false
         },
         ...customOptions
     };
+
+    // Only set parent if valid (prevents flickering issues)
+    if (parent && !parent.isDestroyed()) {
+        options.parent = parent;
+        // Center on parent window
+        const parentBounds = parent.getBounds();
+        options.x = Math.round(parentBounds.x + (parentBounds.width - options.width) / 2);
+        options.y = Math.round(parentBounds.y + (parentBounds.height - options.height) / 2);
+    }
+
+    return options;
 }
 
 module.exports = {

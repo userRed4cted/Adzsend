@@ -17,27 +17,23 @@ BRIDGE_DESCRIPTION = "Adzsend Bridge, allowing users to send messages without is
 # You can add as many sections as needed
 BRIDGE_INFO_SECTIONS = [
     {
+        "title": "WARNING",
+        "text": "Dont download Adzsend Bridge from anywhere else, distribution is only handled via the Adzsend website."
+    },
+    {
         "title": "Do I need Adzsend Bridge?",
         "text": "Yes, to send messages you need the Bridge installed."
     },
     {
-        "title": "Why?",
-        "text": "."
-    },
-        {
-        "title": "Where can I download it onto?",
+        "title": "What can I download it on?",
         "text": "Any device, no need for Discord installed, its just used as connection bridge between Adzsend and Discord. Windows 10/11 (64-bit); macOS (Intel and Apple Silicon); Linux (most distributions). As long as the device has a 64-bit processor."
     },
-        {
-        "title": "Placeholder",
-        "text": "Placeholder"
+    {
+        "title": "How to use",
+        "text": "Once you have finished with the installer, open the Adzsend Bridge application, and activate the Bridge to start using."
     },
-        {
-        "title": "Placeholder",
-        "text": "Placeholder"
-    },
-        {
-        "title": "Placeholder",
-        "text": "Placeholder"
+    {
+        "title": "Can I use it from anywhere?",
+        "text": "As long as the Bridge has a stable internet connection and is activated, you can use the dashboard from anywhere remotely."
     },
 ]

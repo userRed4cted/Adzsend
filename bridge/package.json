@@ -53,7 +53,7 @@
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
       "createDesktopShortcut": false,
-      "createStartMenuShortcut": false,
+      "createStartMenuShortcut": true,
       "shortcutName": "Adzsend Bridge",
       "deleteAppDataOnUninstall": true,
       "artifactName": "AdzsendBridgeSetup.exe",

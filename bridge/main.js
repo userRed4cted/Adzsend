@@ -33,6 +33,9 @@ let wsClient = null;
 let isQuitting = false;
 let connectionStatus = 'disconnected'; // disconnected, connecting, connected
 
+// Set app name (shows in taskbar instead of "Electron")
+app.setName('Adzsend Bridge');
+
 // Prevent multiple instances
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -101,8 +104,8 @@ function createTray() {
 
     tray.setToolTip('Adzsend Bridge');
 
-    // Double-click to show window
-    tray.on('double-click', () => {
+    // Single-click to show window
+    tray.on('click', () => {
         if (mainWindow) {
             mainWindow.show();
             mainWindow.focus();
@@ -541,7 +544,7 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
                             resolve({ success: true, key: secretKey });
                         } else if (message.type === 'auth_failed') {
                             // Invalid key
-                            showValidationError('Invalid', 'Not a valid Adzsend Bridge secret key.', 'OK');
+                            showValidationError('Invalid', 'Invalid secret key.', 'OK');
                         }
                     } catch (e) {}
                 });
@@ -550,7 +553,7 @@ ipcMain.handle('show-secret-key-dialog', async (event) => {
                     if (isCancelled) return;
                     if (code === 4001 || code === 4003) {
                         // Invalid secret key
-                        showValidationError('Invalid', 'Not a valid Adzsend Bridge secret key.', 'OK');
+                        showValidationError('Invalid', 'Invalid secret key.', 'OK');
                     }
                 });
 

@@ -2,7 +2,7 @@
 # All database models and operations
 
 from .models import (
-    init_db, get_user_by_discord_id, get_user_by_adzsend_id, get_user_by_id, update_user_token,
+    get_db, init_db, get_user_by_discord_id, get_user_by_adzsend_id, get_user_by_id, update_user_token,
     set_subscription, get_active_subscription, can_send_message,
     record_successful_send, get_plan_status, update_user_session,
     validate_user_session, save_user_data, get_user_data,

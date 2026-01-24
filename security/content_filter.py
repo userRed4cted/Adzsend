@@ -18,6 +18,7 @@ BLACKLISTED_WORDS = [
     'molest',
     'rape',
     'rapist',
+    'leak',
     'teen'
 
 ]

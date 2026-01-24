@@ -264,7 +264,7 @@ async function autoVerifyToken() {
 
     if (!token) {
         if (statusDiv) {
-            statusDiv.textContent = 'Enter a token';
+            statusDiv.textContent = 'Enter a token.';
             statusDiv.style.color = '#991a35'; // Delete button top gradient color
         }
         return;
@@ -273,14 +273,14 @@ async function autoVerifyToken() {
     // Check for quotation marks anywhere in token and show error
     if (token.includes('"') || token.includes("'")) {
         if (statusDiv) {
-            statusDiv.textContent = 'Remove quotation marks';
+            statusDiv.textContent = 'Remove quotation marks.';
             statusDiv.style.color = '#991a35';
         }
         return;
     }
 
     if (statusDiv) {
-        statusDiv.textContent = 'Verifying';
+        statusDiv.textContent = 'Verifying token.';
         statusDiv.style.color = '#81828A';
     }
 
@@ -317,14 +317,14 @@ async function autoVerifyToken() {
             if (statusDiv) {
                 // Check if it's a CSRF error
                 if (response.status === 403 || (data.error && data.error.toLowerCase().includes('csrf'))) {
-                    statusDiv.textContent = 'Invalid CSRF token';
+                    statusDiv.textContent = 'Invalid CSRF token.';
                     statusDiv.style.color = '#991a35';
                 } else if (data.error) {
-                    // Show the actual error message from the API
-                    statusDiv.textContent = data.error;
+                    // Show the actual error message from the API (ensure period at end)
+                    statusDiv.textContent = data.error.endsWith('.') ? data.error : data.error + '.';
                     statusDiv.style.color = '#991a35';
                 } else {
-                    statusDiv.textContent = 'Incorrect token';
+                    statusDiv.textContent = 'Incorrect token.';
                     statusDiv.style.color = '#991a35';
                 }
             }
@@ -332,7 +332,7 @@ async function autoVerifyToken() {
     } catch (error) {
         console.error('Error verifying token:', error);
         if (statusDiv) {
-            statusDiv.textContent = 'Network error: ' + error.message;
+            statusDiv.textContent = 'Network error.';
             statusDiv.style.color = '#991a35';
         }
     }

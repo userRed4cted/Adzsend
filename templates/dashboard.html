@@ -338,16 +338,14 @@
 
         /* Discord-style server sidebar on far left */
         .server-sidebar {
-            width: 72px;
+            width: 76px;
             background: transparent;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start;
             padding: 0.5rem 0;
-            padding-left: 12px; /* Space for pill indicator */
             gap: 0.5rem;
             overflow-y: auto;
-            overflow-x: visible;
             flex-shrink: 0;
             position: relative;
             box-sizing: border-box;
@@ -357,6 +355,7 @@
             position: relative;
             width: 48px;
             height: 48px;
+            margin-left: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -365,7 +364,7 @@
 
         .server-icon-pill {
             position: absolute;
-            left: -12px;
+            left: -14px;
             width: 4px;
             background: #FFFFFF;
             border-radius: 0 4px 4px 0;
@@ -421,6 +420,8 @@
             display: flex;
             justify-content: center;
             padding-top: 8px;
+            margin-left: 14px;
+            width: 48px;
         }
 
         .server-loading-placeholder .server-icon-holder.placeholder {
@@ -1796,6 +1797,15 @@
         </div>
     </div>
 
+    <!-- Tag Character Limit Modal -->
+    <div id="tag-char-limit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
+        <div style="background: #191A1F; border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; text-align: center; display: flex; flex-direction: column; gap: 1rem;">
+            <h2 style="color: #dcddde; margin: 0; font-size: 1.25rem;">Tag character limit exceeded</h2>
+            <p style="color: #81828A; margin: 0; font-size: 0.9rem;">Each tag can only have 10 characters.</p>
+            <button class="grey-btn" onclick="closeTagCharLimitModal()" style="padding: 0.6rem 2rem;">Ok</button>
+        </div>
+    </div>
+
     <!-- Channel Limit Per Server Modal -->
     <div id="channel-limit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
         <div style="background: #191A1F; border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; text-align: center; display: flex; flex-direction: column; gap: 1rem;">
@@ -1927,6 +1937,15 @@
             document.getElementById('tag-limit-modal').style.display = 'none';
         }
 
+        // Tag Character Limit Modal functions
+        function showTagCharLimitModal() {
+            document.getElementById('tag-char-limit-modal').style.display = 'flex';
+        }
+
+        function closeTagCharLimitModal() {
+            document.getElementById('tag-char-limit-modal').style.display = 'none';
+        }
+
         // Channel Limit Modal functions
         function showChannelLimitModal(limit) {
             document.getElementById('channel-limit-message').textContent =
@@ -1942,6 +1961,11 @@
         document.getElementById('tag-limit-modal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeTagLimitModal();
+            }
+        });
+        document.getElementById('tag-char-limit-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeTagCharLimitModal();
             }
         });
         document.getElementById('channel-limit-modal').addEventListener('click', function(e) {
@@ -2273,6 +2297,7 @@
             let selectedChannels = []; // Personal panel selected channels
             let selectedGuild = null; // Currently selected guild
             let searchTags = []; // Search filter tags
+            let searchText = ''; // Search text for selected server mode (live filtering)
             let currentServerColor = 'rgba(21, 216, 188, 0.6)'; // Current server's dominant color
             let isSending = false; // Track if messages are being sent
             let isChecking = false; // Track if checking guilds/channels before send
@@ -2356,12 +2381,11 @@
                     return;
                 }
 
-                // Filter by search text
+                // Filter by search text (channel name only, consistent with other modes)
                 let filteredChannels = selectedChannels;
                 if (selectedChannelsModeSearchText) {
                     filteredChannels = selectedChannels.filter(ch =>
-                        ch.name.toLowerCase().includes(selectedChannelsModeSearchText) ||
-                        ch.guildName.toLowerCase().includes(selectedChannelsModeSearchText)
+                        ch.name.toLowerCase().includes(selectedChannelsModeSearchText)
                     );
                 }
 
@@ -2433,8 +2457,13 @@
                     showTagLimitModal();
                     return;
                 }
-                if (!channelsOnlySearchTags.includes(text.toLowerCase()) && text.trim()) {
-                    channelsOnlySearchTags.push(text.toLowerCase());
+                const trimmedText = text.trim().toLowerCase();
+                if (trimmedText.length > 10) {
+                    showTagCharLimitModal();
+                    return;
+                }
+                if (!channelsOnlySearchTags.includes(trimmedText) && trimmedText) {
+                    channelsOnlySearchTags.push(trimmedText);
                     updateChannelsOnlySearchTagsDisplay();
                     channelsOnlySearch.value = '';
                     channelsOnlySearchText = '';
@@ -2485,21 +2514,17 @@
                     }
                 }
 
-                // Filter by search tags (OR logic - any tag matches)
+                // Filter by search tags (OR logic - any tag matches channel name only)
                 if (channelsOnlySearchTags.length > 0) {
                     allChannels = allChannels.filter(ch =>
-                        channelsOnlySearchTags.some(tag =>
-                            ch.name.toLowerCase().includes(tag) ||
-                            ch.guildName.toLowerCase().includes(tag)
-                        )
+                        channelsOnlySearchTags.some(tag => ch.name.toLowerCase().includes(tag))
                     );
                 }
 
-                // Filter by search text
+                // Filter by search text (channel name only, same as Selected server mode)
                 if (channelsOnlySearchText) {
                     allChannels = allChannels.filter(ch =>
-                        ch.name.toLowerCase().includes(channelsOnlySearchText) ||
-                        ch.guildName.toLowerCase().includes(channelsOnlySearchText)
+                        ch.name.toLowerCase().includes(channelsOnlySearchText)
                     );
                 }
 
@@ -2732,10 +2757,16 @@
                     showTagLimitModal();
                     return;
                 }
-                if (!searchTags.includes(text.toLowerCase()) && text.trim()) {
-                    searchTags.push(text.toLowerCase());
+                const trimmedText = text.trim().toLowerCase();
+                if (trimmedText.length > 10) {
+                    showTagCharLimitModal();
+                    return;
+                }
+                if (!searchTags.includes(trimmedText) && trimmedText) {
+                    searchTags.push(trimmedText);
                     updateSearchTagsDisplay();
                     channelSearch.value = '';
+                    searchText = '';
                     if (selectedGuild) {
                         renderChannels();
                     }
@@ -2770,6 +2801,10 @@
 
             // Handle channel search input
             if (channelSearch) {
+                channelSearch.addEventListener('input', (e) => {
+                    searchText = e.target.value.toLowerCase();
+                    renderChannels();
+                });
                 channelSearch.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter' && channelSearch.value.trim()) {
                         addSearchTag(channelSearch.value);
@@ -2814,16 +2849,29 @@
                 });
             }
 
+            // Abort controller for channel preloading
+            let channelLoadAbortController = null;
+
             // Preload all channels for all guilds (shared data in window.serverChannels)
             async function preloadAllChannels() {
+                // Abort any previous loading
+                if (channelLoadAbortController) {
+                    channelLoadAbortController.abort();
+                }
+                channelLoadAbortController = new AbortController();
+                const signal = channelLoadAbortController.signal;
+
                 const failedGuilds = [];
 
                 // First pass: load all in parallel (fast)
                 const promises = guilds.map(async (guild) => {
                     if (serverChannels[guild.id] !== undefined) return;
+                    if (signal.aborted) return;
 
                     try {
-                        const response = await fetch(`/api/guild/${guild.id}/channels`);
+                        const response = await fetch(`/api/guild/${guild.id}/channels`, { signal });
+
+                        if (signal.aborted) return;
 
                         // Track rate limited for retry
                         if (response.status === 429) {
@@ -2831,7 +2879,15 @@
                             return;
                         }
 
+                        // Handle other errors - don't retry, just set empty
+                        if (!response.ok) {
+                            serverChannels[guild.id] = [];
+                            return;
+                        }
+
                         const data = await response.json();
+
+                        if (signal.aborted) return;
 
                         if (data.token_invalid) {
                             serverChannels[guild.id] = [];
@@ -2851,18 +2907,26 @@
                             renderChannels();
                         }
                     } catch (error) {
+                        if (error.name === 'AbortError') return;
                         console.error(`Error loading channels for ${guild.name}:`, error);
-                        failedGuilds.push(guild);
+                        serverChannels[guild.id] = []; // Set empty instead of retrying
                     }
                 });
 
                 await Promise.all(promises);
 
+                if (signal.aborted) return;
+
                 // Retry failed guilds one by one with delay
                 for (const guild of failedGuilds) {
+                    if (signal.aborted) return;
                     await new Promise(r => setTimeout(r, 1000));
+                    if (signal.aborted) return;
+
                     try {
-                        const response = await fetch(`/api/guild/${guild.id}/channels`);
+                        const response = await fetch(`/api/guild/${guild.id}/channels`, { signal });
+                        if (signal.aborted) return;
+
                         const data = await response.json();
 
                         if (data.channels) {
@@ -2877,14 +2941,21 @@
                             renderChannels();
                         }
                     } catch (error) {
+                        if (error.name === 'AbortError') return;
                         serverChannels[guild.id] = [];
                     }
                 }
+
+                if (signal.aborted) return;
 
                 // Mark loading as complete
                 window.channelsLoadingComplete = true;
                 if (viewMode === 'channels') {
                     renderChannelsOnlyMode();
+                }
+                // Also update team panel if it's showing channels
+                if (typeof window.teamRenderChannelsOnlyMode === 'function') {
+                    window.teamRenderChannelsOnlyMode();
                 }
             }
 
@@ -2921,12 +2992,65 @@
 
                 try {
                     const response = await fetch('/api/guilds');
+
+                    // Handle server errors
+                    if (!response.ok) {
+                        let data = {};
+                        try {
+                            data = await response.json();
+                        } catch (e) {
+                            // JSON parse failed
+                        }
+
+                        // Check for token invalid
+                        if (data.token_invalid) {
+                            showTokenUpdatePopup(data.account_info, (success) => {
+                                if (success) window.location.reload();
+                            });
+                            return;
+                        }
+
+                        // Check for suspended
+                        if (data.suspended) {
+                            await showSuspendedAccountPopup(data.account_info);
+                            window.location.reload();
+                            return;
+                        }
+
+                        console.error('Failed to load guilds:', response.status, data);
+                        return;
+                    }
+
                     const data = await response.json();
 
+                    // Check for token invalid (can also come with 200 status in some cases)
+                    if (data.token_invalid) {
+                        showTokenUpdatePopup(data.account_info, (success) => {
+                            if (success) window.location.reload();
+                        });
+                        return;
+                    }
+
+                    // Check for suspended account
+                    if (data.suspended) {
+                        await showSuspendedAccountPopup(data.account_info);
+                        window.location.reload();
+                        return;
+                    }
+
                     if (data.success) {
-                        // Update shared array (clear and push to keep reference)
+                        // Abort any ongoing channel loading
+                        if (channelLoadAbortController) {
+                            channelLoadAbortController.abort();
+                            channelLoadAbortController = null;
+                        }
+
+                        // Clear shared data for fresh load
                         guilds.length = 0;
                         (data.guilds || []).forEach(g => guilds.push(g));
+                        // Clear channel cache (new guilds = new channels)
+                        Object.keys(serverChannels).forEach(key => delete serverChannels[key]);
+                        window.channelsLoadingComplete = false;
                         window.guildsLoaded = true;
 
                         // Update global hasGuilds flag
@@ -2958,13 +3082,6 @@
 
                         // Preload channels in background
                         preloadAllChannels().catch(err => console.error('Error preloading channels:', err));
-                    } else if (data.token_invalid) {
-                        showTokenUpdatePopup(data.account_info, (success) => {
-                            if (success) window.location.reload();
-                        });
-                    } else if (data.suspended) {
-                        await showSuspendedAccountPopup(data.account_info);
-                        window.location.reload();
                     }
                 } catch (error) {
                     console.error('Error loading guilds:', error);
@@ -3120,6 +3237,13 @@
                 if (searchTags.length > 0) {
                     filteredChannels = channels.filter(channel =>
                         searchTags.some(tag => channel.name.toLowerCase().includes(tag))
+                    );
+                }
+
+                // Filter by search text (live filtering as you type)
+                if (searchText) {
+                    filteredChannels = filteredChannels.filter(channel =>
+                        channel.name.toLowerCase().includes(searchText)
                     );
                 }
 
@@ -3855,6 +3979,7 @@
             let teamSelectedChannels = []; // Team's own selected channels
             let teamSelectedGuild = null; // Currently selected guild
             let teamSearchTags = []; // Search filter tags
+            let teamSearchText = ''; // Search text for selected server mode (live filtering)
             let teamCurrentServerColor = 'rgba(21, 216, 188, 0.6)';
             let teamIsSending = false;
             let teamShouldCancelSend = false; // Track if user wants to cancel team send
@@ -3936,11 +4061,11 @@
                     return;
                 }
 
+                // Filter by search text (channel name only, consistent with other modes)
                 let filteredChannels = teamSelectedChannels;
                 if (teamSelectedChannelsModeSearchText) {
                     filteredChannels = teamSelectedChannels.filter(ch =>
-                        ch.name.toLowerCase().includes(teamSelectedChannelsModeSearchText) ||
-                        ch.guildName.toLowerCase().includes(teamSelectedChannelsModeSearchText)
+                        ch.name.toLowerCase().includes(teamSelectedChannelsModeSearchText)
                     );
                 }
 
@@ -4008,8 +4133,13 @@
                     showTagLimitModal();
                     return;
                 }
-                if (!teamChannelsOnlySearchTags.includes(text.toLowerCase()) && text.trim()) {
-                    teamChannelsOnlySearchTags.push(text.toLowerCase());
+                const trimmedText = text.trim().toLowerCase();
+                if (trimmedText.length > 10) {
+                    showTagCharLimitModal();
+                    return;
+                }
+                if (!teamChannelsOnlySearchTags.includes(trimmedText) && trimmedText) {
+                    teamChannelsOnlySearchTags.push(trimmedText);
                     teamUpdateChannelsOnlySearchTagsDisplay();
                     teamChannelsOnlySearch.value = '';
                     teamChannelsOnlySearchText = '';
@@ -4059,19 +4189,17 @@
                     }
                 }
 
+                // Filter by search tags (OR logic - any tag matches channel name only)
                 if (teamChannelsOnlySearchTags.length > 0) {
                     allChannels = allChannels.filter(ch =>
-                        teamChannelsOnlySearchTags.some(tag =>
-                            ch.name.toLowerCase().includes(tag) ||
-                            ch.guildName.toLowerCase().includes(tag)
-                        )
+                        teamChannelsOnlySearchTags.some(tag => ch.name.toLowerCase().includes(tag))
                     );
                 }
 
+                // Filter by search text (channel name only, same as Selected server mode)
                 if (teamChannelsOnlySearchText) {
                     allChannels = allChannels.filter(ch =>
-                        ch.name.toLowerCase().includes(teamChannelsOnlySearchText) ||
-                        ch.guildName.toLowerCase().includes(teamChannelsOnlySearchText)
+                        ch.name.toLowerCase().includes(teamChannelsOnlySearchText)
                     );
                 }
 
@@ -4166,10 +4294,16 @@
                     showTagLimitModal();
                     return;
                 }
-                if (!teamSearchTags.includes(text.toLowerCase()) && text.trim()) {
-                    teamSearchTags.push(text.toLowerCase());
+                const trimmedText = text.trim().toLowerCase();
+                if (trimmedText.length > 10) {
+                    showTagCharLimitModal();
+                    return;
+                }
+                if (!teamSearchTags.includes(trimmedText) && trimmedText) {
+                    teamSearchTags.push(trimmedText);
                     teamUpdateSearchTagsDisplay();
                     teamChannelSearch.value = '';
+                    teamSearchText = '';
                     if (teamSelectedGuild) {
                         teamRenderChannels();
                     }
@@ -4202,6 +4336,10 @@
 
             // Handle team channel search input
             if (teamChannelSearch) {
+                teamChannelSearch.addEventListener('input', (e) => {
+                    teamSearchText = e.target.value.toLowerCase();
+                    teamRenderChannels();
+                });
                 teamChannelSearch.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter' && teamChannelSearch.value.trim()) {
                         teamAddSearchTag(teamChannelSearch.value);
@@ -4404,6 +4542,13 @@
                 if (teamSearchTags.length > 0) {
                     filteredChannels = channels.filter(channel =>
                         teamSearchTags.some(tag => channel.name.toLowerCase().includes(tag))
+                    );
+                }
+
+                // Filter by search text (live filtering as you type)
+                if (teamSearchText) {
+                    filteredChannels = filteredChannels.filter(channel =>
+                        channel.name.toLowerCase().includes(teamSearchText)
                     );
                 }
 
@@ -6111,5 +6256,8 @@
             }
         });
     </script>
+
+    <!-- Centralized Image Loader (additional instance for late-loaded images) -->
+    <script src="{{ url_for('static', filename='image_loader.js') }}"></script>
 </body>
 </html>

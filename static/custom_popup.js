@@ -36,6 +36,7 @@ let currentPopup = null;
 let popupResolve = null;
 let tokenUpdateCallback = null;
 let tokenDebounceTimer = null; // Track debounce timer for cleanup
+let isTokenPopupOpen = false; // Track if token popup is open (to prevent click-off closing)
 
 // Create popup overlay and structure
 function initCustomPopup() {
@@ -53,7 +54,7 @@ function initCustomPopup() {
             <p class="custom-popup-text" id="custom-popup-text"></p>
             <div class="custom-popup-content" id="custom-popup-content" style="display: none;"></div>
             <div id="custom-popup-token-section" style="display: none;">
-                <div class="custom-popup-status" id="custom-popup-token-status">Enter a token</div>
+                <div class="custom-popup-status" id="custom-popup-token-status">Enter a token.</div>
                 <input type="text" class="custom-popup-input" id="custom-popup-token-input" placeholder="Account token">
             </div>
             <button class="custom-popup-btn" id="custom-popup-btn">Ok</button>
@@ -66,19 +67,23 @@ function initCustomPopup() {
     const closeBtn = document.getElementById('custom-popup-close');
     const actionBtn = document.getElementById('custom-popup-btn');
 
-    closeBtn.addEventListener('click', () => closePopup(false));
+    closeBtn.addEventListener('click', () => {
+        // X button always works (resets token popup state)
+        isTokenPopupOpen = false;
+        closePopup(false);
+    });
     actionBtn.addEventListener('click', () => closePopup(true));
 
-    // Click outside to close
+    // Click outside to close (disabled for token popup)
     overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
+        if (e.target === overlay && !isTokenPopupOpen) {
             closePopup(false);
         }
     });
 
-    // ESC key to close
+    // ESC key to close (disabled for token popup)
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && currentPopup) {
+        if (e.key === 'Escape' && currentPopup && !isTokenPopupOpen) {
             closePopup(false);
         }
     });
@@ -98,6 +103,7 @@ function showCustomPopup(title, message, buttonText = 'Ok', options = {}) {
         }
 
         const overlay = document.getElementById('custom-popup-overlay');
+        const closeBtn = document.getElementById('custom-popup-close');
         const titleEl = document.getElementById('custom-popup-title');
         const textEl = document.getElementById('custom-popup-text');
         const btnEl = document.getElementById('custom-popup-btn');
@@ -107,11 +113,15 @@ function showCustomPopup(title, message, buttonText = 'Ok', options = {}) {
         // Ensure overlay is reset before showing new popup
         overlay.classList.remove('active');
 
+        // Reset token popup state
+        isTokenPopupOpen = false;
+
         // Reset visibility
         contentEl.style.display = 'none';
         contentEl.innerHTML = '';
         tokenSection.style.display = 'none';
         btnEl.style.display = 'block';
+        closeBtn.style.display = 'block';
 
         // Support HTML content if allowHtml is true
         if (options.allowHtml) {
@@ -193,7 +203,7 @@ function closePopup(result) {
     if (tokenSection) tokenSection.style.display = 'none';
     if (tokenInput) tokenInput.value = '';
     if (tokenStatus) {
-        tokenStatus.textContent = 'Enter a token';
+        tokenStatus.textContent = 'Enter a token.';
         tokenStatus.style.color = '#991a35';
     }
 
@@ -227,6 +237,7 @@ function showTokenUpdatePopup(accountInfo, onClose) {
         initCustomPopup();
 
         const overlay = document.getElementById('custom-popup-overlay');
+        const closeBtn = document.getElementById('custom-popup-close');
         const titleEl = document.getElementById('custom-popup-title');
         const textEl = document.getElementById('custom-popup-text');
         const btnEl = document.getElementById('custom-popup-btn');
@@ -241,14 +252,14 @@ function showTokenUpdatePopup(accountInfo, onClose) {
 
         // Set content
         titleEl.textContent = 'Discord account token';
-        textEl.textContent = `The account token of ${accountInfo.username} (${accountInfo.discord_id}) has changed, please update it if you want to continue using it below.`;
+        textEl.textContent = `The account token of ${accountInfo.username || 'Unknown'} (${accountInfo.discord_id || 'Unknown'}) has changed. To continue using this account, update the token.`;
 
-        // Show token section, hide button
+        // Show token section, hide main button (keep X button visible)
         tokenSection.style.display = 'block';
         btnEl.style.display = 'none';
-        tokenInput.value = '';
-        tokenStatus.textContent = 'Enter a token';
-        tokenStatus.style.color = '#991a35';
+
+        // Mark token popup as open (prevents click-off closing)
+        isTokenPopupOpen = true;
 
         // Store callback for when popup closes
         tokenUpdateCallback = onClose;
@@ -264,23 +275,28 @@ function showTokenUpdatePopup(accountInfo, onClose) {
 
         // Token input handler with debounce
         const handleTokenInput = async () => {
-            const token = tokenInput.value.trim();
+            // Get fresh reference to input
+            const currentInput = document.getElementById('custom-popup-token-input');
+            const currentStatus = document.getElementById('custom-popup-token-status');
+            if (!currentInput || !currentStatus) return;
+
+            const token = currentInput.value.trim();
 
             if (!token) {
-                tokenStatus.textContent = 'Enter a token';
-                tokenStatus.style.color = '#991a35';
+                currentStatus.textContent = 'Enter a token.';
+                currentStatus.style.color = '#991a35';
                 return;
             }
 
             // Check for quotation marks
             if (token.includes('"') || token.includes("'")) {
-                tokenStatus.textContent = 'Remove quotation marks';
-                tokenStatus.style.color = '#991a35';
+                currentStatus.textContent = 'Remove quotation marks.';
+                currentStatus.style.color = '#991a35';
                 return;
             }
 
-            tokenStatus.textContent = 'Verifying';
-            tokenStatus.style.color = '#81828A';
+            currentStatus.textContent = 'Verifying token.';
+            currentStatus.style.color = '#81828A';
 
             try {
                 const response = await fetch('/api/linked-accounts/update-token', {
@@ -298,11 +314,12 @@ function showTokenUpdatePopup(accountInfo, onClose) {
                 const data = await response.json();
 
                 if (data.success) {
-                    tokenStatus.textContent = 'Token updated!';
-                    tokenStatus.style.color = '#15d8bc';
+                    currentStatus.textContent = 'Success.';
+                    currentStatus.style.color = '#15d8bc';
 
                     // Close popup after short delay
                     setTimeout(() => {
+                        isTokenPopupOpen = false;
                         if (tokenUpdateCallback) {
                             tokenUpdateCallback(true);
                             tokenUpdateCallback = null;
@@ -310,22 +327,35 @@ function showTokenUpdatePopup(accountInfo, onClose) {
                         closePopup(true);
                     }, 500);
                 } else {
-                    tokenStatus.textContent = data.error || 'Invalid token';
-                    tokenStatus.style.color = '#991a35';
+                    // Ensure period at end of error message
+                    const errorMsg = data.error || 'Invalid token';
+                    currentStatus.textContent = errorMsg.endsWith('.') ? errorMsg : errorMsg + '.';
+                    currentStatus.style.color = '#991a35';
                 }
             } catch (error) {
-                tokenStatus.textContent = 'Network error';
-                tokenStatus.style.color = '#991a35';
+                currentStatus.textContent = 'Network error.';
+                currentStatus.style.color = '#991a35';
             }
         };
 
-        // Remove old listener and add new one
-        const newInput = tokenInput.cloneNode(true);
-        tokenInput.parentNode.replaceChild(newInput, tokenInput);
+        // Get fresh token input and set up listener
+        const freshTokenInput = document.getElementById('custom-popup-token-input');
+        freshTokenInput.value = '';
+
+        // Remove old listeners by cloning
+        const newInput = freshTokenInput.cloneNode(true);
+        freshTokenInput.parentNode.replaceChild(newInput, freshTokenInput);
+
+        // Add input listener with debounce
         newInput.addEventListener('input', () => {
             clearTimeout(tokenDebounceTimer);
             tokenDebounceTimer = setTimeout(handleTokenInput, 500);
         });
+
+        // Reset status
+        const freshStatus = document.getElementById('custom-popup-token-status');
+        freshStatus.textContent = 'Enter a token.';
+        freshStatus.style.color = '#991a35';
 
         // Show popup
         overlay.classList.add('active');

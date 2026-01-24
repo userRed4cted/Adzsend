@@ -4,9 +4,12 @@ on:
   workflow_dispatch:  # Manual trigger from GitHub UI
   push:
     tags:
-      - 'bridge-v*'   # Auto-trigger on bridge version tags
+      - 'bridge-v*'   # Auto-trigger on bridge version tags (e.g., bridge-v1.0.0)
 
 jobs:
+  # ============================================
+  # WINDOWS BUILD
+  # ============================================
   build-windows:
     runs-on: windows-latest
 
@@ -23,20 +26,113 @@ jobs:
         working-directory: ./bridge
         run: npm install
 
-      - name: Build Windows installer
+      - name: Build Windows installers (x64 + arm64)
         working-directory: ./bridge
         run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload installer artifact
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: AdzsendBridgeSetup
-          path: bridge/dist/*.exe
+          name: windows-installers
+          path: |
+            bridge/dist/*.exe
+            bridge/dist/latest.yml
 
-      - name: Upload to Release (if tagged)
-        if: startsWith(github.ref, 'refs/tags/')
+  # ============================================
+  # MACOS BUILD
+  # ============================================
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./bridge
+        run: npm install
+
+      - name: Build macOS installers (x64 + arm64)
+        working-directory: ./bridge
+        run: npm run build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-installers
+          path: |
+            bridge/dist/*.dmg
+            bridge/dist/*.zip
+            bridge/dist/latest-mac.yml
+
+  # ============================================
+  # LINUX BUILD
+  # ============================================
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./bridge
+        run: npm install
+
+      - name: Build Linux installers (x64 + arm64)
+        working-directory: ./bridge
+        run: npm run build:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installers
+          path: |
+            bridge/dist/*.AppImage
+            bridge/dist/*.deb
+            bridge/dist/*.tar.gz
+            bridge/dist/latest-linux.yml
+
+  # ============================================
+  # CREATE GITHUB RELEASE
+  # ============================================
+  release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List downloaded files
+        run: find artifacts -type f
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: bridge/dist/*.exe
+          files: |
+            artifacts/windows-installers/*
+            artifacts/macos-installers/*
+            artifacts/linux-installers/*
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "electron-store": "^8.1.0",
+    "electron-updater": "^6.1.7",
     "ws": "^8.16.0"
   },
   "build": {
@@ -39,14 +40,20 @@
       "renderer/**/*",
       "assets/**/*"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "your-github-username",
+      "repo": "your-repo-name"
+    },
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": ["x64", "arm64"]
         }
       ],
-      "icon": "assets/favicon.ico"
+      "icon": "assets/favicon.ico",
+      "artifactName": "AdzsendBridge-Setup-${version}-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -56,17 +63,36 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Adzsend Bridge",
       "deleteAppDataOnUninstall": true,
-      "artifactName": "AdzsendBridgeSetup.exe",
       "include": "installer.nsh",
       "runAfterFinish": true
     },
     "mac": {
-      "target": ["dmg"],
-      "icon": "assets/favicon.icns"
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "assets/favicon.icns",
+      "artifactName": "AdzsendBridge-${version}-${arch}.${ext}"
     },
     "linux": {
-      "target": ["AppImage"],
-      "icon": "assets/favicon.png"
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "tar.gz",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "assets/favicon.png",
+      "artifactName": "AdzsendBridge-${version}-${arch}.${ext}"
     }
   }
 }

@@ -43,7 +43,7 @@ from config import (
     DATABASE_VERSION, DATABASE_WIPE_MESSAGE, SITE,
     get_page_description, get_page_embed,
     SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS,
-    BRIDGE_DOWNLOAD_URL, BRIDGE_DESCRIPTION, BRIDGE_INFO_SECTIONS
+    BRIDGE_DOWNLOAD_URL, BRIDGE_DESCRIPTION
 )
 from config.footer import (
     FOOTER_LOGO, FOOTER_BACKGROUND, FOOTER_SECTION_TITLE_COLOR,
@@ -1330,8 +1330,7 @@ def bridge():
         user_data=user_data,
         csrf_token=csrf_token,
         bridge_download_url=BRIDGE_DOWNLOAD_URL,
-        bridge_description=BRIDGE_DESCRIPTION,
-        bridge_info_sections=BRIDGE_INFO_SECTIONS
+        bridge_description=BRIDGE_DESCRIPTION
     ))
     # Prevent caching
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'

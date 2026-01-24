@@ -1160,15 +1160,17 @@
                                     <div class="date-input-group">
                                         <label>From</label>
                                         <div class="custom-date-wrapper">
-                                            <input type="date" id="personal-start-date" class="custom-date-input">
-                                            <span class="custom-date-display" data-for="personal-start-date"></span>
+                                            <input type="text" id="personal-start-date-text" class="custom-date-text" data-picker="personal-start-date">
+                                            <input type="date" id="personal-start-date" class="hidden-date-picker">
+                                            <img src="/static/calendar.png" class="calendar-trigger" data-picker="personal-start-date" alt="calendar">
                                         </div>
                                     </div>
                                     <div class="date-input-group">
                                         <label>To</label>
                                         <div class="custom-date-wrapper">
-                                            <input type="date" id="personal-end-date" class="custom-date-input">
-                                            <span class="custom-date-display" data-for="personal-end-date"></span>
+                                            <input type="text" id="personal-end-date-text" class="custom-date-text" data-picker="personal-end-date">
+                                            <input type="date" id="personal-end-date" class="hidden-date-picker">
+                                            <img src="/static/calendar.png" class="calendar-trigger" data-picker="personal-end-date" alt="calendar">
                                         </div>
                                     </div>
                                     <button class="apply-dates-btn" onclick="applyPersonalDateRange()">Apply</button>
@@ -1330,15 +1332,17 @@
                         <div class="date-input-group">
                             <label>From</label>
                             <div class="custom-date-wrapper">
-                                <input type="date" id="analytics-start-date" class="custom-date-input">
-                                <span class="custom-date-display" data-for="analytics-start-date"></span>
+                                <input type="text" id="analytics-start-date-text" class="custom-date-text" data-picker="analytics-start-date">
+                                <input type="date" id="analytics-start-date" class="hidden-date-picker">
+                                <img src="/static/calendar.png" class="calendar-trigger" data-picker="analytics-start-date" alt="calendar">
                             </div>
                         </div>
                         <div class="date-input-group">
                             <label>To</label>
                             <div class="custom-date-wrapper">
-                                <input type="date" id="analytics-end-date" class="custom-date-input">
-                                <span class="custom-date-display" data-for="analytics-end-date"></span>
+                                <input type="text" id="analytics-end-date-text" class="custom-date-text" data-picker="analytics-end-date">
+                                <input type="date" id="analytics-end-date" class="hidden-date-picker">
+                                <img src="/static/calendar.png" class="calendar-trigger" data-picker="analytics-end-date" alt="calendar">
                             </div>
                         </div>
                         <button class="apply-dates-btn" onclick="applyDateRange()">Apply</button>
@@ -1557,7 +1561,6 @@
 
         .date-input-group input:focus {
             outline: none;
-            border-color: #15d8bc;
         }
 
         .date-input-group input[type="date"]::-webkit-calendar-picker-indicator {
@@ -1570,42 +1573,48 @@
         /* Custom date wrapper for format display */
         .custom-date-wrapper {
             position: relative;
-            display: inline-block;
+            display: flex;
+            align-items: center;
             width: 100%;
         }
 
-        .custom-date-input {
-            color: transparent;
-            caret-color: #dcddde;
-        }
-
-        .custom-date-input::-webkit-datetime-edit {
-            color: transparent;
-        }
-
-        /* Show actual input text when focused for keyboard editing */
-        .custom-date-input:focus {
-            color: #dcddde !important;
-        }
-
-        .custom-date-input:focus::-webkit-datetime-edit {
-            color: #dcddde;
-        }
-
-        .custom-date-display {
-            position: absolute;
-            left: 0.5rem;
-            top: 50%;
-            transform: translateY(-50%);
+        .custom-date-text {
+            background: #212227;
+            border: 1px solid #282930;
+            border-radius: 6px;
+            padding: 0.5rem;
+            padding-right: 2rem;
             color: #dcddde;
             font-size: 0.85rem;
-            pointer-events: none;
-            z-index: 1;
+            width: 100%;
         }
 
-        /* Hide overlay when input is focused */
-        .custom-date-input:focus + .custom-date-display {
-            display: none;
+        .custom-date-text:focus {
+            outline: none;
+            border-color: #282930;
+        }
+
+        .hidden-date-picker {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            cursor: pointer;
+            z-index: -1;
+        }
+
+        .calendar-trigger {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            filter: brightness(0) invert(1);
+            opacity: 0.7;
         }
 
         .apply-dates-btn {
@@ -1857,63 +1866,249 @@
             });
         }
 
-        // Update custom date input displays with user's format preference
-        function updateCustomDateDisplays() {
-            document.querySelectorAll('.custom-date-display').forEach(displayEl => {
-                const inputId = displayEl.getAttribute('data-for');
-                const inputEl = document.getElementById(inputId);
-                if (inputEl && inputEl.value) {
-                    // Parse the date value (YYYY-MM-DD format from input)
-                    const dateValue = inputEl.value;
-                    const [year, month, day] = dateValue.split('-');
-                    const shortYear = year.slice(-2);
+        // Format ISO date (YYYY-MM-DD) to user's format
+        function formatDateToUserFormat(isoDate) {
+            if (!isoDate) return '';
+            const [year, month, day] = isoDate.split('-');
+            const shortYear = year.slice(-2);
+            switch (window.userDateFormat) {
+                case 'dd/mm/yy':
+                    return `${day}/${month}/${shortYear}`;
+                case 'yy/mm/dd':
+                    return `${shortYear}/${month}/${day}`;
+                case 'mm/dd/yy':
+                default:
+                    return `${month}/${day}/${shortYear}`;
+            }
+        }
 
-                    // Format according to user preference
-                    switch (window.userDateFormat) {
-                        case 'dd/mm/yy':
-                            displayEl.textContent = `${day}/${month}/${shortYear}`;
-                            break;
-                        case 'yy/mm/dd':
-                            displayEl.textContent = `${shortYear}/${month}/${day}`;
-                            break;
-                        case 'mm/dd/yy':
-                        default:
-                            displayEl.textContent = `${month}/${day}/${shortYear}`;
-                            break;
+        // Parse user format date string to ISO (YYYY-MM-DD)
+        function parseUserDateToISO(dateStr) {
+            if (!dateStr) return null;
+            const parts = dateStr.split('/');
+            if (parts.length !== 3) return null;
+
+            let day, month, year;
+            switch (window.userDateFormat) {
+                case 'dd/mm/yy':
+                    [day, month, year] = parts;
+                    break;
+                case 'yy/mm/dd':
+                    [year, month, day] = parts;
+                    break;
+                case 'mm/dd/yy':
+                default:
+                    [month, day, year] = parts;
+                    break;
+            }
+
+            // Convert 2-digit year to 4-digit (assume 2000s)
+            if (year && year.length === 2) {
+                year = '20' + year;
+            }
+
+            const d = parseInt(day), m = parseInt(month), y = parseInt(year);
+            if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
+            if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > 2100) return null;
+
+            // Validate the date is real
+            const testDate = new Date(y, m - 1, d);
+            if (testDate.getDate() !== d || testDate.getMonth() !== m - 1) return null;
+
+            return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        }
+
+        // Sync text input from hidden date picker
+        function syncTextFromPicker(pickerId, skipSwapCheck) {
+            const picker = document.getElementById(pickerId);
+            const textInput = document.querySelector(`.custom-date-text[data-picker="${pickerId}"]`);
+            if (!picker || !textInput || !picker.value) return;
+
+            // Get min/max from the picker
+            const minDate = picker.min || null;
+            const maxDate = picker.max || null;
+
+            // Clamp to valid range
+            let validDate = picker.value;
+            if (minDate && validDate < minDate) {
+                validDate = minDate;
+                picker.value = validDate;
+            }
+            if (maxDate && validDate > maxDate) {
+                validDate = maxDate;
+                picker.value = validDate;
+            }
+
+            textInput.value = formatDateToUserFormat(validDate);
+
+            // Handle date swapping for from/to pairs (only if not already in a swap operation)
+            if (!skipSwapCheck) {
+                const isStartPicker = pickerId.includes('start');
+                const isEndPicker = pickerId.includes('end');
+
+                if (isStartPicker) {
+                    const endPickerId = pickerId.replace('start', 'end');
+                    const endPicker = document.getElementById(endPickerId);
+                    if (endPicker && endPicker.value && validDate > endPicker.value) {
+                        const temp = endPicker.value;
+                        endPicker.value = validDate;
+                        picker.value = temp;
+                        textInput.value = formatDateToUserFormat(temp);
+                        syncTextFromPicker(endPickerId, true);
                     }
-                } else {
-                    displayEl.textContent = '';
+                } else if (isEndPicker) {
+                    const startPickerId = pickerId.replace('end', 'start');
+                    const startPicker = document.getElementById(startPickerId);
+                    if (startPicker && startPicker.value && validDate < startPicker.value) {
+                        const temp = startPicker.value;
+                        startPicker.value = validDate;
+                        picker.value = temp;
+                        textInput.value = formatDateToUserFormat(temp);
+                        syncTextFromPicker(startPickerId, true);
+                    }
                 }
+            }
+        }
+
+        // Sync hidden date picker from text input with validation
+        function syncPickerFromText(textInput) {
+            const pickerId = textInput.getAttribute('data-picker');
+            const picker = document.getElementById(pickerId);
+            if (!picker) return;
+
+            const isoDate = parseUserDateToISO(textInput.value);
+            if (!isoDate) {
+                // Invalid date format - revert to the current picker value
+                textInput.value = formatDateToUserFormat(picker.value);
+                return;
+            }
+
+            // Get min/max from the picker (set by analytics initialization)
+            const minDate = picker.min || null;
+            const maxDate = picker.max || null;
+
+            // Clamp to valid range
+            let validDate = isoDate;
+            if (minDate && validDate < minDate) {
+                validDate = minDate;
+            }
+            if (maxDate && validDate > maxDate) {
+                validDate = maxDate;
+            }
+
+            // Update picker value
+            picker.value = validDate;
+
+            // Update text to show the (possibly clamped) date
+            textInput.value = formatDateToUserFormat(validDate);
+
+            // Handle date swapping for from/to pairs
+            const isStartPicker = pickerId.includes('start');
+            const isEndPicker = pickerId.includes('end');
+
+            if (isStartPicker) {
+                // Find corresponding end picker
+                const endPickerId = pickerId.replace('start', 'end');
+                const endPicker = document.getElementById(endPickerId);
+                const endTextInput = document.querySelector(`.custom-date-text[data-picker="${endPickerId}"]`);
+
+                if (endPicker && endPicker.value && validDate > endPicker.value) {
+                    // Swap: start > end, so swap them
+                    const temp = endPicker.value;
+                    endPicker.value = validDate;
+                    picker.value = temp;
+                    textInput.value = formatDateToUserFormat(temp);
+                    if (endTextInput) endTextInput.value = formatDateToUserFormat(validDate);
+                }
+            } else if (isEndPicker) {
+                // Find corresponding start picker
+                const startPickerId = pickerId.replace('end', 'start');
+                const startPicker = document.getElementById(startPickerId);
+                const startTextInput = document.querySelector(`.custom-date-text[data-picker="${startPickerId}"]`);
+
+                if (startPicker && startPicker.value && validDate < startPicker.value) {
+                    // Swap: end < start, so swap them
+                    const temp = startPicker.value;
+                    startPicker.value = validDate;
+                    picker.value = temp;
+                    textInput.value = formatDateToUserFormat(temp);
+                    if (startTextInput) startTextInput.value = formatDateToUserFormat(validDate);
+                }
+            }
+
+        }
+
+        // Update all text inputs from their hidden pickers
+        function updateCustomDateDisplays() {
+            document.querySelectorAll('.custom-date-text[data-picker]').forEach(textInput => {
+                const pickerId = textInput.getAttribute('data-picker');
+                syncTextFromPicker(pickerId);
             });
         }
 
-        // Set up event listeners for date inputs to update display on change
+        // Initialize custom date input system
         function initCustomDateInputs() {
-            document.querySelectorAll('.custom-date-input').forEach(input => {
-                input.addEventListener('change', updateCustomDateDisplays);
+            // Calendar trigger click opens date picker
+            document.querySelectorAll('.calendar-trigger[data-picker]').forEach(trigger => {
+                trigger.addEventListener('click', function() {
+                    const pickerId = this.getAttribute('data-picker');
+                    const picker = document.getElementById(pickerId);
+                    if (picker && picker.showPicker) {
+                        picker.showPicker();
+                    }
+                });
             });
-            // Initial update
+
+            // Hidden date picker change updates text input
+            document.querySelectorAll('.hidden-date-picker').forEach(picker => {
+                picker.addEventListener('change', function() {
+                    syncTextFromPicker(this.id);
+                });
+            });
+
+            // Text input blur validates and syncs to hidden picker
+            document.querySelectorAll('.custom-date-text[data-picker]').forEach(textInput => {
+                textInput.addEventListener('blur', function() {
+                    syncPickerFromText(this);
+                });
+                textInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        syncPickerFromText(this);
+                        this.blur();
+                        // Trigger the appropriate apply function
+                        const pickerId = this.getAttribute('data-picker');
+                        if (pickerId.startsWith('personal-')) {
+                            if (typeof applyPersonalDateRange === 'function') {
+                                applyPersonalDateRange();
+                            }
+                        } else if (pickerId.startsWith('analytics-')) {
+                            if (typeof applyDateRange === 'function') {
+                                applyDateRange();
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Initial sync
             updateCustomDateDisplays();
         }
 
         // Initialize on DOM ready
         document.addEventListener('DOMContentLoaded', function() {
             initCustomDateInputs();
-            // Update date format labels and displays on initial page load
             updateDateFormatLabels();
-            updateCustomDateDisplays();
         });
         // Also try immediately in case DOMContentLoaded already fired
         if (document.readyState !== 'loading') {
             initCustomDateInputs();
             updateDateFormatLabels();
-            updateCustomDateDisplays();
         }
 
         // Listen for date format changes from settings popup
         window.addEventListener('dateFormatChanged', function(e) {
             updateDateFormatLabels();
-            // Update calendar date inputs to show new format
+            // Re-sync all text inputs with new format
             updateCustomDateDisplays();
             // Refresh analytics data to update displayed dates
             if (typeof loadPersonalAnalyticsSummary === 'function') {
@@ -5740,6 +5935,24 @@
         }
 
         function applyDateRange() {
+            // Sync text inputs to hidden pickers before applying
+            const startText = document.querySelector('.custom-date-text[data-picker="analytics-start-date"]');
+            const endText = document.querySelector('.custom-date-text[data-picker="analytics-end-date"]');
+            // If text has content, sync text to picker; otherwise sync picker to text first
+            if (startText) {
+                if (startText.value.trim()) {
+                    syncPickerFromText(startText);
+                } else {
+                    syncTextFromPicker('analytics-start-date');
+                }
+            }
+            if (endText) {
+                if (endText.value.trim()) {
+                    syncPickerFromText(endText);
+                } else {
+                    syncTextFromPicker('analytics-end-date');
+                }
+            }
             loadDailyStats();
         }
 
@@ -5878,9 +6091,8 @@
 
                         // Center horizontally under the point
                         let left = closest.x - (tooltipWidth / 2);
-                        // Ensure it doesn't go off-screen horizontally
+                        // Only clamp left edge (right side can overflow, chart has padding)
                         if (left < 0) left = 0;
-                        if (left + tooltipWidth > rect.width) left = rect.width - tooltipWidth;
 
                         // Position below the point
                         let top = closest.y + 15;
@@ -6076,6 +6288,24 @@
         }
 
         function applyPersonalDateRange() {
+            // Sync text inputs to hidden pickers before applying
+            const startText = document.querySelector('.custom-date-text[data-picker="personal-start-date"]');
+            const endText = document.querySelector('.custom-date-text[data-picker="personal-end-date"]');
+            // If text has content, sync text to picker; otherwise sync picker to text first
+            if (startText) {
+                if (startText.value.trim()) {
+                    syncPickerFromText(startText);
+                } else {
+                    syncTextFromPicker('personal-start-date');
+                }
+            }
+            if (endText) {
+                if (endText.value.trim()) {
+                    syncPickerFromText(endText);
+                } else {
+                    syncTextFromPicker('personal-end-date');
+                }
+            }
             loadPersonalDailyStats();
         }
 
@@ -6234,9 +6464,10 @@
                         const tooltipHeight = personalChartTooltip.offsetHeight;
                         const tooltipWidth = personalChartTooltip.offsetWidth;
 
+                        // Center horizontally under the point
                         let left = closest.x - (tooltipWidth / 2);
+                        // Only clamp left edge (right side can overflow, chart has padding)
                         if (left < 0) left = 0;
-                        if (left + tooltipWidth > rect.width) left = rect.width - tooltipWidth;
 
                         let top = closest.y + 15;
                         if (top + tooltipHeight > rect.height) {

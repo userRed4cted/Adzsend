@@ -88,23 +88,23 @@
                 <div class="hero-section">
                     <!-- Hero Heading Section -->
                     <div class="hero-heading">
-                        <div class="hero-tagline-wrapper hero-fade-in" style="animation-delay: 0s;">
+                        <div class="hero-tagline-wrapper">
                             <p class="hero-tagline">The Ultimate <span class="teal-gradient">Discord Marketing System</span></p>
                             <div class="hero-divider"></div>
                         </div>
                     </div>
 
                     <!-- Hero title -->
-                    <h2 class="hero-title hero-fade-in" id="hero-title" style="animation-delay: 0.3s;">{{ slideshow_messages[0] }}</h2>
+                    <h2 class="hero-title" id="hero-title">{{ slideshow_messages[0] }}</h2>
 
                     <!-- CTA Buttons -->
-                    <div class="hero-buttons hero-fade-in" style="animation-delay: 0.6s;">
+                    <div class="hero-buttons">
                         <a href="{{ discord_server_url }}" target="_blank" class="discord-btn"><img src="{{ url_for('static', filename='discordlogo.png') }}" alt="Discord" class="discord-btn-icon">Our Discord server</a>
                         <a href="{{ url_for('purchase') }}" class="view-pricing-btn">{{ hero_cta_button_text }}</a>
                     </div>
 
                     <!-- Panel Images - 3 images with rotation -->
-                    <div class="hero-panel-images hero-fade-in" style="animation-delay: 0.9s;">
+                    <div class="hero-panel-images">
                         <div class="hero-panel-image hero-panel-left" onclick="openPanelLightbox(0)">
                             <img src="{{ url_for('static', filename=hero_panel_images[0]) }}" alt="Panel Preview">
                         </div>
@@ -162,20 +162,10 @@
             <img src="{{ url_for('static', filename='Wordmark.svg') }}" alt="Discord" class="discord-wordmark-bottom">
         </section>
 
-            {% include 'partials/footer.html' %}
         </div>
     </div>
 
     <script>
-        // Remove will-change after initial animations complete
-        requestAnimationFrame(() => {
-            setTimeout(() => {
-                document.querySelectorAll('.hero-fade-in').forEach(el => {
-                    el.style.willChange = 'auto';
-                });
-            }, 2200); // Last element: 1.2s delay + 1s animation
-        });
-
         // Hero text slideshow - optimized with CSS transitions only
         const heroTitle = document.getElementById('hero-title');
         const messages = {{ slideshow_messages | tojson }};
@@ -185,13 +175,8 @@
         let lastSlideTime = performance.now();
         let rafId;
 
-        // Remove hero-fade-in class after initial animation and set up smooth transition
-        setTimeout(() => {
-            heroTitle.classList.remove('hero-fade-in');
-            heroTitle.style.willChange = 'auto';
-            // Set transition dynamically to match configured fade duration (like navbar profile)
-            heroTitle.style.transition = `opacity ${fadeDuration}ms ease`;
-        }, 1300); // 0.3s delay + 1s animation
+        // Set transition for slideshow
+        heroTitle.style.transition = `opacity ${fadeDuration}ms ease`;
 
         function changeSlide() {
             // Fade out smoothly

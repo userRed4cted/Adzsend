@@ -26,7 +26,7 @@ jobs:
         working-directory: ./bridge
         run: npm install
 
-      - name: Build Windows installers (x64 + arm64)
+      - name: Build Windows installer (x64)
         working-directory: ./bridge
         run: npm run build:win
         env:
@@ -59,7 +59,7 @@ jobs:
         working-directory: ./bridge
         run: npm install
 
-      - name: Build macOS installers (x64 + arm64)
+      - name: Build macOS installer (universal)
         working-directory: ./bridge
         run: npm run build:mac
         env:
@@ -71,7 +71,6 @@ jobs:
           name: macos-installers
           path: |
             bridge/dist/*.dmg
-            bridge/dist/*.zip
             bridge/dist/latest-mac.yml
 
   # ============================================
@@ -93,7 +92,7 @@ jobs:
         working-directory: ./bridge
         run: npm install
 
-      - name: Build Linux installers (x64 + arm64)
+      - name: Build Linux installers (deb + tar.gz)
         working-directory: ./bridge
         run: npm run build:linux
         env:
@@ -104,7 +103,6 @@ jobs:
         with:
           name: linux-installers
           path: |
-            bridge/dist/*.AppImage
             bridge/dist/*.deb
             bridge/dist/*.tar.gz
             bridge/dist/latest-linux.yml

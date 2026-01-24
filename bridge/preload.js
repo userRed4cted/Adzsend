@@ -26,7 +26,9 @@ contextBridge.exposeInMainWorld('bridge', {
 
     // Updates
     downloadUpdate: (url) => ipcRenderer.invoke('download-update', url),
+    installUpdate: () => ipcRenderer.invoke('install-update'),
     quitForUpdate: () => ipcRenderer.send('quit-for-update'),
+    onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, data) => callback(data)),
 
     // Custom Styled Dialogs
     showErrorDialog: (title, message) => ipcRenderer.invoke('show-error-dialog', title, message),

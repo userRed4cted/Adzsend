@@ -42,18 +42,18 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "your-github-username",
-      "repo": "your-repo-name"
+      "owner": "userRed4cted",
+      "repo": "Adzsend"
     },
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64", "arm64"]
+          "arch": ["x64"]
         }
       ],
       "icon": "assets/favicon.ico",
-      "artifactName": "AdzsendBridge-Setup-${version}-${arch}.${ext}"
+      "artifactName": "AdzsendBridgeSetup.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -70,29 +70,25 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": ["universal"]
         }
       ],
       "icon": "assets/favicon.icns",
-      "artifactName": "AdzsendBridge-${version}-${arch}.${ext}"
+      "artifactName": "AdzsendBridge.${ext}"
     },
     "linux": {
       "target": [
         {
-          "target": "AppImage",
-          "arch": ["x64", "arm64"]
-        },
-        {
           "target": "deb",
-          "arch": ["x64", "arm64"]
+          "arch": ["x64"]
         },
         {
           "target": "tar.gz",
-          "arch": ["x64", "arm64"]
+          "arch": ["x64"]
         }
       ],
       "icon": "assets/favicon.png",
-      "artifactName": "AdzsendBridge-${version}-${arch}.${ext}"
+      "artifactName": "AdzsendBridge.${ext}"
     }
   }
 }

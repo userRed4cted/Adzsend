@@ -1202,15 +1202,15 @@
                                     <div class="chart-summary" id="personal-chart-summary">
                                         <div class="chart-summary-item">
                                             <div class="chart-summary-value" id="personal-summary-total">0</div>
-                                            <div class="chart-summary-label">Total Ads</div>
+                                            <div class="chart-summary-label">Total ads</div>
                                         </div>
                                         <div class="chart-summary-item">
                                             <div class="chart-summary-value" id="personal-summary-avg">0</div>
-                                            <div class="chart-summary-label">Daily Avg</div>
+                                            <div class="chart-summary-label">Daily avg</div>
                                         </div>
                                         <div class="chart-summary-item">
                                             <div class="chart-summary-value" id="personal-summary-peak">0</div>
-                                            <div class="chart-summary-label">Peak Day</div>
+                                            <div class="chart-summary-label">Peak day</div>
                                         </div>
                                     </div>
                                 </div>
@@ -1374,15 +1374,15 @@
                         <div class="chart-summary" id="chart-summary">
                             <div class="chart-summary-item">
                                 <div class="chart-summary-value" id="summary-total">0</div>
-                                <div class="chart-summary-label">Total Ads</div>
+                                <div class="chart-summary-label">Total ads</div>
                             </div>
                             <div class="chart-summary-item">
                                 <div class="chart-summary-value" id="summary-avg">0</div>
-                                <div class="chart-summary-label">Daily Avg</div>
+                                <div class="chart-summary-label">Daily avg</div>
                             </div>
                             <div class="chart-summary-item">
                                 <div class="chart-summary-value" id="summary-peak">0</div>
-                                <div class="chart-summary-label">Peak Day</div>
+                                <div class="chart-summary-label">Peak day</div>
                             </div>
                         </div>
                     </div>
@@ -1689,7 +1689,6 @@
         .chart-summary-label {
             color: #81828A;
             font-size: 0.7rem;
-            text-transform: uppercase;
             margin-top: 0.25rem;
         }
 
@@ -5935,24 +5934,6 @@
         }
 
         function applyDateRange() {
-            // Sync text inputs to hidden pickers before applying
-            const startText = document.querySelector('.custom-date-text[data-picker="analytics-start-date"]');
-            const endText = document.querySelector('.custom-date-text[data-picker="analytics-end-date"]');
-            // If text has content, sync text to picker; otherwise sync picker to text first
-            if (startText) {
-                if (startText.value.trim()) {
-                    syncPickerFromText(startText);
-                } else {
-                    syncTextFromPicker('analytics-start-date');
-                }
-            }
-            if (endText) {
-                if (endText.value.trim()) {
-                    syncPickerFromText(endText);
-                } else {
-                    syncTextFromPicker('analytics-end-date');
-                }
-            }
             loadDailyStats();
         }
 
@@ -6288,24 +6269,6 @@
         }
 
         function applyPersonalDateRange() {
-            // Sync text inputs to hidden pickers before applying
-            const startText = document.querySelector('.custom-date-text[data-picker="personal-start-date"]');
-            const endText = document.querySelector('.custom-date-text[data-picker="personal-end-date"]');
-            // If text has content, sync text to picker; otherwise sync picker to text first
-            if (startText) {
-                if (startText.value.trim()) {
-                    syncPickerFromText(startText);
-                } else {
-                    syncTextFromPicker('personal-start-date');
-                }
-            }
-            if (endText) {
-                if (endText.value.trim()) {
-                    syncPickerFromText(endText);
-                } else {
-                    syncTextFromPicker('personal-end-date');
-                }
-            }
             loadPersonalDailyStats();
         }
 

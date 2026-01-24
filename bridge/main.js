@@ -2,7 +2,7 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, dialog, shell } = 
 const path = require('path');
 const Store = require('electron-store');
 const WebSocketClient = require('./src/websocket');
-const { checkForUpdates, downloadUpdate } = require('./src/updater');
+const { checkForUpdates, downloadUpdate, installUpdate, setMainWindow } = require('./src/updater');
 const { cleanupGateway } = require('./src/discord');
 const { getDialogStyles, getDialogWindowOptions, escapeHtml, loadingDotsHTML, closeDialog } = require('./src/dialogStyles');
 const { API_URL } = require('./src/config');
@@ -779,17 +779,28 @@ ipcMain.handle('show-logged-out-dialog', async () => {
     );
 });
 
-// Download and install update
+// Download update (auto-updater will download in background)
 ipcMain.handle('download-update', async (event, downloadUrl) => {
     try {
-        await downloadUpdate(downloadUrl);
+        // downloadUrl is ignored now - electron-updater handles it automatically
+        await downloadUpdate();
         return { success: true };
     } catch (error) {
         return { success: false, error: error.message };
     }
 });
 
-// Quit app for update
+// Install update and restart
+ipcMain.handle('install-update', async () => {
+    try {
+        installUpdate();
+        return { success: true };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+// Quit app for update (legacy - kept for compatibility)
 ipcMain.on('quit-for-update', () => {
     isQuitting = true;
     app.quit();
@@ -798,6 +809,7 @@ ipcMain.on('quit-for-update', () => {
 // App lifecycle
 app.whenReady().then(() => {
     createWindow();
+    setMainWindow(mainWindow); // Set main window for auto-updater
     createTray();
 
     app.on('activate', () => {

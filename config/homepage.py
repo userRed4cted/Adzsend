@@ -23,7 +23,7 @@ HOMEPAGE = {
 
     'hero': {
         # Main title (uses ABC Ginto Nord font, same as support page title)
-        'title': "The Ultimate Discord Marketing System",
+        'title': "THE ULTIMATE DISCORD MARKETING SYSTEM",
 
         # Description text below title (same style as FAQ title in support)
         'description': "Send ads across multiple Discord servers at once. Save time, cut costs, and take total control.",

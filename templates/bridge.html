@@ -10,6 +10,12 @@
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     {% include 'partials/base_scripts.html' %}
     <style>
+        /* ABC Ginto Nord font */
+        @font-face {
+            font-family: 'ABC Ginto Nord';
+            src: url('{{ url_for("static", filename="fonts/ABCGintoNord-Black-Trial.otf") }}') format('opentype');
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -31,82 +37,198 @@
             flex: 1;
             overflow-y: auto;
             padding-top: 60px;
+            background: #121215;
             display: flex;
             flex-direction: column;
+            min-height: calc(100vh - 60px);
         }
 
         .bridge-content {
-            display: flex;
-            flex-direction: column;
-            padding: 4rem 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
             flex: 1;
         }
 
-        /* Hero Section */
+        /* ==================== HERO SECTION ==================== */
         .bridge-hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 30px 0 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .bridge-hero-content {
+            flex: 0 0 auto;
+            max-width: 400px;
+        }
+
+        h1.bridge-hero-title {
+            font-size: 48px !important;
+            font-family: 'ABC Ginto Nord', 'gg sans Bold', sans-serif !important;
+            color: #ffffff !important;
+            text-align: left !important;
+            line-height: 1.1 !important;
+            letter-spacing: -0.5px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        p.bridge-hero-description {
+            font-size: 1rem !important;
+            font-weight: 400 !important;
+            color: #ffffff !important;
+            text-align: left !important;
+            margin: 24px 0 0 0 !important;
+            padding: 0 !important;
+            line-height: 1.5 !important;
+        }
+
+        img.bridge-hero-image {
+            flex: 0 0 auto !important;
+            width: 490px !important;
+            max-width: 490px !important;
+            height: auto !important;
+        }
+
+        /* ==================== BRIDGE FEATURE PILLS ==================== */
+        /* Gap variable - same as homepage */
+        :root {
+            --section-gap: 240px;
+        }
+
+        .bridge-feature-pills {
+            display: flex;
+            flex-direction: column;
+            gap: var(--section-gap);
+            padding: 30px;
+            max-width: 1200px;
+            margin: var(--section-gap) auto var(--section-gap) auto;
+        }
+
+        .bridge-feature-pill {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 500px;
+            /* No pill background - transparent */
+            background: transparent !important;
+        }
+
+        .bridge-feature-pill.reverse {
+            flex-direction: row-reverse;
+        }
+
+        .bridge-feature-pill-content {
+            flex: 0 1 auto;
+            max-width: 500px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            align-items: center;
-            padding: 4rem 0 2rem 0;
-            margin-bottom: 0;
+            padding: 0;
         }
 
-        .bridge-logo {
-            height: 40px;
-            width: auto;
-            margin-bottom: -8px;
+        h2.bridge-feature-pill-title {
+            font-family: 'ABC Ginto Nord', 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+            font-size: 48px !important;
+            color: #ffffff !important;
+            margin: 0 !important;
+            margin-bottom: 16px !important;
+            text-align: left !important;
+            letter-spacing: 0.5px !important;
         }
 
-        .bridge-title {
-            font-size: 48px;
-            font-family: 'ABC Ginto Nord', 'gg sans Bold', sans-serif !important;
-            color: #ffffff;
-            text-align: center;
-            line-height: 1.4;
-            letter-spacing: -0.5px;
-            white-space: pre-line;
-            margin: 0;
+        p.bridge-feature-pill-description {
+            font-size: 16px !important;
+            color: #ffffff !important;
+            line-height: 1.625 !important;
+            margin: 0 !important;
+            text-align: left !important;
         }
 
-        /* Description under BRIDGE title */
-        .bridge-description {
-            font-size: 1.1rem;
-            font-weight: 400;
-            color: #b5bac1;
-            text-align: center;
-            margin-top: 1rem;
-            margin-bottom: 0;
-            max-width: 600px;
-            line-height: 1.5;
-            font-family: 'gg sans', sans-serif;
-        }
-
-        /* Download Button Section */
-        .bridge-download-section {
+        /* Pill section buttons */
+        .bridge-feature-pill-buttons {
             display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .bridge-feature-pill-btn {
+            display: inline-flex;
+            align-items: center;
             justify-content: center;
-            margin-top: 2rem;
+            gap: 0.5rem;
+            padding: 0.625rem 1.5rem;
+            background: #ffffff;
+            border: none;
+            border-radius: 8px;
+            color: #121215;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .bridge-feature-pill-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .bridge-feature-pill-btn:active {
+            background: #d0d0d0;
+        }
+
+        .bridge-feature-pill-btn img {
+            width: 14px;
+            height: 14px;
+            object-fit: contain;
+            filter: brightness(0) saturate(100%) invert(6%) sepia(5%) saturate(1000%) hue-rotate(201deg) brightness(95%) contrast(92%);
+        }
+
+        /* Gradient background container */
+        .bridge-feature-pill-media-container {
+            flex: 0 0 auto;
+            width: 480px;
+            height: 700px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 80px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bridge-feature-pill-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+        }
+
+        /* Download button in hero section */
+        .bridge-hero-download {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 40px;
+            width: 100%;
         }
 
         .bridge-download-btn {
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.75rem;
-            padding: 0.75rem 3rem;
+            padding: 0.75rem 2rem;
             background: linear-gradient(to bottom, #15d8bc, #006e59);
             border: none;
             border-radius: 8px;
             color: #121215;
-            font-weight: 700;
-            font-size: 1rem;
-            letter-spacing: 0.5px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            font-weight: 500;
             text-decoration: none;
-            text-align: center;
+            transition: all 0.3s ease;
         }
 
         .bridge-download-btn:hover {
@@ -114,15 +236,103 @@
         }
 
         .bridge-download-btn:active {
-            transform: scale(1.01);
+            background: linear-gradient(to bottom, #0ea08a, #003d32);
         }
 
         .bridge-download-btn img {
-            width: 16px;
-            height: 16px;
-            filter: brightness(0);
+            width: 14px;
+            height: 14px;
+            object-fit: contain;
+            filter: brightness(0) saturate(100%) invert(6%) sepia(5%) saturate(1000%) hue-rotate(201deg) brightness(95%) contrast(92%);
         }
 
+        .bridge-download-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .bridge-download-incompatible {
+            font-size: 0.875rem;
+            color: #ff6b6b;
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        /* ==================== BRIDGE PILLS RESPONSIVE ==================== */
+        @media (max-width: 1024px) {
+            :root {
+                --section-gap: 160px;
+            }
+
+            .bridge-feature-pill-media-container {
+                width: 400px;
+                height: 580px;
+                border-radius: 60px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            :root {
+                --section-gap: 120px;
+            }
+
+            .bridge-feature-pills {
+                padding: 20px;
+            }
+
+            .bridge-feature-pill {
+                flex-direction: column !important;
+                min-height: auto;
+            }
+
+            .bridge-feature-pill-content {
+                padding: 24px;
+                order: 1;
+            }
+
+            .bridge-feature-pill-media-container {
+                order: 2;
+                width: 100%;
+                max-width: 400px;
+                height: 500px;
+                border-radius: 48px;
+            }
+
+            h2.bridge-feature-pill-title {
+                font-size: 28px !important;
+                margin-bottom: 12px !important;
+            }
+
+            p.bridge-feature-pill-description {
+                font-size: 14px !important;
+            }
+        }
+
+        @media (max-width: 600px) {
+            :root {
+                --section-gap: 80px;
+            }
+
+            .bridge-feature-pill-content {
+                padding: 20px;
+            }
+
+            .bridge-feature-pill-media-container {
+                width: 100%;
+                max-width: 320px;
+                height: 420px;
+                border-radius: 40px;
+            }
+
+            h2.bridge-feature-pill-title {
+                font-size: 24px !important;
+            }
+
+            p.bridge-feature-pill-description {
+                font-size: 13px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -132,25 +342,134 @@
         <div class="page-scroll-container">
             <div class="bridge-content">
                 <!-- Hero Section -->
-                <div class="bridge-hero">
-                    <img src="{{ url_for('static', filename='AdzsendDiscordTextLogoStyle.png') }}" alt="Adzsend" class="bridge-logo">
-                    <h1 class="bridge-title">BRIDGE</h1>
-                    <p class="bridge-description">{{ bridge_description }}</p>
-                </div>
+                <section class="bridge-hero">
+                    <div class="bridge-hero-content">
+                        <h1 class="bridge-hero-title">{{ bridge_title }}</h1>
+                        <p class="bridge-hero-description">{{ bridge_description }}</p>
+                    </div>
+                    <img src="{{ url_for('static', filename='DiscordPcImageThing.png') }}" alt="Discord PC" class="bridge-hero-image">
+                </section>
 
-                <!-- Download Button -->
-                <div class="bridge-download-section">
-                    <a href="{{ bridge_download_url }}" class="bridge-download-btn">
+                <!-- Download Button (after hero image) -->
+                <div class="bridge-hero-download">
+                    <a href="#" id="bridge-download-btn" class="bridge-download-btn">
                         <img src="{{ url_for('static', filename='downloadIcon.png') }}" alt="Download">
-                        Download Bridge
+                        <span id="bridge-download-text">Download for Windows</span>
                     </a>
+                    <p id="bridge-incompatible-msg" class="bridge-download-incompatible" style="display: none;">Only compatible with x64 processors</p>
                 </div>
 
+                <!-- Bridge Feature Pills -->
+                <section class="bridge-feature-pills">
+                    {% for pill in bridge_feature_pills %}
+                    <div class="bridge-feature-pill {% if loop.index is even %}reverse{% endif %}">
+                        <div class="bridge-feature-pill-content">
+                            <h2 class="bridge-feature-pill-title">{{ pill.title }}</h2>
+                            <p class="bridge-feature-pill-description">{{ pill.description }}</p>
+                            {% if pill.buttons %}
+                            <div class="bridge-feature-pill-buttons">
+                                {% for btn in pill.buttons %}
+                                <a href="{{ btn.url | process_footer_link }}" class="bridge-feature-pill-btn"{% if btn.download %} download{% endif %}>{% if btn.icon %}<img src="{{ url_for('static', filename=btn.icon) }}" alt="">{% endif %}{{ btn.text }}</a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="bridge-feature-pill-media-container" style="background: linear-gradient({{ pill.gradient_rotation | default(135) }}deg, {{ pill.bg_gradient_start | default('#ff6bda') }}, {{ pill.bg_gradient_end | default('#ffb8ec') }});">
+                            <img src="{{ url_for('static', filename=pill.image) }}" alt="{{ pill.title }}" class="bridge-feature-pill-image" style="object-position: calc(50% + {{ pill.image_offset_x | default(0) }}px) calc(50% + {{ pill.image_offset_y | default(0) }}px);">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </section>
             </div>
 
             {% include 'partials/footer.html' %}
         </div>
     </div>
+
+    <script>
+        // OS and architecture detection for Bridge download
+        (function() {
+            const downloadBtn = document.getElementById('bridge-download-btn');
+            const downloadText = document.getElementById('bridge-download-text');
+            const incompatibleMsg = document.getElementById('bridge-incompatible-msg');
+
+            // Download URLs from config
+            const downloadUrls = {
+                windows: '{{ bridge_download_urls.windows }}',
+                macos: '{{ bridge_download_urls.macos }}',
+                linux: '{{ bridge_download_urls.linux }}'
+            };
+
+            // Detect OS
+            function detectOS() {
+                const userAgent = navigator.userAgent.toLowerCase();
+                const platform = navigator.platform.toLowerCase();
+
+                if (platform.includes('win') || userAgent.includes('windows')) {
+                    return 'windows';
+                } else if (platform.includes('mac') || userAgent.includes('macintosh') || userAgent.includes('mac os')) {
+                    return 'macos';
+                } else if (platform.includes('linux') || userAgent.includes('linux')) {
+                    return 'linux';
+                }
+                return 'unknown';
+            }
+
+            // Detect if x64 architecture
+            function isX64() {
+                const platform = navigator.platform.toLowerCase();
+                const userAgent = navigator.userAgent.toLowerCase();
+
+                // Check for 64-bit indicators
+                if (platform.includes('win64') || platform.includes('x86_64') || platform.includes('amd64')) {
+                    return true;
+                }
+                if (userAgent.includes('win64') || userAgent.includes('x86_64') || userAgent.includes('x64') || userAgent.includes('amd64')) {
+                    return true;
+                }
+                // macOS on Apple Silicon or Intel 64-bit
+                if (platform.includes('mac')) {
+                    // Modern Macs are all 64-bit
+                    return true;
+                }
+                // Linux 64-bit
+                if (platform.includes('linux') && (userAgent.includes('x86_64') || userAgent.includes('x64'))) {
+                    return true;
+                }
+                // Check if running in 64-bit browser on Linux (most modern Linux systems)
+                if (platform === 'linux x86_64') {
+                    return true;
+                }
+
+                return false;
+            }
+
+            const os = detectOS();
+            const is64bit = isX64();
+
+            // Set button text based on OS
+            if (os === 'windows') {
+                downloadText.textContent = 'Download for Windows';
+                downloadBtn.href = downloadUrls.windows || '#';
+            } else if (os === 'macos') {
+                downloadText.textContent = 'Download for MacOS';
+                downloadBtn.href = downloadUrls.macos || '#';
+            } else if (os === 'linux') {
+                downloadText.textContent = 'Download for Linux';
+                downloadBtn.href = downloadUrls.linux || '#';
+            } else {
+                downloadText.textContent = 'Download';
+                downloadBtn.href = '#';
+            }
+
+            // Check architecture compatibility
+            if (!is64bit) {
+                downloadBtn.classList.add('disabled');
+                downloadBtn.removeAttribute('href');
+                incompatibleMsg.style.display = 'block';
+            }
+        })();
+    </script>
 
     {% include 'partials/settings_popup.html' %}
 </body>

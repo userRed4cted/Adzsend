@@ -40,20 +40,10 @@
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     {% include 'partials/base_scripts.html' %}
     <style>
-        /* Dynamic fade duration from config */
-        .hero-title.fade-out,
-        .hero-title.fade-in {
-            transition: opacity {{ slideshow_fade_duration }}ms ease !important;
-        }
-
-        /* ABC Ginto Nord font for Discord Marketing System */
+        /* ABC Ginto Nord font */
         @font-face {
             font-family: 'ABC Ginto Nord';
             src: url('{{ url_for("static", filename="fonts/ABCGintoNord-Black-Trial.otf") }}') format('opentype');
-        }
-
-        .hero-tagline .teal-gradient {
-            font-family: 'ABC Ginto Nord', 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
         }
 
         body {
@@ -84,41 +74,6 @@
         {% include 'navbar.html' %}
 
         <div class="page-scroll-container">
-            <div class="home-content">
-                <div class="hero-section">
-                    <!-- Hero Heading Section -->
-                    <div class="hero-heading">
-                        <div class="hero-tagline-wrapper">
-                            <p class="hero-tagline">The Ultimate <span class="teal-gradient">Discord Marketing System</span></p>
-                            <div class="hero-divider"></div>
-                        </div>
-                    </div>
-
-                    <!-- Hero title -->
-                    <h2 class="hero-title" id="hero-title">{{ slideshow_messages[0] }}</h2>
-
-                    <!-- CTA Buttons -->
-                    <div class="hero-buttons">
-                        <a href="{{ discord_server_url }}" target="_blank" class="discord-btn"><img src="{{ url_for('static', filename='discordlogo.png') }}" alt="Discord" class="discord-btn-icon">Our Discord server</a>
-                        <a href="{{ url_for('purchase') }}" class="view-pricing-btn">{{ hero_cta_button_text }}</a>
-                    </div>
-
-                    <!-- Panel Images - 3 images with rotation -->
-                    <div class="hero-panel-images">
-                        <div class="hero-panel-image hero-panel-left" onclick="openPanelLightbox(0)">
-                            <img src="{{ url_for('static', filename=hero_panel_images[0]) }}" alt="Panel Preview">
-                        </div>
-                        <div class="hero-panel-image hero-panel-center" onclick="openPanelLightbox(1)">
-                            <img src="{{ url_for('static', filename=hero_panel_images[1]) }}" alt="Panel Preview">
-                        </div>
-                        <div class="hero-panel-image hero-panel-right" onclick="openPanelLightbox(2)">
-                            <img src="{{ url_for('static', filename=hero_panel_images[2]) }}" alt="Panel Preview">
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
             <!-- Why Discord Section -->
             <section class="why-discord-section">
             <!-- Wumpus Character - at top edge -->
@@ -166,67 +121,7 @@
     </div>
 
     <script>
-        // Hero text slideshow - optimized with CSS transitions only
-        const heroTitle = document.getElementById('hero-title');
-        const messages = {{ slideshow_messages | tojson }};
-        const interval = {{ slideshow_interval }};
-        const fadeDuration = {{ slideshow_fade_duration }};
-        let currentIndex = 0;
-        let lastSlideTime = performance.now();
-        let rafId;
-
-        // Set transition for slideshow
-        heroTitle.style.transition = `opacity ${fadeDuration}ms ease`;
-
-        function changeSlide() {
-            // Fade out smoothly
-            heroTitle.style.opacity = '0';
-
-            // Wait for fade-out to complete, then change text and fade in
-            setTimeout(() => {
-                // Change text during invisible state
-                currentIndex = (currentIndex + 1) % messages.length;
-                heroTitle.textContent = messages[currentIndex];
-
-                // Fade back in
-                heroTitle.style.opacity = '1';
-            }, fadeDuration);
-        }
-
-        // Optimized slideshow loop with proper RAF usage
-        function slideshowLoop(currentTime) {
-            if (currentTime - lastSlideTime >= interval) {
-                changeSlide();
-                lastSlideTime = currentTime;
-            }
-            rafId = requestAnimationFrame(slideshowLoop);
-        }
-
-        // Start slideshow
-        rafId = requestAnimationFrame(slideshowLoop);
-
-        // Stop slideshow when tab is hidden
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                if (rafId) cancelAnimationFrame(rafId);
-            } else {
-                lastSlideTime = performance.now();
-                rafId = requestAnimationFrame(slideshowLoop);
-            }
-        }, { passive: true });
-
-        // Panel images for lightbox - uses unified lightbox system
-        const panelImages = [
-            '{{ url_for('static', filename=hero_panel_images[0]) }}',
-            '{{ url_for('static', filename=hero_panel_images[1]) }}',
-            '{{ url_for('static', filename=hero_panel_images[2]) }}'
-        ];
-
-        function openPanelLightbox(index) {
-            openImageLightbox(panelImages, index);
-        }
-
-        // Count-up animation for Discord stats - optimized version
+        // Count-up animation for Discord stats
         (() => {
             const statNumbers = document.querySelectorAll('.stat-number[data-target]');
             if (statNumbers.length === 0) return;

@@ -335,15 +335,6 @@ def home():
             is_admin_user = is_admin(user.get('email'))
 
     return render_template('home.html',
-                         slideshow_messages=HOMEPAGE['hero']['slideshow_messages'],
-                         slideshow_interval=HOMEPAGE['hero']['slideshow_interval'],
-                         slideshow_fade_duration=HOMEPAGE['hero']['slideshow_fade_duration'],
-                         hero_image=HOMEPAGE['hero']['hero_image'],
-                         hero_panel_images=HOMEPAGE['hero']['panel_images'],
-                         about_title=HOMEPAGE['about']['title'],
-                         about_description=HOMEPAGE['about']['description'],
-                         hero_cta_button_text=HOMEPAGE['hero']['cta_button_text'],
-                         scroll_indicator_text=HOMEPAGE['hero']['scroll_indicator_text'],
                          why_discord_title=HOMEPAGE['why_discord']['title'],
                          why_discord_stats=HOMEPAGE['why_discord']['stats'],
                          why_discord_benefits=HOMEPAGE['why_discord']['benefits'],
@@ -682,7 +673,7 @@ def support():
                          support_faq_title=SUPPORT_FAQ_TITLE,
                          support_contact_text=SUPPORT_CONTACT_TEXT,
                          faq_items=FAQ_ITEMS,
-                         discord_server_url=HOMEPAGE['hero']['discord_server_url'])
+                         discord_server_url=HOMEPAGE['discord_server_url'])
 
 
 @app.route('/api/check-message', methods=['POST'])

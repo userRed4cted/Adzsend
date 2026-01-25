@@ -7,6 +7,10 @@
     <div class="settings-popup">
         <!-- Settings Side Menu -->
         <div class="settings-side-menu">
+            <!-- Mobile Close Button -->
+            <button class="settings-mobile-close-btn" onclick="closeSettingsPopup()">
+                <img src="{{ url_for('static', filename='x.png') }}" alt="Close" class="settings-mobile-close-icon">
+            </button>
             <!-- Profile Section -->
             <div class="settings-profile-section">
                 <div style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;">
@@ -44,6 +48,16 @@
         </div>
         <!-- Settings Content -->
         <div class="settings-content">
+            <!-- Mobile Content Header -->
+            <div class="settings-mobile-content-header">
+                <button class="settings-mobile-back-btn" onclick="settingsMobileBack()">
+                    <img src="{{ url_for('static', filename='openorclose.png') }}" alt="Back">
+                </button>
+                <span class="settings-mobile-page-title" id="settings-mobile-page-title">My account</span>
+                <button class="settings-mobile-close-btn settings-mobile-content-close" onclick="closeSettingsPopup()">
+                    <img src="{{ url_for('static', filename='x.png') }}" alt="Close">
+                </button>
+            </div>
             <div class="settings-content-header">
                 <span class="settings-content-title" id="settings-content-title">My account</span>
                 <button class="settings-close-btn" onclick="closeSettingsPopup()">&times;</button>
@@ -1410,6 +1424,174 @@
     .bridge-status-text.online {
         color: #15d8bc;
     }
+
+    /* Mobile close button - hidden on desktop */
+    .settings-mobile-close-btn {
+        display: none;
+    }
+
+    /* Mobile content header - hidden on desktop */
+    .settings-mobile-content-header {
+        display: none;
+    }
+
+    /* ==================== SETTINGS POPUP RESPONSIVE ==================== */
+    /* Mobile */
+    @media (max-width: 900px) {
+        /* Full screen settings */
+        .settings-popup {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 0;
+            border: none;
+            flex-direction: column;
+        }
+
+        /* Side menu takes full screen, content hidden initially */
+        .settings-side-menu {
+            width: 100%;
+            height: 100%;
+            border-right: none;
+            padding: 56px 1.25rem 2rem 1.25rem;
+            position: relative;
+        }
+
+        /* Mobile settings header - same as mobile menu header */
+        .settings-side-menu::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            border-bottom: 0.5px solid #222225;
+            box-sizing: border-box;
+        }
+
+        /* Hide content area on mobile - slides from right */
+        .settings-content {
+            display: flex;
+            position: absolute;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            background: #121215;
+            z-index: 20;
+            transition: right 0.3s ease;
+        }
+
+        /* Show content when mobile page is active - slide in */
+        .settings-content.mobile-page-active {
+            right: 0;
+        }
+
+        /* Hide desktop close button */
+        .settings-close-btn {
+            display: none;
+        }
+
+        /* Hide desktop content header on mobile */
+        .settings-content-header {
+            display: none;
+        }
+
+        /* Mobile content header - shown on mobile */
+        .settings-mobile-content-header {
+            display: flex;
+            align-items: center;
+            height: 56px;
+            min-height: 56px;
+            padding: 0 1.25rem;
+            border-bottom: 0.5px solid #222225;
+            position: relative;
+            background: #121215;
+        }
+
+        /* Mobile back button */
+        .settings-mobile-back-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #121215;
+            border: 1px solid #222225;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 0.25rem;
+            width: 32px;
+            height: 32px;
+        }
+
+        .settings-mobile-back-btn > img {
+            width: 20px;
+            height: 20px;
+            transform: rotate(90deg);
+            filter: brightness(0) saturate(100%) invert(100%);
+        }
+
+        /* Mobile page title - left aligned next to back button */
+        .settings-mobile-page-title {
+            flex: 1;
+            text-align: left;
+            margin-left: 12px;
+            color: #dcddde;
+            font-family: 'gg sans Semibold', sans-serif;
+            font-size: 1rem;
+        }
+
+        /* Mobile close button in content header */
+        .settings-mobile-content-close {
+            display: flex;
+            position: relative;
+            top: auto;
+            right: auto;
+        }
+
+        /* Mobile close button - same style as mobile menu close button */
+        .settings-mobile-close-btn {
+            display: flex;
+            position: absolute;
+            top: 12px;
+            right: 1.25rem;
+            align-items: center;
+            justify-content: center;
+            background: #121215;
+            border: 1px solid #222225;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 0.25rem;
+            width: 32px;
+            height: 32px;
+            z-index: 10;
+        }
+
+        .settings-mobile-close-btn > img {
+            width: 20px;
+            height: 20px;
+            filter: brightness(0) saturate(100%) invert(100%);
+        }
+
+        /* Remove active state background on mobile menu items */
+        .settings-menu-item.active {
+            background: transparent;
+            color: #dcddde;
+        }
+
+        /* Content body styling for mobile - proportionally scaled */
+        .settings-content-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem 1.25rem;
+        }
+
+        /* Hide content divider on mobile */
+        .settings-content-divider {
+            display: none;
+        }
+    }
 </style>
 
 <script>
@@ -1447,6 +1629,21 @@
         if (typeof stopBridgeStatusPolling === 'function') {
             stopBridgeStatusPolling();
         }
+        // Reset mobile page view when closing
+        settingsMobileBack();
+    }
+
+    // Mobile settings navigation - go back to menu
+    function settingsMobileBack() {
+        const content = document.querySelector('.settings-content');
+        if (content) {
+            content.classList.remove('mobile-page-active');
+        }
+    }
+
+    // Check if we're on mobile
+    function isSettingsMobile() {
+        return window.innerWidth <= 900;
     }
 
     // Settings popup - click overlay to close
@@ -1464,7 +1661,14 @@
             this.classList.add('active');
 
             // Update header title to match button text
-            document.getElementById('settings-content-title').textContent = this.textContent;
+            const pageTitle = this.textContent;
+            document.getElementById('settings-content-title').textContent = pageTitle;
+
+            // Update mobile page title
+            const mobileTitle = document.getElementById('settings-mobile-page-title');
+            if (mobileTitle) {
+                mobileTitle.textContent = pageTitle;
+            }
 
             // Show the corresponding page
             const pageName = this.getAttribute('data-settings-page');
@@ -1474,6 +1678,14 @@
             const targetPage = document.getElementById('settings-page-' + pageName);
             if (targetPage) {
                 targetPage.style.display = 'flex';
+            }
+
+            // On mobile, show the content area
+            if (isSettingsMobile()) {
+                const content = document.querySelector('.settings-content');
+                if (content) {
+                    content.classList.add('mobile-page-active');
+                }
             }
         });
     });

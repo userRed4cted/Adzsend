@@ -101,9 +101,9 @@ function createLinkAccountCardList() {
         <div class="team-current-avatar" style="background: #1A1A1E;">
             <img src="${avatarUrl}" alt="Discord" style="width: 100%; height: 100%; object-fit: contain; padding: 6px;">
         </div>
-        <div class="team-current-info">
+        <div class="team-current-info" style="flex-direction: column; align-items: flex-start; gap: 2px;">
             <span class="team-current-id">Link a Discord account</span>
-            <span class="team-current-id" style="color: #81828A; font-size: 0.85rem;">(${currentAccountCount}/${accountLimit} Linked)</span>
+            <span class="team-current-id" style="color: #81828A; font-size: 0.8rem;">(${currentAccountCount}/${accountLimit} Linked)</span>
         </div>
     `;
 
@@ -172,9 +172,9 @@ function createAccountCardList(account) {
             <img src="${avatarUrl}" alt="${escapeHtml(account.username)}">
             ${decorationHtml}
         </div>
-        <div class="team-current-info">
+        <div class="team-current-info" style="flex-direction: column; align-items: flex-start; gap: 2px;">
             <span class="team-current-id" style="color: #dcddde;">${escapeHtml(account.username)}</span>
-            <span class="team-current-id" style="color: #81828A; font-size: 0.85rem;">${account.discord_id}</span>
+            <span class="team-current-id" style="color: #81828A; font-size: 0.8rem;">${account.discord_id}</span>
         </div>
         <button class="team-leave-btn" onclick="unlinkDiscordAccount(${account.id}, event)">Unlink</button>
     `;

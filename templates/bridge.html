@@ -38,13 +38,10 @@
             overflow-y: auto;
             padding-top: 60px;
             background: #121215;
-            display: flex;
-            flex-direction: column;
-            min-height: calc(100vh - 60px);
         }
 
         .bridge-content {
-            flex: 1;
+            /* Content flows naturally, footer follows */
         }
 
         /* ==================== HERO SECTION ==================== */
@@ -190,7 +187,7 @@
         .bridge-feature-pill-media-container {
             flex: 0 0 auto;
             width: 480px;
-            height: 700px;
+            aspect-ratio: 480 / 700;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -246,37 +243,48 @@
             filter: brightness(0) saturate(100%) invert(6%) sepia(5%) saturate(1000%) hue-rotate(201deg) brightness(95%) contrast(92%);
         }
 
-        .bridge-download-btn.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
-
-        .bridge-download-incompatible {
-            font-size: 0.875rem;
-            color: #ff6b6b;
-            margin-top: 12px;
-            text-align: center;
-        }
-
-        /* ==================== BRIDGE PILLS RESPONSIVE ==================== */
+        /* ==================== BRIDGE RESPONSIVE ==================== */
         @media (max-width: 1024px) {
-            :root {
-                --section-gap: 160px;
-            }
-
             .bridge-feature-pill-media-container {
                 width: 400px;
-                height: 580px;
                 border-radius: 60px;
             }
         }
 
+        /* Mobile */
         @media (max-width: 900px) {
-            :root {
-                --section-gap: 120px;
+            /* Hero responsive */
+            .bridge-hero {
+                padding: 20px 20px 0 20px;
+                flex-direction: column;
             }
 
+            .bridge-hero-content {
+                order: 2;
+            }
+
+            img.bridge-hero-image {
+                order: 1;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            h1.bridge-hero-title {
+                font-size: 32px !important;
+                text-align: center !important;
+            }
+
+            p.bridge-hero-description {
+                font-size: 1rem !important;
+                margin: 20px 0 0 0 !important;
+                text-align: center !important;
+            }
+
+            .bridge-hero-download {
+                margin-top: 20px;
+            }
+
+            /* Pills responsive */
             .bridge-feature-pills {
                 padding: 20px;
             }
@@ -284,18 +292,28 @@
             .bridge-feature-pill {
                 flex-direction: column !important;
                 min-height: auto;
+                align-items: center;
             }
 
             .bridge-feature-pill-content {
                 padding: 24px;
-                order: 1;
+                order: 2;
+                text-align: center;
+            }
+
+            .bridge-feature-pill-content h2.bridge-feature-pill-title,
+            .bridge-feature-pill-content p.bridge-feature-pill-description {
+                text-align: center !important;
+            }
+
+            .bridge-feature-pill-buttons {
+                justify-content: center;
             }
 
             .bridge-feature-pill-media-container {
-                order: 2;
+                order: 1;
                 width: 100%;
                 max-width: 400px;
-                height: 500px;
                 border-radius: 48px;
             }
 
@@ -310,8 +328,12 @@
         }
 
         @media (max-width: 600px) {
-            :root {
-                --section-gap: 80px;
+            h1.bridge-hero-title {
+                font-size: 26px !important;
+            }
+
+            p.bridge-hero-description {
+                font-size: 0.9rem !important;
             }
 
             .bridge-feature-pill-content {
@@ -321,7 +343,6 @@
             .bridge-feature-pill-media-container {
                 width: 100%;
                 max-width: 320px;
-                height: 420px;
                 border-radius: 40px;
             }
 
@@ -356,7 +377,6 @@
                         <img src="{{ url_for('static', filename='downloadIcon.png') }}" alt="Download">
                         <span id="bridge-download-text">Download for Windows</span>
                     </a>
-                    <p id="bridge-incompatible-msg" class="bridge-download-incompatible" style="display: none;">Only compatible with x64 processors</p>
                 </div>
 
                 <!-- Bridge Feature Pills -->
@@ -387,11 +407,10 @@
     </div>
 
     <script>
-        // OS and architecture detection for Bridge download
+        // OS detection for Bridge download
         (function() {
             const downloadBtn = document.getElementById('bridge-download-btn');
             const downloadText = document.getElementById('bridge-download-text');
-            const incompatibleMsg = document.getElementById('bridge-incompatible-msg');
 
             // Download URLs from config
             const downloadUrls = {
@@ -415,39 +434,9 @@
                 return 'unknown';
             }
 
-            // Detect if x64 architecture
-            function isX64() {
-                const platform = navigator.platform.toLowerCase();
-                const userAgent = navigator.userAgent.toLowerCase();
-
-                // Check for 64-bit indicators
-                if (platform.includes('win64') || platform.includes('x86_64') || platform.includes('amd64')) {
-                    return true;
-                }
-                if (userAgent.includes('win64') || userAgent.includes('x86_64') || userAgent.includes('x64') || userAgent.includes('amd64')) {
-                    return true;
-                }
-                // macOS on Apple Silicon or Intel 64-bit
-                if (platform.includes('mac')) {
-                    // Modern Macs are all 64-bit
-                    return true;
-                }
-                // Linux 64-bit
-                if (platform.includes('linux') && (userAgent.includes('x86_64') || userAgent.includes('x64'))) {
-                    return true;
-                }
-                // Check if running in 64-bit browser on Linux (most modern Linux systems)
-                if (platform === 'linux x86_64') {
-                    return true;
-                }
-
-                return false;
-            }
-
             const os = detectOS();
-            const is64bit = isX64();
 
-            // Set button text based on OS
+            // Set button text and URL based on OS
             if (os === 'windows') {
                 downloadText.textContent = 'Download for Windows';
                 downloadBtn.href = downloadUrls.windows || '#';
@@ -458,15 +447,8 @@
                 downloadText.textContent = 'Download for Linux';
                 downloadBtn.href = downloadUrls.linux || '#';
             } else {
-                downloadText.textContent = 'Download';
-                downloadBtn.href = '#';
-            }
-
-            // Check architecture compatibility
-            if (!is64bit) {
-                downloadBtn.classList.add('disabled');
-                downloadBtn.removeAttribute('href');
-                incompatibleMsg.style.display = 'block';
+                // Unknown OS - hide the button
+                downloadBtn.style.display = 'none';
             }
         })();
     </script>

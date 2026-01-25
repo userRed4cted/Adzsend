@@ -1,13 +1,31 @@
 <nav class="navbar">
     <div class="navbar-content">
-        <div class="navbar-left">
+        <!-- Desktop: Logo on left -->
+        <div class="navbar-left navbar-left-desktop">
             <a href="{{ url_for('home') }}" style="display: flex; align-items: center; text-decoration: none;">
                 <img src="{{ url_for('static', filename='AdzsendDiscordTextLogoStyle.png') }}" alt="Adzsend" style="height: 84px; display: block; object-fit: contain;" loading="eager">
             </a>
         </div>
+
+        <!-- Mobile: Profile/Auth on left -->
+        <div class="navbar-left navbar-left-mobile">
+            <div class="navbar-profile-container navbar-profile-mobile">
+                {% if user %}
+                <div class="navbar-profile-circle">
+                    <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" class="user-profile-photo">
+                </div>
+                <span class="navbar-welcome-text navbar-welcome-text-mobile" id="navbar-welcome-text-mobile">{{ welcome_slideshow.messages[0] }}</span>
+                <img src="{{ url_for('static', filename='gear.png') }}" alt="Settings" title="Settings" class="navbar-settings-icon" onclick="openSettings()">
+                {% else %}
+                <a href="{{ url_for('signup_page') }}" class="navbar-auth-link">Sign up</a>
+                <a href="{{ url_for('login_page') }}" class="navbar-auth-link">Login</a>
+                {% endif %}
+            </div>
+        </div>
+
         <div class="nav-right">
-            <!-- Navigation Links -->
-            <nav class="nav-links">
+            <!-- Navigation Links (Desktop) -->
+            <nav class="nav-links nav-links-desktop">
                 <a href="{{ url_for('home') }}" class="nav-link" data-page="home">Home</a>
                 <a href="{{ url_for('purchase') }}" class="nav-link" data-page="purchase">Purchase</a>
                 <a href="#" class="nav-link disabled" data-page="discover" onclick="return false;" title="Coming soon...">Discover</a>
@@ -16,8 +34,8 @@
                 <a href="{{ url_for('support') }}" class="nav-link" data-page="support">Support</a>
             </nav>
 
-            <!-- User Profile / Auth Buttons -->
-            <div class="navbar-profile-container">
+            <!-- User Profile / Auth Buttons (Desktop) -->
+            <div class="navbar-profile-container navbar-profile-desktop">
                 {% if user %}
                 <div class="navbar-profile-circle">
                     <img src="{{ url_for('static', filename='profile_photos/' ~ (user_data.profile_photo if user_data and user_data.profile_photo else 'Light_Blue.jpg')) }}" alt="Profile" class="user-profile-photo">
@@ -29,15 +47,93 @@
                 <a href="{{ url_for('login_page') }}" class="navbar-auth-link">Login</a>
                 {% endif %}
             </div>
+
+            <!-- Mobile Menu Button -->
+            <button class="mobile-menu-btn" id="mobile-menu-btn" onclick="toggleMobileMenu()">
+                <img src="{{ url_for('static', filename='menu.png') }}" alt="Menu" class="mobile-menu-icon">
+                <span class="mobile-menu-close">&times;</span>
+            </button>
         </div>
     </div>
 </nav>
 
+<!-- Mobile Menu Overlay -->
+<div class="mobile-menu-overlay" id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu" id="mobile-menu">
+    <div class="mobile-menu-header">
+        <div class="mobile-menu-logo">
+            <img src="{{ url_for('static', filename='AdzsendDiscordTextLogoStyle.png') }}" alt="Adzsend" class="mobile-menu-logo-img">
+        </div>
+        <button class="mobile-menu-close-btn" onclick="closeMobileMenu()">
+            <img src="{{ url_for('static', filename='x.png') }}" alt="Close" class="mobile-menu-close-icon">
+        </button>
+    </div>
+    <nav class="mobile-nav-links">
+        <a href="{{ url_for('home') }}" class="mobile-nav-link" data-page="home">Home</a>
+        <a href="{{ url_for('purchase') }}" class="mobile-nav-link" data-page="purchase">Purchase</a>
+        <a href="#" class="mobile-nav-link disabled" data-page="discover" onclick="return false;" title="Coming soon...">Discover</a>
+        <a href="{{ url_for('dashboard') if user else '#' }}" class="mobile-nav-link{% if not user %} disabled{% endif %}" data-page="dashboard"{% if not user %} onclick="return false;"{% endif %}>Dashboard</a>
+        <a href="{{ url_for('bridge') if user else '#' }}" class="mobile-nav-link{% if not user %} disabled{% endif %}" data-page="bridge"{% if not user %} onclick="return false;"{% endif %}>Bridge</a>
+        <a href="{{ url_for('support') }}" class="mobile-nav-link" data-page="support">Support</a>
+    </nav>
+</div>
+
 <script>
+// Mobile menu functions
+let mobileMenuOpen = false;
+
+function toggleMobileMenu() {
+    if (mobileMenuOpen) {
+        closeMobileMenu();
+    } else {
+        openMobileMenu();
+    }
+}
+
+function openMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    const overlay = document.getElementById('mobile-menu-overlay');
+    const btn = document.getElementById('mobile-menu-btn');
+
+    menu.classList.add('active');
+    overlay.classList.add('active');
+    btn.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    mobileMenuOpen = true;
+}
+
+function closeMobileMenu() {
+    const menu = document.getElementById('mobile-menu');
+    const overlay = document.getElementById('mobile-menu-overlay');
+    const btn = document.getElementById('mobile-menu-btn');
+
+    menu.classList.remove('active');
+    overlay.classList.remove('active');
+    btn.classList.remove('active');
+    document.body.style.overflow = '';
+    mobileMenuOpen = false;
+}
+
+// Close menu on ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && mobileMenuOpen) {
+        closeMobileMenu();
+    }
+});
+
+// Close menu when resizing to desktop
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 900 && mobileMenuOpen) {
+        closeMobileMenu();
+    }
+});
+
 // Detect active page and mark navigation link
 (function() {
     const currentPath = window.location.pathname;
-    const navLinks = document.querySelectorAll('.nav-link');
+    const navLinks = document.querySelectorAll('.nav-link, .mobile-nav-link');
 
     navLinks.forEach(link => {
         const page = link.getAttribute('data-page');
@@ -69,7 +165,8 @@
 {% if user %}
 (function() {
     const welcomeText = document.getElementById('navbar-welcome-text');
-    if (!welcomeText) return;
+    const welcomeTextMobile = document.getElementById('navbar-welcome-text-mobile');
+    if (!welcomeText && !welcomeTextMobile) return;
 
     const messages = {{ welcome_slideshow.messages | tojson }};
     const interval = {{ welcome_slideshow.interval }};
@@ -77,19 +174,23 @@
     let currentIndex = 0;
 
     // Add CSS transition dynamically
-    welcomeText.style.transition = `opacity ${fadeDuration}ms ease`;
+    if (welcomeText) welcomeText.style.transition = `opacity ${fadeDuration}ms ease`;
+    if (welcomeTextMobile) welcomeTextMobile.style.transition = `opacity ${fadeDuration}ms ease`;
 
     function changeSlide() {
         // Fade out
-        welcomeText.style.opacity = '0';
+        if (welcomeText) welcomeText.style.opacity = '0';
+        if (welcomeTextMobile) welcomeTextMobile.style.opacity = '0';
 
         setTimeout(() => {
             // Change text
             currentIndex = (currentIndex + 1) % messages.length;
-            welcomeText.textContent = messages[currentIndex];
+            if (welcomeText) welcomeText.textContent = messages[currentIndex];
+            if (welcomeTextMobile) welcomeTextMobile.textContent = messages[currentIndex];
 
             // Fade in
-            welcomeText.style.opacity = '1';
+            if (welcomeText) welcomeText.style.opacity = '1';
+            if (welcomeTextMobile) welcomeTextMobile.style.opacity = '1';
         }, fadeDuration);
     }
 

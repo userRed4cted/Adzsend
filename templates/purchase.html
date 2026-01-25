@@ -62,6 +62,92 @@
             overflow-y: auto;
             padding-top: 60px;
         }
+
+        /* ==================== RESPONSIVE ==================== */
+        /* Mobile */
+        @media (max-width: 900px) {
+            .purchase-container {
+                padding: 1.5rem;
+                height: auto;
+                min-height: auto;
+                overflow: visible;
+            }
+
+            .purchase-section {
+                flex: none;
+            }
+
+            .plans-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                flex: none;
+            }
+
+            .plan-card {
+                padding: 2rem;
+                min-height: auto;
+            }
+
+            .plan-name {
+                font-size: 1.25rem;
+            }
+
+            .price {
+                font-size: 2.75rem;
+            }
+
+            .billing-toggle {
+                gap: 0.75rem;
+            }
+
+            .billing-label {
+                font-size: 0.9rem;
+            }
+
+            .feature span {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Small mobile */
+        @media (max-width: 600px) {
+            .purchase-container {
+                padding: 1.25rem;
+            }
+
+            .plans-grid {
+                gap: 1.5rem;
+            }
+
+            .plan-card {
+                padding: 1.5rem;
+            }
+
+            .plan-name {
+                font-size: 1.1rem;
+            }
+
+            .price {
+                font-size: 2.5rem;
+            }
+
+            .billing-label {
+                font-size: 0.85rem;
+            }
+
+            .feature span {
+                font-size: 0.85rem;
+            }
+
+            .purchase-btn {
+                padding: 0.65rem 1.25rem;
+                font-size: 0.9rem;
+            }
+
+            .view-switch-btn {
+                font-size: 0.8rem;
+            }
+        }
     </style>
 </head>
 <body>

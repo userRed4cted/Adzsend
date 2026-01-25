@@ -11,6 +11,7 @@
     "build:linux": "electron-builder --linux"
   },
   "author": "Adzsend",
+  "homepage": "https://adzsend.com",
   "license": "UNLICENSED",
   "private": true,
   "devDependencies": {
@@ -44,11 +45,11 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": ["x64", "arm64"]
         }
       ],
       "icon": "assets/favicon.ico",
-      "artifactName": "AdzsendBridgeSetup.${ext}"
+      "artifactName": "AdzsendBridgeSetup-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -83,7 +84,8 @@
         }
       ],
       "icon": "assets/favicon.png",
-      "artifactName": "AdzsendBridge.${ext}"
+      "artifactName": "AdzsendBridge.${ext}",
+      "maintainer": "Adzsend"
     }
   }
 }

@@ -364,16 +364,112 @@
         font-weight: 500;
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
+    /* ==================== LIGHTBOX RESPONSIVE ==================== */
+    /* Tablet */
+    @media (max-width: 900px) {
+        .unified-lightbox-layout {
+            padding: 15px;
+        }
+
         .unified-lightbox-nav-area {
-            width: 40px;
+            width: 50px;
         }
 
         .unified-lightbox-nav-btn {
-            width: 32px;
-            height: 32px;
-            padding: 0.25rem;
+            width: 36px;
+            height: 36px;
+            padding: 0.35rem;
+        }
+
+        .unified-lightbox-nav-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .unified-lightbox-media-container {
+            max-width: calc(100% - 120px);
+        }
+
+        .unified-lightbox-close-btn {
+            top: -45px;
+            right: -60px;
+            width: 36px;
+            height: 36px;
+            font-size: 1.35rem;
+        }
+
+        /* Image - use object-fit contain to prevent cropping */
+        .unified-lightbox-image-wrapper {
+            max-height: calc(100vh - 100px);
+        }
+
+        .unified-lightbox-image-wrapper img {
+            max-width: 100%;
+            max-height: calc(100vh - 100px);
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+
+        /* Video - full width display */
+        .unified-lightbox-video-wrapper {
+            max-height: calc(100vh - 100px);
+        }
+
+        .unified-lightbox-video-wrapper video {
+            max-width: 85vw;
+            max-height: calc(100vh - 140px);
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .unified-lightbox-preview canvas {
+            width: 130px;
+            height: 73px;
+        }
+
+        .unified-lightbox-counter {
+            bottom: -35px;
+            font-size: 0.85rem;
+        }
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+        .unified-lightbox-layout {
+            padding: 10px;
+            position: relative;
+        }
+
+        /* Navigation arrows - fixed position on sides */
+        .unified-lightbox-nav-area {
+            width: auto;
+            height: auto;
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+        }
+
+        .unified-lightbox-nav-left {
+            left: 10px;
+        }
+
+        .unified-lightbox-nav-right {
+            right: 10px;
+        }
+
+        .unified-lightbox-nav-btn {
+            width: 36px;
+            height: 36px;
+            padding: 0.35rem;
+            background: rgba(18, 18, 21, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .unified-lightbox-nav-btn:hover {
+            background: rgba(26, 26, 30, 0.95);
         }
 
         .unified-lightbox-nav-btn svg {
@@ -382,16 +478,73 @@
         }
 
         .unified-lightbox-media-container {
-            max-width: calc(100% - 100px);
+            max-width: 100%;
+            width: 100%;
+        }
+
+        /* Close button repositioned for mobile */
+        .unified-lightbox-close-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            width: 36px;
+            height: 36px;
+            font-size: 1.35rem;
+            background: rgba(18, 18, 21, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+
+        /* Image - full screen display without cropping */
+        .unified-lightbox-image-wrapper {
+            max-height: calc(100vh - 60px);
+            width: 100%;
+        }
+
+        .unified-lightbox-image-wrapper img {
+            max-width: calc(100vw - 100px); /* Leave room for nav arrows */
+            max-height: calc(100vh - 60px);
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+
+        /* Video - full screen display without cropping */
+        .unified-lightbox-video-wrapper {
+            max-width: 100%;
+            max-height: calc(100vh - 80px);
         }
 
         .unified-lightbox-video-wrapper video {
-            max-width: 90vw;
+            max-width: calc(100vw - 20px);
+            max-height: calc(100vh - 120px);
+            width: auto;
+            height: auto;
+            object-fit: contain;
         }
 
-        .unified-lightbox-preview canvas {
-            width: 120px;
-            height: 68px;
+        .unified-lightbox-video-controls {
+            padding: 15px;
+            gap: 10px;
+        }
+
+        .unified-lightbox-play-btn {
+            width: 36px;
+            height: 36px;
+        }
+
+        .unified-lightbox-play-btn img {
+            width: 18px;
+            height: 18px;
+        }
+
+        .unified-lightbox-preview {
+            display: none !important; /* Hide preview on mobile - too small to be useful */
+        }
+
+        .unified-lightbox-counter {
+            bottom: -30px;
+            font-size: 0.8rem;
         }
     }
 </style>

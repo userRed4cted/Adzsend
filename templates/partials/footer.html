@@ -4,18 +4,21 @@
 <!-- Centralized Footer -->
 <footer class="site-footer">
     <div class="footer-content">
-        <!-- Logo on the left (same as navbar logo, but #121215 color) -->
-        <div class="footer-logo">
+        <!-- Desktop: Logo on the left -->
+        <div class="footer-logo footer-logo-desktop">
             <a href="{{ url_for('home') }}">
                 <img src="{{ url_for('static', filename='AdzsendDiscordTextLogoStyle.png') }}" alt="Adzsend">
             </a>
         </div>
 
-        <!-- Sections container (right to left) -->
+        <!-- Sections container -->
         <div class="footer-sections">
             {% for section in footer_config.sections %}
             <div class="footer-section">
-                <div class="footer-section-title">{{ section.title }}</div>
+                <div class="footer-section-header" onclick="toggleFooterSection(this)">
+                    <div class="footer-section-title">{{ section.title }}</div>
+                    <img src="{{ url_for('static', filename='openorclose.png') }}" alt="Toggle" class="footer-toggle-icon">
+                </div>
                 <div class="footer-section-links">
                     {% for link in section.links %}
                     <a href="{{ link.url | process_footer_link }}" class="footer-link" {% if link.lightbox %}onclick="openVideoLightbox('{{ link.lightbox }}'); return false;"{% endif %}>{{ link.text }}</a>
@@ -23,6 +26,13 @@
                 </div>
             </div>
             {% endfor %}
+        </div>
+
+        <!-- Mobile: Logo at the bottom -->
+        <div class="footer-logo footer-logo-mobile">
+            <a href="{{ url_for('home') }}">
+                <img src="{{ url_for('static', filename='AdzsendDiscordTextLogoStyle.png') }}" alt="Adzsend">
+            </a>
         </div>
     </div>
 </footer>
@@ -61,6 +71,11 @@
         display: block;
     }
 
+    /* Hide mobile logo on desktop */
+    .footer-logo-mobile {
+        display: none;
+    }
+
     .footer-sections {
         display: flex;
         gap: 4rem;
@@ -73,12 +88,35 @@
         gap: 0.75rem;
     }
 
+    .footer-section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
     .footer-section-title {
-        color: {{ footer_config.section_title_color }};
+        color: #121215;
         font-size: 0.75rem;
         font-family: 'gg sans Semibold', 'gg sans', sans-serif !important;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+    }
+
+    /* Hide toggle icon on desktop */
+    .footer-toggle-icon {
+        display: none;
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease;
+        flex-shrink: 0;
+        margin-left: 1rem;
+        transform: rotate(-90deg);
+        /* Make icon #121215 */
+        filter: brightness(0) saturate(100%) invert(6%) sepia(5%) saturate(1000%) hue-rotate(201deg) brightness(95%) contrast(92%);
+    }
+
+    .footer-section.active .footer-toggle-icon {
+        transform: rotate(0deg);
     }
 
     .footer-section-links {
@@ -88,7 +126,7 @@
     }
 
     .footer-link {
-        color: {{ footer_config.link_color }};
+        color: #121215;
         font-size: 0.875rem;
         text-decoration: none;
         transition: text-decoration 0.2s;
@@ -97,4 +135,152 @@
     .footer-link:hover {
         text-decoration: underline;
     }
+
+    /* ==================== MOBILE FOOTER ==================== */
+    @media (max-width: 900px) {
+        .site-footer {
+            padding: 0;
+        }
+
+        .footer-content {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        /* Hide desktop logo on mobile */
+        .footer-logo-desktop {
+            display: none;
+        }
+
+        /* Show mobile logo at bottom - centered horizontally, same width as dividers */
+        .footer-logo-mobile {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .footer-logo-mobile img {
+            width: 100%;
+            height: auto;
+            margin-top: 0;
+        }
+
+        .footer-sections {
+            flex-direction: column;
+            gap: 0;
+            width: 100%;
+            padding: 0 1.5rem;
+        }
+
+        .footer-section {
+            gap: 0;
+        }
+
+        /* Dividers only between sections, not at top or bottom */
+        .footer-section + .footer-section {
+            border-top: 1px solid #121215;
+        }
+
+        .footer-section-header {
+            padding: 1rem 0;
+            cursor: pointer;
+        }
+
+        .footer-section-title {
+            font-size: 1rem;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+
+        /* Show toggle icon on mobile */
+        .footer-toggle-icon {
+            display: block;
+        }
+
+        /* Collapsible links on mobile */
+        .footer-section-links {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        .footer-section.active .footer-section-links {
+            padding-top: 0.25rem;
+            padding-bottom: 1rem;
+        }
+
+        .footer-link {
+            padding: 0.4rem 0;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .footer-sections {
+            padding: 0 1.25rem;
+        }
+
+        .footer-logo-mobile {
+            padding: 2rem 1.25rem;
+        }
+
+        .footer-section-title {
+            font-size: 0.95rem;
+        }
+
+        .footer-link {
+            font-size: 0.85rem;
+        }
+    }
 </style>
+
+<script>
+    function toggleFooterSection(element) {
+        // Only toggle on mobile
+        if (window.innerWidth > 900) return;
+
+        const section = element.parentElement;
+        const links = section.querySelector('.footer-section-links');
+
+        // Close all other sections smoothly
+        document.querySelectorAll('.footer-section').forEach(item => {
+            if (item !== section && item.classList.contains('active')) {
+                const otherLinks = item.querySelector('.footer-section-links');
+                // First set explicit height for smooth transition
+                otherLinks.style.maxHeight = otherLinks.scrollHeight + 'px';
+                // Force reflow
+                otherLinks.offsetHeight;
+                // Then animate to 0
+                otherLinks.style.maxHeight = '0';
+                item.classList.remove('active');
+            }
+        });
+
+        // Toggle current section
+        if (section.classList.contains('active')) {
+            // Closing - set current height first, then animate to 0
+            links.style.maxHeight = links.scrollHeight + 'px';
+            links.offsetHeight; // Force reflow
+            links.style.maxHeight = '0';
+            section.classList.remove('active');
+        } else {
+            // Opening
+            section.classList.add('active');
+            links.style.maxHeight = links.scrollHeight + 20 + 'px'; // +20 for padding
+        }
+    }
+
+    // Reset footer sections on resize
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 900) {
+            document.querySelectorAll('.footer-section').forEach(section => {
+                section.classList.remove('active');
+                section.querySelector('.footer-section-links').style.maxHeight = '';
+            });
+        }
+    });
+</script>

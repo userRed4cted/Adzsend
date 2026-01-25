@@ -14,6 +14,12 @@
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     {% include 'partials/base_scripts.html' %}
     <style>
+        /* ABC Ginto Nord font */
+        @font-face {
+            font-family: 'ABC Ginto Nord';
+            src: url('{{ url_for("static", filename="fonts/ABCGintoNord-Black-Trial.otf") }}') format('opentype');
+        }
+
         body {
             margin: 0;
             padding: 0;
@@ -35,6 +41,220 @@
             flex: 1;
             overflow-y: auto;
             padding-top: 60px;
+            background: #121215;
+        }
+
+        /* Gap variable - consistent spacing (same as homepage) */
+        :root {
+            --section-gap: 240px;
+        }
+
+        /* ==================== HERO SECTION ==================== */
+        /* Same positioning as homepage */
+        .support-hero {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px 30px 0 30px;
+            text-align: center;
+        }
+
+        .support-hero-title {
+            font-size: 48px;
+            font-family: 'ABC Ginto Nord', 'gg sans Bold', sans-serif !important;
+            color: #ffffff;
+            text-align: center;
+            line-height: 1.4;
+            letter-spacing: -0.5px;
+            margin: 0;
+            white-space: pre-line;
+        }
+
+        /* ==================== MESSAGE CHECKER SECTION ==================== */
+        .message-checker-section {
+            max-width: 924px;
+            margin: var(--section-gap) auto 0 auto;
+            padding: 0 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .message-checker-section .message-checker-input {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .message-checker-label {
+            font-size: 0.875rem;
+            color: #72767d;
+            text-align: center;
+            margin: 12px 0 0 0;
+        }
+
+        .message-checker-label.message-checker-found {
+            color: #15d8bc;
+        }
+
+        /* ==================== FAQ SECTION ==================== */
+        .support-faq-section {
+            max-width: 924px;
+            margin: var(--section-gap) auto 0 auto;
+            padding: 0 30px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .support-faq-title {
+            font-size: 1.225rem;
+            font-weight: 400;
+            color: #ffffff;
+            text-align: center;
+            margin: 0 0 40px 0;
+        }
+
+        /* FAQ List */
+        .faq-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        /* FAQ Item - pill style with configurable gradient */
+        .faq-item {
+            border-radius: 24px;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: none;
+        }
+
+        /* FAQ Question */
+        .faq-question {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.75rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .faq-question-text {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #ffffff;
+            font-family: 'gg sans Medium', sans-serif;
+        }
+
+        .faq-toggle-icon {
+            width: 20px;
+            height: 20px;
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+            margin-left: 1rem;
+            transform: rotate(-90deg);
+        }
+
+        .faq-item.active .faq-toggle-icon {
+            transform: rotate(0deg);
+        }
+
+        /* FAQ Answer */
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .faq-answer p {
+            padding: 1.25rem 1.75rem 1.5rem 1.75rem;
+            margin: 0;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            font-family: 'gg sans Medium', sans-serif;
+        }
+
+        /* ==================== CONTACT SUPPORT SECTION ==================== */
+        .support-contact {
+            max-width: 924px;
+            margin: 1rem auto var(--section-gap) auto;
+            padding: 0 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            border-top: none !important;
+            padding-top: 0 !important;
+        }
+
+        .support-contact-text {
+            font-size: 1.1rem;
+            color: #dcddde;
+            text-align: center;
+            margin: 0;
+            font-family: 'gg sans Medium', sans-serif;
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 900px) {
+            :root {
+                --section-gap: 120px;
+            }
+
+            .support-hero {
+                padding: 20px 20px 0 20px;
+            }
+
+            .support-hero-title {
+                font-size: 32px;
+            }
+
+            .message-checker-section,
+            .support-faq-section,
+            .support-contact {
+                padding: 0 20px;
+            }
+
+            .faq-item {
+                border-radius: 20px;
+            }
+
+            .faq-question {
+                padding: 1rem 1.25rem;
+            }
+
+            .faq-answer p {
+                padding: 1rem 1.25rem 1.25rem 1.25rem;
+            }
+        }
+
+        @media (max-width: 600px) {
+            :root {
+                --section-gap: 80px;
+            }
+
+            .support-hero-title {
+                font-size: 26px;
+            }
+
+            .faq-item {
+                border-radius: 16px;
+            }
+
+            .faq-question {
+                padding: 1rem;
+            }
+
+            .faq-question-text {
+                font-size: 0.9rem;
+            }
+
+            .faq-answer p {
+                padding: 0.875rem 1rem 1rem 1rem;
+                font-size: 0.875rem;
+            }
         }
     </style>
 </head>
@@ -43,52 +263,48 @@
         {% include 'navbar.html' %}
 
         <div class="page-scroll-container">
-            <div class="support-content">
-                <!-- Hero Section -->
-                <div class="support-hero">
-                    <h1 class="support-hero-title">{{ support_hero_title }}</h1>
-                </div>
+            <!-- Hero Section - same position as homepage -->
+            <section class="support-hero">
+                <h1 class="support-hero-title">{{ support_hero_title }}</h1>
+            </section>
 
-                <!-- Message Checker Section -->
-                <div class="message-checker-section">
-                    <input type="text"
-                           id="message-link-input"
-                           class="search-input message-checker-input"
-                           placeholder="Discord message link"
-                           autocomplete="off">
-                    <p id="message-checker-result" class="message-checker-label">Check if a message was sent with Adzsend (no message over 5 days old)</p>
-                </div>
+            <!-- Message Checker Section -->
+            <section class="message-checker-section">
+                <input type="text"
+                       id="message-link-input"
+                       class="search-input message-checker-input"
+                       placeholder="Discord message link"
+                       autocomplete="off">
+                <p id="message-checker-result" class="message-checker-label">Check if a message was sent with Adzsend (no message over 5 days old)</p>
+            </section>
 
-                <!-- FAQ Section -->
-                <div class="support-faq-section">
-                    <h2 class="support-faq-title">{{ support_faq_title }}</h2>
+            <!-- FAQ Section -->
+            <section class="support-faq-section">
+                <h2 class="support-faq-title">{{ support_faq_title }}</h2>
 
-                    <div class="faq-list">
-                        {% for faq in faq_items %}
-                        <div class="faq-item">
-                            <div class="faq-question" onclick="toggleFaq(this)">
-                                <span class="faq-question-text">{{ faq.question }}</span>
-                                <img src="{{ url_for('static', filename='openorclose.png') }}" alt="Toggle" class="faq-toggle-icon">
-                            </div>
-                            <div class="faq-answer">
-                                <div class="faq-answer-divider"></div>
-                                <p>{{ faq.answer }}</p>
-                            </div>
+                <div class="faq-list">
+                    {% for faq in faq_items %}
+                    <div class="faq-item" style="background: {% if faq.gradient is defined and faq.gradient %}linear-gradient({{ faq.gradient_rotation | default(135) }}deg, {{ faq.color_start | default('rgba(255, 255, 255, 0.1)') }}, {{ faq.color_end | default('rgba(255, 255, 255, 0.02)') }}){% else %}{{ faq.color_start | default('rgba(255, 255, 255, 0.1)') }}{% endif %};">
+                        <div class="faq-question" onclick="toggleFaq(this)">
+                            <span class="faq-question-text">{{ faq.question }}</span>
+                            <img src="{{ url_for('static', filename='openorclose.png') }}" alt="Toggle" class="faq-toggle-icon">
                         </div>
-                        {% endfor %}
+                        <div class="faq-answer">
+                            <p>{{ faq.answer }}</p>
+                        </div>
                     </div>
-
-                    <!-- Contact Support -->
-                    <div class="support-contact">
-                        <p class="support-contact-text">{{ support_contact_text }}</p>
-                        <a href="{{ discord_server_url }}" target="_blank" class="discord-btn">
-                            <img src="{{ url_for('static', filename='discordlogo.png') }}" alt="Discord" class="discord-btn-icon">
-                            Contact support
-                        </a>
-                    </div>
+                    {% endfor %}
                 </div>
+            </section>
 
-            </div>
+            <!-- Contact Support -->
+            <section class="support-contact">
+                <p class="support-contact-text">{{ support_contact_text }}</p>
+                <a href="{{ discord_server_url }}" target="_blank" class="discord-btn">
+                    <img src="{{ url_for('static', filename='discordlogo.png') }}" alt="Discord" class="discord-btn-icon">
+                    Contact support
+                </a>
+            </section>
 
             {% include 'partials/footer.html' %}
         </div>

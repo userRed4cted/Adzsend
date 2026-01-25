@@ -119,13 +119,21 @@
         }
 
         /* ==================== FEATURE PILLS ==================== */
+        /* Gap variable - consistent spacing across all resolutions */
+        :root {
+            --section-gap: 240px;
+            /* WumpusLeaf offset: wumpus-container top (-209px) + wumpus-leaf top (-80px) = 289px above section */
+            --wumpus-leaf-offset: 289px;
+        }
+
         .feature-pills {
             display: flex;
             flex-direction: column;
-            gap: 240px;
+            gap: var(--section-gap);
             padding: 30px;
             max-width: 924px;
-            margin: 240px auto 520px auto;
+            /* Top margin: gap from hero showcase. Bottom margin: gap to WumpusLeaf */
+            margin: var(--section-gap) auto calc(var(--section-gap) + var(--wumpus-leaf-offset)) auto;
         }
 
         .feature-pill {
@@ -179,19 +187,13 @@
             padding: 20px;
         }
 
-        .feature-pill-media-wrapper {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-
         .feature-pill-video {
             width: 100%;
             height: 100%;
             max-height: 320px;
             object-fit: cover;
             border-radius: var(--media-radius);
-            background: #1a1a1d;
+            background: #121215;
         }
 
         .feature-pill-image {
@@ -202,32 +204,12 @@
             border-radius: var(--media-radius);
         }
 
-        /* Frozen frame overlay - shows captured frame when tab is hidden */
-        .feature-pill-frozen-frame {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            max-height: 320px;
-            object-fit: cover;
-            border-radius: var(--media-radius);
-            display: none;
-            pointer-events: none;
-        }
-
-        .feature-pill-frozen-frame.visible {
-            display: block;
-        }
-
         /* ==================== RESPONSIVE ==================== */
 
         /* Tablet */
         @media (max-width: 1024px) {
             .feature-pills {
                 max-width: 90%;
-                gap: 120px;
-                margin: 120px auto 300px auto;
             }
 
             .feature-pill {
@@ -289,8 +271,6 @@
 
             .feature-pills {
                 padding: 20px;
-                gap: 80px;
-                margin: 80px auto 200px auto;
             }
 
             .feature-pill {
@@ -322,8 +302,7 @@
             }
 
             .feature-pill-video,
-            .feature-pill-image,
-            .feature-pill-frozen-frame {
+            .feature-pill-image {
                 max-height: 200px;
             }
 
@@ -341,11 +320,6 @@
 
             .home-hero-description {
                 font-size: 0.9rem;
-            }
-
-            .feature-pills {
-                gap: 60px;
-                margin: 60px auto 150px auto;
             }
 
             .feature-pill {
@@ -372,8 +346,7 @@
             }
 
             .feature-pill-video,
-            .feature-pill-image,
-            .feature-pill-frozen-frame {
+            .feature-pill-image {
                 max-height: 180px;
             }
         }
@@ -389,8 +362,7 @@
             }
 
             .feature-pill-video,
-            .feature-pill-image,
-            .feature-pill-frozen-frame {
+            .feature-pill-image {
                 max-height: 520px;
             }
         }
@@ -405,8 +377,7 @@
             }
 
             .feature-pill-video,
-            .feature-pill-image,
-            .feature-pill-frozen-frame {
+            .feature-pill-image {
                 max-height: 585px;
             }
         }
@@ -437,12 +408,9 @@
                     </div>
                     <div class="feature-pill-media-container">
                         {% if pill.video %}
-                        <div class="feature-pill-media-wrapper">
-                            <video class="feature-pill-video" autoplay loop muted playsinline preload="auto">
-                                <source src="{{ url_for('static', filename=pill.video) }}" type="video/mp4">
-                            </video>
-                            <img class="feature-pill-frozen-frame" alt="" aria-hidden="true">
-                        </div>
+                        <video class="feature-pill-video" autoplay loop muted playsinline>
+                            <source src="{{ url_for('static', filename=pill.video) }}" type="video/mp4">
+                        </video>
                         {% else %}
                         <img src="{{ url_for('static', filename=pill.image) }}" alt="{{ pill.title }}" class="feature-pill-image">
                         {% endif %}
@@ -581,55 +549,15 @@
             });
         })();
 
-        // Handle video pause/resume when tab visibility changes
-        (() => {
-            const mediaWrappers = document.querySelectorAll('.feature-pill-media-wrapper');
-            if (mediaWrappers.length === 0) return;
-
-            // Capture current frame as data URL
-            function captureFrame(video) {
-                try {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth || 640;
-                    canvas.height = video.videoHeight || 360;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    return canvas.toDataURL('image/jpeg', 0.9);
-                } catch (e) {
-                    console.warn('Could not capture frame:', e);
-                    return null;
-                }
+        // Pause/resume videos on tab visibility change
+        document.addEventListener('visibilitychange', () => {
+            const videos = document.querySelectorAll('.feature-pill-video');
+            if (document.hidden) {
+                videos.forEach(v => v.pause());
+            } else {
+                videos.forEach(v => v.play().catch(() => {}));
             }
-
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) {
-                    // Tab hidden - capture frames and show frozen overlay
-                    mediaWrappers.forEach(wrapper => {
-                        const video = wrapper.querySelector('.feature-pill-video');
-                        const frozenFrame = wrapper.querySelector('.feature-pill-frozen-frame');
-                        if (!video || !frozenFrame) return;
-
-                        // Capture the current frame
-                        const frame = captureFrame(video);
-                        if (frame) {
-                            frozenFrame.src = frame;
-                            frozenFrame.classList.add('visible');
-                        }
-                        video.pause();
-                    });
-                } else {
-                    // Tab visible again - hide frozen frame and resume video
-                    mediaWrappers.forEach(wrapper => {
-                        const video = wrapper.querySelector('.feature-pill-video');
-                        const frozenFrame = wrapper.querySelector('.feature-pill-frozen-frame');
-                        if (!video || !frozenFrame) return;
-
-                        frozenFrame.classList.remove('visible');
-                        video.play().catch(() => {});
-                    });
-                }
-            });
-        })();
+        });
     </script>
 
     {% include 'partials/settings_popup.html' %}

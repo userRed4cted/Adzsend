@@ -335,6 +335,14 @@ def home():
             is_admin_user = is_admin(user.get('email'))
 
     return render_template('home.html',
+                         # Hero section
+                         hero_title=HOMEPAGE['hero']['title'],
+                         hero_description=HOMEPAGE['hero']['description'],
+                         hero_cta_text=HOMEPAGE['hero']['cta_text'],
+                         hero_showcase_image=HOMEPAGE['hero']['showcase_image'],
+                         # Feature pills
+                         feature_pills=HOMEPAGE['feature_pills'],
+                         # Why Discord section
                          why_discord_title=HOMEPAGE['why_discord']['title'],
                          why_discord_stats=HOMEPAGE['why_discord']['stats'],
                          why_discord_benefits=HOMEPAGE['why_discord']['benefits'],

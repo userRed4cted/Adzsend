@@ -49,7 +49,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #121215;
+            background: #121215;
             color: #ffffff;
             overflow: hidden;
             height: 100vh;
@@ -66,6 +66,349 @@
             flex: 1;
             overflow-y: auto;
             padding-top: 60px;
+            background: #121215;
+        }
+
+        /* ==================== HERO SECTION ==================== */
+        .home-hero {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px 30px 0 30px;
+            text-align: center;
+        }
+
+        .home-hero-title {
+            font-size: 48px;
+            font-family: 'ABC Ginto Nord', 'gg sans Bold', sans-serif !important;
+            color: #ffffff;
+            text-align: center;
+            line-height: 1.4;
+            letter-spacing: -0.5px;
+            margin: 0;
+        }
+
+        .home-hero-description {
+            font-size: 1.225rem;
+            font-weight: 400;
+            color: #ffffff;
+            text-align: center;
+            margin: 40px 0 0 0;
+        }
+
+        .home-hero-cta {
+            display: inline-block;
+            margin-top: 40px;
+            padding: 12px 32px;
+            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            color: #121215;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+
+        .home-showcase-image {
+            margin-top: 40px;
+            width: 104%;
+            max-width: 832px;
+            border-radius: 12px;
+            object-fit: cover;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* ==================== FEATURE PILLS ==================== */
+        .feature-pills {
+            display: flex;
+            flex-direction: column;
+            gap: 240px;
+            padding: 30px;
+            max-width: 924px;
+            margin: 240px auto 520px auto;
+        }
+
+        .feature-pill {
+            display: flex;
+            align-items: stretch;
+            border-radius: 80px;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            min-height: 390px;
+            --pill-radius: 80px;
+            --media-padding: 20px;
+            --media-radius: calc(var(--pill-radius) - var(--media-padding));
+        }
+
+        .feature-pill.reverse {
+            flex-direction: row-reverse;
+        }
+
+        .feature-pill-content {
+            flex: 0.8;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .feature-pill-title {
+            font-family: 'ABC Ginto Nord', 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+            font-size: 48px;
+            color: #ffffff;
+            margin: 0;
+            margin-bottom: 16px;
+            text-align: left;
+            letter-spacing: 0.5px;
+        }
+
+        .feature-pill-description {
+            font-size: 16px;
+            color: #ffffff;
+            line-height: 1.625;
+            margin: 0;
+            text-align: left;
+        }
+
+        .feature-pill-media-container {
+            flex: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .feature-pill-media-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .feature-pill-video {
+            width: 100%;
+            height: 100%;
+            max-height: 320px;
+            object-fit: cover;
+            border-radius: var(--media-radius);
+            background: #1a1a1d;
+        }
+
+        .feature-pill-image {
+            width: 100%;
+            height: 100%;
+            max-height: 320px;
+            object-fit: cover;
+            border-radius: var(--media-radius);
+        }
+
+        /* Frozen frame overlay - shows captured frame when tab is hidden */
+        .feature-pill-frozen-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            max-height: 320px;
+            object-fit: cover;
+            border-radius: var(--media-radius);
+            display: none;
+            pointer-events: none;
+        }
+
+        .feature-pill-frozen-frame.visible {
+            display: block;
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+
+        /* Tablet */
+        @media (max-width: 1024px) {
+            .feature-pills {
+                max-width: 90%;
+                gap: 120px;
+                margin: 120px auto 300px auto;
+            }
+
+            .feature-pill {
+                border-radius: 60px;
+                --pill-radius: 60px;
+                --media-padding: 16px;
+                --media-radius: calc(var(--pill-radius) - var(--media-padding));
+                min-height: 320px;
+            }
+
+            .feature-pill-content {
+                padding: 32px;
+            }
+
+            .feature-pill-title {
+                font-size: 36px;
+            }
+
+            .feature-pill-media-container {
+                padding: 16px;
+            }
+        }
+
+        /* Mobile */
+        @media (max-width: 900px) {
+            .home-hero {
+                padding: 20px 20px 0 20px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .home-hero-title {
+                font-size: 32px;
+                order: 2;
+            }
+
+            .home-hero-description {
+                font-size: 1rem;
+                order: 3;
+                margin: 20px 0 0 0;
+            }
+
+            .home-hero-cta {
+                order: 4;
+                margin-top: 20px;
+            }
+
+            .home-hero > div:last-child {
+                order: 1;
+                margin-top: 0;
+                margin-bottom: 20px;
+            }
+
+            .home-showcase-image {
+                margin-top: 0;
+                width: 100%;
+                max-width: 100%;
+            }
+
+            .feature-pills {
+                padding: 20px;
+                gap: 80px;
+                margin: 80px auto 200px auto;
+            }
+
+            .feature-pill {
+                flex-direction: column !important;
+                min-height: auto;
+                border-radius: 40px;
+                --pill-radius: 40px;
+                --media-padding: 16px;
+                --media-radius: calc(var(--pill-radius) - var(--media-padding));
+            }
+
+            .feature-pill-content {
+                padding: 24px;
+                order: 1;
+            }
+
+            .feature-pill-media-container {
+                order: 2;
+                padding: 0 16px 16px 16px;
+            }
+
+            .feature-pill-title {
+                font-size: 28px;
+                margin-bottom: 12px;
+            }
+
+            .feature-pill-description {
+                font-size: 14px;
+            }
+
+            .feature-pill-video,
+            .feature-pill-image,
+            .feature-pill-frozen-frame {
+                max-height: 200px;
+            }
+
+            /* Reduce why-discord margin on mobile */
+            .why-discord-section {
+                margin-top: 0 !important;
+            }
+        }
+
+        /* Small mobile */
+        @media (max-width: 600px) {
+            .home-hero-title {
+                font-size: 26px;
+            }
+
+            .home-hero-description {
+                font-size: 0.9rem;
+            }
+
+            .feature-pills {
+                gap: 60px;
+                margin: 60px auto 150px auto;
+            }
+
+            .feature-pill {
+                border-radius: 32px;
+                --pill-radius: 32px;
+                --media-padding: 12px;
+                --media-radius: calc(var(--pill-radius) - var(--media-padding));
+            }
+
+            .feature-pill-content {
+                padding: 20px;
+            }
+
+            .feature-pill-media-container {
+                padding: 0 12px 12px 12px;
+            }
+
+            .feature-pill-title {
+                font-size: 24px;
+            }
+
+            .feature-pill-description {
+                font-size: 13px;
+            }
+
+            .feature-pill-video,
+            .feature-pill-image,
+            .feature-pill-frozen-frame {
+                max-height: 180px;
+            }
+        }
+
+        /* Wide screens - scale pills proportionally */
+        @media (min-width: 1400px) {
+            .feature-pills {
+                max-width: 1078px;
+            }
+
+            .feature-pill {
+                min-height: 455px;
+            }
+
+            .feature-pill-video,
+            .feature-pill-image,
+            .feature-pill-frozen-frame {
+                max-height: 520px;
+            }
+        }
+
+        @media (min-width: 1800px) {
+            .feature-pills {
+                max-width: 1232px;
+            }
+
+            .feature-pill {
+                min-height: 520px;
+            }
+
+            .feature-pill-video,
+            .feature-pill-image,
+            .feature-pill-frozen-frame {
+                max-height: 585px;
+            }
         }
     </style>
 </head>
@@ -74,48 +417,82 @@
         {% include 'navbar.html' %}
 
         <div class="page-scroll-container">
+            <!-- Hero Section -->
+            <section class="home-hero">
+                <h1 class="home-hero-title">{{ hero_title }}</h1>
+                <p class="home-hero-description">{{ hero_description }}</p>
+                <a href="{{ url_for('signup_page') }}" class="home-hero-cta">{{ hero_cta_text }}</a>
+                <div>
+                    <img src="{{ url_for('static', filename=hero_showcase_image) }}" alt="Adzsend Showcase" class="home-showcase-image">
+                </div>
+            </section>
+
+            <!-- Feature Pills -->
+            <section class="feature-pills">
+                {% for pill in feature_pills %}
+                <div class="feature-pill {% if loop.index is even %}reverse{% endif %}" style="background: {% if pill.gradient %}linear-gradient({{ pill.gradient_rotation }}deg, {{ pill.color_start }}, {{ pill.color_end }}){% else %}{{ pill.color_start }}{% endif %};">
+                    <div class="feature-pill-content">
+                        <h2 class="feature-pill-title">{{ pill.title }}</h2>
+                        <p class="feature-pill-description">{{ pill.description }}</p>
+                    </div>
+                    <div class="feature-pill-media-container">
+                        {% if pill.video %}
+                        <div class="feature-pill-media-wrapper">
+                            <video class="feature-pill-video" autoplay loop muted playsinline preload="auto">
+                                <source src="{{ url_for('static', filename=pill.video) }}" type="video/mp4">
+                            </video>
+                            <img class="feature-pill-frozen-frame" alt="" aria-hidden="true">
+                        </div>
+                        {% else %}
+                        <img src="{{ url_for('static', filename=pill.image) }}" alt="{{ pill.title }}" class="feature-pill-image">
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </section>
+
             <!-- Why Discord Section -->
             <section class="why-discord-section">
-            <!-- Wumpus Character - at top edge -->
-            <div class="wumpus-container">
-                <div class="wumpus-character">
-                    <div class="wumpus-leaf">
-                        <img src="{{ url_for('static', filename='WumpusLeaf.png') }}" alt="Leaf">
+                <!-- Wumpus Character - at top edge -->
+                <div class="wumpus-container">
+                    <div class="wumpus-character">
+                        <div class="wumpus-leaf">
+                            <img src="{{ url_for('static', filename='WumpusLeaf.png') }}" alt="Leaf">
+                        </div>
+                        <img src="{{ url_for('static', filename='WumpusDiscord.png') }}" alt="Wumpus">
                     </div>
-                    <img src="{{ url_for('static', filename='WumpusDiscord.png') }}" alt="Wumpus">
                 </div>
-            </div>
 
-            <h2 class="why-discord-title">{{ why_discord_title }}</h2>
+                <h2 class="why-discord-title">{{ why_discord_title }}</h2>
 
-            <!-- Discord Branding - Logo only -->
-            <div class="discord-branding">
-                <img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord Logo" class="discord-logo">
-            </div>
-
-            <!-- Discord Stats -->
-            <div class="discord-stats">
-                {% for stat in why_discord_stats %}
-                <div class="discord-stat-item">
-                    <div class="stat-number" data-target="{{ stat.value }}">0</div>
-                    <div class="stat-label">{{ stat.label }}</div>
+                <!-- Discord Branding - Logo only -->
+                <div class="discord-branding">
+                    <img src="{{ url_for('static', filename='DiscordLogo.png') }}" alt="Discord Logo" class="discord-logo">
                 </div>
-                {% endfor %}
-            </div>
 
-            <!-- Benefits Grid -->
-            <div class="discord-benefits-grid">
-                {% for benefit in why_discord_benefits %}
-                <div class="benefit-card">
-                    <h3 class="benefit-title">{{ benefit.title }}</h3>
-                    <p class="benefit-description">{{ benefit.description }}</p>
+                <!-- Discord Stats -->
+                <div class="discord-stats">
+                    {% for stat in why_discord_stats %}
+                    <div class="discord-stat-item">
+                        <div class="stat-number" data-target="{{ stat.value }}">0</div>
+                        <div class="stat-label">{{ stat.label }}</div>
+                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
-            </div>
 
-            <!-- Large Wordmark at bottom -->
-            <img src="{{ url_for('static', filename='Wordmark.svg') }}" alt="Discord" class="discord-wordmark-bottom">
-        </section>
+                <!-- Benefits Grid -->
+                <div class="discord-benefits-grid">
+                    {% for benefit in why_discord_benefits %}
+                    <div class="benefit-card">
+                        <h3 class="benefit-title">{{ benefit.title }}</h3>
+                        <p class="benefit-description">{{ benefit.description }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Large Wordmark at bottom -->
+                <img src="{{ url_for('static', filename='Wordmark.svg') }}" alt="Discord" class="discord-wordmark-bottom">
+            </section>
 
         </div>
     </div>
@@ -201,6 +578,56 @@
                 );
 
                 observer.observe(statNumber);
+            });
+        })();
+
+        // Handle video pause/resume when tab visibility changes
+        (() => {
+            const mediaWrappers = document.querySelectorAll('.feature-pill-media-wrapper');
+            if (mediaWrappers.length === 0) return;
+
+            // Capture current frame as data URL
+            function captureFrame(video) {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth || 640;
+                    canvas.height = video.videoHeight || 360;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    return canvas.toDataURL('image/jpeg', 0.9);
+                } catch (e) {
+                    console.warn('Could not capture frame:', e);
+                    return null;
+                }
+            }
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    // Tab hidden - capture frames and show frozen overlay
+                    mediaWrappers.forEach(wrapper => {
+                        const video = wrapper.querySelector('.feature-pill-video');
+                        const frozenFrame = wrapper.querySelector('.feature-pill-frozen-frame');
+                        if (!video || !frozenFrame) return;
+
+                        // Capture the current frame
+                        const frame = captureFrame(video);
+                        if (frame) {
+                            frozenFrame.src = frame;
+                            frozenFrame.classList.add('visible');
+                        }
+                        video.pause();
+                    });
+                } else {
+                    // Tab visible again - hide frozen frame and resume video
+                    mediaWrappers.forEach(wrapper => {
+                        const video = wrapper.querySelector('.feature-pill-video');
+                        const frozenFrame = wrapper.querySelector('.feature-pill-frozen-frame');
+                        if (!video || !frozenFrame) return;
+
+                        frozenFrame.classList.remove('visible');
+                        video.play().catch(() => {});
+                    });
+                }
             });
         })();
     </script>

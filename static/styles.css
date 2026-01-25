@@ -177,7 +177,7 @@ body {
     position: relative;
     z-index: 3;
     overflow: visible;
-    margin-top: 400px;
+    margin-top: 0;
 }
 
 .why-discord-title {

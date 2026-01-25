@@ -25,22 +25,7 @@ from .paid_services_terms import PAID_SERVICES_TERMS_SECTIONS
 from .bridge import BRIDGE_DOWNLOAD_URL, BRIDGE_DESCRIPTION
 
 # Import site-wide settings
-from .site import (
-    SITE_FONT,
-    HEADING_FONT,
-    CODE_FONT,
-    BASE_FONT_SIZE,
-    LINE_HEIGHT,
-    SITE_NAME,
-    SITE_DESCRIPTION,
-    COPYRIGHT_TEXT,
-    MAX_CONTENT_WIDTH,
-    BORDER_RADIUS,
-    SPACING_UNIT,
-    ANIMATIONS_ENABLED,
-    TRANSITION_DURATION,
-    TRANSITION_EASING,
-)
+from .site import SITE_FONT, SITE
 
 
 def get_all_config():
@@ -54,22 +39,3 @@ def get_all_config():
         # Backwards compatibility aliases
         'page_titles': PAGES['titles'],
     }
-
-
-# Dictionary of site-wide settings for easy template access
-SITE = {
-    'font': SITE_FONT,
-    'heading_font': HEADING_FONT or SITE_FONT,
-    'code_font': CODE_FONT,
-    'base_font_size': BASE_FONT_SIZE,
-    'line_height': LINE_HEIGHT,
-    'name': SITE_NAME,
-    'description': SITE_DESCRIPTION,
-    'copyright': COPYRIGHT_TEXT,
-    'max_width': MAX_CONTENT_WIDTH,
-    'border_radius': BORDER_RADIUS,
-    'spacing': SPACING_UNIT,
-    'animations': ANIMATIONS_ENABLED,
-    'transition_duration': TRANSITION_DURATION,
-    'transition_easing': TRANSITION_EASING,
-}

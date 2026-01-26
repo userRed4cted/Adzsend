@@ -58,8 +58,8 @@ HOMEPAGE = {
             'gradient_rotation': 135,  # Gradient angle in degrees (0 = top to bottom, 90 = left to right)
         },
         {
-            'title': "CONTROL & POWER",
-            'description': "Everyone desires power, start controlling your marketing campaigns, instead of letting people control them for you. Overpaying marketing services that take long and result in minimal results, NO MORE!: with Adzsend.",
+            'title': "CONTROL",
+            'description': "Everyone desires power, start finally controlling your marketing campaigns, instead of letting people control them for you. Overpaying marketing services that take long and have minimal results, NO MORE!",
             'video': "placeholderimagething2.mp4",
             'gradient': True,
             'color_start': "rgba(255, 255, 255, 0.02)",

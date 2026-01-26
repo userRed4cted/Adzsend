@@ -136,16 +136,16 @@ SUBSCRIPTION_PLANS = {
     # PRO PLAN
     # -------------------------------------------------------------------------
     'plan_2': {
-        'name': 'Max x3 & x5',
+        'name': 'Max',
         'price_monthly': 17.50,
         'price_yearly': 160,
         'features': [
-            'x3 or x5 (of Pro) message posting',
+            '3200 message posts per week',
             'Unlimited channel and server selections',
             'Advanced analytics',
             'Personal panel',
         ],
-        'message_limit': 2400,  # x5=4000 -1 = unlimited
+        'message_limit': 3200,  # x4 of pro | -1 = unlimited
         'usage_type': 'amount',
         'allowance_period': 'Weekly',
         'savings_text': '$12.50 per month',
@@ -185,17 +185,17 @@ BUSINESS_PLANS = {
         # FEATURES LIST
         # Element: Bullet points with checkmarks on plan card
         'features': [
-            '5000 message posts per week across all members',
+            '3200 message posts per week across all members',
             'Unlimited channel and server selections',
             'Advanced analytics',
             'Team management',
-            'Up to 15 team members',
+            'Up to 3 team members',
             'Team panel for owner and members',
         ],
 
         # MESSAGE LIMIT
         # Total messages shared across ALL team members
-        'message_limit': 5000,
+        'message_limit': 3200,
 
         # USAGE TYPE & PERIOD
         'usage_type': 'allowance',
@@ -203,7 +203,7 @@ BUSINESS_PLANS = {
 
         # MAX TEAM MEMBERS
         # Maximum number of people who can join this business team
-        'max_members': 15,
+        'max_members': 3,
 
         # SAVINGS TEXT & COLOR (shown when Yearly selected)
         'savings_text': '$16 per month',
@@ -227,17 +227,17 @@ BUSINESS_PLANS = {
         'price_monthly': 30,
         'price_yearly': 288,
         'features': [
-            'Unlimited message posting',
+            '7000 message posts per week across all members',
             'Unlimited channel and server selections',
             'Advanced analytics',
             'Team management',
-            'Up to 40 team members',
+            'Up to 10 team members',
             'Team panel for owner and members',
         ],
-        'message_limit': -1,  # -1 = unlimited
+        'message_limit': 7000,  # -1 = unlimited
         'usage_type': 'amount',
         'allowance_period': 'monthly',
-        'max_members': 40,
+        'max_members': 10,
         'savings_text': '$24 per month',
         'savings_color': '#15d8bc',
         'button_text': 'Subscribe',

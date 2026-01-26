@@ -296,8 +296,6 @@ async function autoVerifyToken() {
 
         const data = await response.json();
 
-        console.log('Verify token response:', response.status, data);
-
         if (data.success && data.valid) {
             // Clear pending data
             pendingLinkAccount = null;

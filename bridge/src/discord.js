@@ -117,7 +117,6 @@ async function ensureGatewayConnection(token) {
         await gatewayManager.ensureConnection(token, 'online');
     } catch (error) {
         // Gateway connection failed, but we can still use REST API
-        console.warn('[Discord] Gateway connection failed, using REST only:', error.message);
     }
 }
 
@@ -130,7 +129,6 @@ async function sendTypingIndicator(token, channelId) {
         const response = await makeRequest('POST', `/channels/${channelId}/typing`, token);
         return response.status === 204 || response.status === 200;
     } catch (error) {
-        console.error('Error sending typing indicator:', error);
         return false;
     }
 }

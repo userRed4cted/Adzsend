@@ -54,7 +54,6 @@ function checkForUpdates(currentVersion) {
             cleanup();
             // Don't reject on error, just return no update available
             // This prevents crashes when offline or GitHub is unreachable
-            console.log('[Updater] Check failed:', error.message);
             resolve({
                 updateAvailable: false,
                 currentVersion,

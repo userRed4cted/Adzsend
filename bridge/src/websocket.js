@@ -20,14 +20,12 @@ class WebSocketClient {
             // Set connection timeout (15 seconds)
             this.connectionTimeout = setTimeout(() => {
                 if (!this.isConnectedFlag && this.ws) {
-                    console.log('Connection timeout');
                     this.ws.terminate();
                     this.callbacks.onError('Connection timeout - server not responding');
                 }
             }, 15000);
 
             this.ws.on('open', () => {
-                console.log('WebSocket connection opened');
                 // Send authentication
                 this.send({
                     type: 'auth',
@@ -40,12 +38,11 @@ class WebSocketClient {
                     const message = JSON.parse(data.toString());
                     this.handleMessage(message);
                 } catch (error) {
-                    console.error('Error parsing message:', error);
+                    // Silent fail on parse errors
                 }
             });
 
             this.ws.on('close', (code, reason) => {
-                console.log('WebSocket closed:', code, reason.toString());
                 this.isConnectedFlag = false;
                 this.stopHeartbeat();
 
@@ -69,12 +66,10 @@ class WebSocketClient {
             });
 
             this.ws.on('error', (error) => {
-                console.error('WebSocket error:', error);
                 this.callbacks.onError(error.message || 'Connection error');
             });
 
         } catch (error) {
-            console.error('Error creating WebSocket:', error);
             this.callbacks.onError(error.message || 'Failed to connect');
         }
     }
@@ -82,7 +77,6 @@ class WebSocketClient {
     handleMessage(message) {
         switch (message.type) {
             case 'auth_success':
-                console.log('Authentication successful');
                 this.isConnectedFlag = true;
                 this.clearConnectionTimeout();
                 this.startHeartbeat();
@@ -90,7 +84,6 @@ class WebSocketClient {
                 break;
 
             case 'auth_failed':
-                console.log('Authentication failed:', message.reason);
                 this.callbacks.onAuthFailed(message.reason || 'Authentication failed');
                 break;
 
@@ -120,7 +113,8 @@ class WebSocketClient {
                 break;
 
             default:
-                console.log('Unknown message type:', message.type);
+                // Unknown message type - ignore
+                break;
         }
     }
 
@@ -130,7 +124,6 @@ class WebSocketClient {
 
         // Only prepare if bridge is connected/active
         if (!this.isConnectedFlag) {
-            console.log('[WebSocket] Ignoring prepare command - bridge not active');
             return;
         }
 
@@ -138,12 +131,10 @@ class WebSocketClient {
             return;
         }
 
-        console.log(`[WebSocket] Pre-connecting Gateway for ${command.tokens.length} token(s)`);
-
         // Connect all tokens in parallel (don't wait, just start connections)
         for (const token of command.tokens) {
-            ensureGatewayConnection(token).catch(err => {
-                console.warn('[WebSocket] Gateway pre-connect failed:', err.message);
+            ensureGatewayConnection(token).catch(() => {
+                // Silent fail on pre-connect
             });
         }
     }
@@ -153,7 +144,6 @@ class WebSocketClient {
 
         // Validate command structure
         if (!command || !Array.isArray(command.tasks) || command.tasks.length === 0) {
-            console.error('Invalid command structure received');
             this.send({
                 type: 'send_result',
                 id: command?.id || 'unknown',
@@ -222,7 +212,6 @@ class WebSocketClient {
                 } else if (result.error === 'rate_limited') {
                     // Rate limited - wait and continue with remaining tasks
                     const retryAfter = (result.retry_after || 5) * 1000;
-                    console.log(`[WebSocket] Rate limited, waiting ${retryAfter}ms before next message`);
                     await this.sleep(retryAfter);
                 }
 

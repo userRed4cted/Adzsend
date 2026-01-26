@@ -1359,8 +1359,8 @@ def disconnect_bridge_for_user(user_id):
             ws = active_bridge_connections[user_id]
             ws.send(json.dumps({'type': 'key_revoked', 'reason': 'Secret key was regenerated'}))
             ws.close()
-        except Exception as e:
-            print(f'[Bridge] Error disconnecting user {user_id}: {e}')
+        except Exception:
+            pass
         finally:
             active_bridge_connections.pop(user_id, None)
 
@@ -1406,7 +1406,6 @@ def send_message_via_bridge(user_id, discord_token, channel_id, message, timeout
         else:
             return {'success': False, 'error': 'Bridge request timeout'}
     except Exception as e:
-        print(f'[Bridge] Error sending via bridge for user {user_id}: {e}')
         return {'success': False, 'error': str(e)}
     finally:
         # Clean up pending request
@@ -1455,12 +1454,17 @@ def bridge_websocket(ws):
                     pending_bridge_requests[request_id]['result'] = message
                     pending_bridge_requests[request_id]['event'].set()
 
-    except Exception as e:
-        print(f'[Bridge WebSocket] Error for user {user_id}: {e}')
+    except Exception:
+        pass
     finally:
         # Remove from active connections
         if user_id:
             active_bridge_connections.pop(user_id, None)
+            # Signal any pending requests that the bridge disconnected
+            for req_id, req_data in list(pending_bridge_requests.items()):
+                if req_data.get('result') is None:
+                    req_data['result'] = {'results': [{'success': False, 'error': 'Bridge disconnected'}]}
+                    req_data['event'].set()
         # Always mark bridge as offline when connection ends
         if user_id:
             set_bridge_offline(user_id)
@@ -1553,6 +1557,30 @@ def paid_services_terms():
         page_title=PAID_SERVICES_TERMS_TITLE,
         effective_date=PAID_SERVICES_TERMS_EFFECTIVE_DATE,
         last_updated=PAID_SERVICES_TERMS_LAST_UPDATED,
+        user=user,
+        user_data=user_data,
+        parse_links=parse_markdown_links
+    )
+
+
+@app.route('/terms/eecc-addendum')
+def eecc_addendum():
+    """EECC Addendum page"""
+    from config.eecc_addendum import EECC_ADDENDUM_SECTIONS, EECC_ADDENDUM_TITLE, EECC_ADDENDUM_EFFECTIVE_DATE, EECC_ADDENDUM_LAST_UPDATED
+
+    # Get user data if logged in
+    user = None
+    user_data = None
+    if 'authenticated' in session and 'user_id' in session:
+        user = get_user_by_id(session.get('user_id'))
+        if user:
+            user_data = get_user_data(user['id'])
+
+    return render_template('eecc_addendum.html',
+        sections=EECC_ADDENDUM_SECTIONS,
+        page_title=EECC_ADDENDUM_TITLE,
+        effective_date=EECC_ADDENDUM_EFFECTIVE_DATE,
+        last_updated=EECC_ADDENDUM_LAST_UPDATED,
         user=user,
         user_data=user_data,
         parse_links=parse_markdown_links

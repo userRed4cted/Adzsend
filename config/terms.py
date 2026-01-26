@@ -2,8 +2,8 @@
 
 # Metadata
 TERMS_TITLE = "ADZSEND TERMS OF SERVICE"
-TERMS_EFFECTIVE_DATE = "January 19 2026"
-TERMS_LAST_UPDATED = "January 19 2026"
+TERMS_EFFECTIVE_DATE = "January 26 2026"
+TERMS_LAST_UPDATED = "January 26 2026"
 
 TERMS_SECTIONS = [
     {
@@ -144,13 +144,21 @@ TERMS_SECTIONS = [
 
             "These terms cover the entire agreement between you and Adzsend for your use of our services.",
 
-            "Where additional terms apply to our products or services, the additional terms will control with respect to your use of that product or service to the extent of any conflict with these terms. Additional information about our services is provided for users in Austria [here](...).",
+            "Where additional terms apply to our products or services, the additional terms will control with respect to your use of that product or service to the extent of any conflict with these terms. Additional information about our services is provided for users in Austria [here](~/terms/eecc-addendum).",
 
             "If you fail to follow these terms and we don't immediately act, that doesn't mean we're giving up any of our legal rights (such as acting in the future). If any part of these terms ends up being invalid or unenforceable based on a decision by any court or competent authority, the rest of these terms will not be affected. You may not assign these terms to anyone else without our written consent. We may assign our rights to any of our affiliates or subsidiaries, or to any successor in interest of any business associated with our services.",
 
             "We may decide to update these terms: (1) to reflect changes to our services or our business, (2) for legal or regulatory reasons, (3) to prevent abuse on or of our services, or (4) to protect or serve users of our services better. If these changes materially affect your Adzsend use or your legal rights, we'll give you reasonable advance notice (unless the updates are urgent). If you continue to use our services after the changes have taken effect, it means that you agree to the changes. If you don't agree, you must stop using our services.",
 
             "Adzsend is not affiliated with, endorsed by, or sponsored by any third-party platform, including Discord. You are responsible for ensuring that your use of the services complies with any applicable third-party terms, rules, or policies. Adzsend is not responsible for enforcement actions, suspensions, or terminations imposed by third parties." # chatgpt
+        ]
+    },
+    {
+        "title": "CONTACTING EACH OTHER",
+        "paragraphs": [
+            "If you have any questions about, or wish to contact us in connection with, these terms, please contact us at 'adzsend.help@gmail.com' unless otherwise stated in these terms. We may send you electronic communications related to our services. Where required, we'll get your consent before sending you direct marketing, and we'll make it easy for you to opt out.",
+
+            "For technical support or other assistance with respect to our services, you can submit a request [here](~/support).",
         ]
     },
 ]

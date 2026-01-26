@@ -73,7 +73,7 @@ class DiscordGatewayClient {
                 }, 30000);
 
                 this.ws.on('open', () => {
-                    console.log('[Gateway] Connection opened');
+                    // Connection opened - wait for HELLO
                 });
 
                 this.ws.on('message', (data) => {
@@ -81,17 +81,15 @@ class DiscordGatewayClient {
                         const message = JSON.parse(data.toString());
                         this.handleMessage(message, status, resolve, reject, timeout);
                     } catch (error) {
-                        console.error('[Gateway] Error parsing message:', error);
+                        // Silent fail on parse errors
                     }
                 });
 
                 this.ws.on('close', (code, reason) => {
-                    console.log('[Gateway] Connection closed:', code, reason.toString());
                     this.handleClose(code);
                 });
 
                 this.ws.on('error', (error) => {
-                    console.error('[Gateway] WebSocket error:', error.message);
                     if (this.state === ConnectionState.CONNECTING) {
                         clearTimeout(timeout);
                         reject(error);
@@ -143,12 +141,10 @@ class DiscordGatewayClient {
                 break;
 
             case GatewayOpcodes.RECONNECT:
-                console.log('[Gateway] Server requested reconnect');
                 this.reconnect();
                 break;
 
             case GatewayOpcodes.INVALID_SESSION:
-                console.log('[Gateway] Invalid session, resumable:', d);
                 if (d) {
                     // Can resume
                     setTimeout(() => this.sendResume(), 1000 + Math.random() * 4000);
@@ -169,25 +165,18 @@ class DiscordGatewayClient {
     handleDispatch(eventName, data, resolve, timeout) {
         switch (eventName) {
             case 'READY':
-                console.log('[Gateway] READY - Session established');
                 this.state = ConnectionState.CONNECTED;
                 this.sessionId = data.session_id;
                 this.resumeGatewayUrl = data.resume_gateway_url;
 
                 // If user's status from settings is available, update presence to match
                 // This makes the bridge appear exactly as the user's Discord app would
-                if (data.user_settings_proto || data.user_settings) {
-                    // Discord sometimes sends user settings in READY
-                    // The status might be in sessions or user_settings
-                    console.log('[Gateway] User settings received, presence synced');
-                }
 
                 clearTimeout(timeout);
                 resolve(true);
                 break;
 
             case 'RESUMED':
-                console.log('[Gateway] Session resumed');
                 this.state = ConnectionState.CONNECTED;
                 clearTimeout(timeout);
                 resolve(true);
@@ -211,13 +200,10 @@ class DiscordGatewayClient {
         // Handle specific close codes
         const nonRecoverableCodes = [4004, 4010, 4011, 4012, 4013, 4014];
         if (nonRecoverableCodes.includes(code)) {
-            console.log('[Gateway] Non-recoverable close code:', code);
             this.sessionId = null;
             this.sequence = null;
         }
-
         // No auto-reconnect - user must manually reactivate bridge
-        console.log('[Gateway] Connection closed, no auto-reconnect');
     }
 
     sendIdentify(status = 'online') {
@@ -292,7 +278,6 @@ class DiscordGatewayClient {
             // Then send heartbeats at regular interval
             this.heartbeatInterval = setInterval(() => {
                 if (!this.heartbeatAcked) {
-                    console.log('[Gateway] Heartbeat not acknowledged, reconnecting');
                     this.ws.terminate();
                     return;
                 }
@@ -382,7 +367,6 @@ class GatewayManager {
         // Schedule new cleanup with random delay
         const delay = this.getRandomIdleTimeout();
         const timeout = setTimeout(() => {
-            console.log(`[GatewayManager] Cleaning up idle connection after ${Math.round(delay / 1000)}s`);
             this.disconnect(token);
         }, delay);
 
@@ -414,10 +398,8 @@ class GatewayManager {
         try {
             await client.connect(status);
             this.connections.set(token, client);
-            console.log(`[GatewayManager] Connected token: ${token.substring(0, 20)}...`);
             return client;
         } catch (error) {
-            console.error(`[GatewayManager] Failed to connect: ${error.message}`);
             throw error;
         }
     }

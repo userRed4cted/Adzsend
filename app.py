@@ -354,8 +354,15 @@ def home():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login_page():
-    if 'authenticated' in session:
-        return redirect(url_for('dashboard'))
+    # Check if user is actually authenticated (not just has old session data)
+    if 'authenticated' in session and 'user' in session and 'user_session_id' in session:
+        # Validate the session is still valid in the database
+        if validate_user_session(session['user']['id'], session['user_session_id']):
+            # Already logged in - redirect to referrer or home (not dashboard)
+            referrer = request.referrer
+            if referrer and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
+                return redirect(referrer)
+            return redirect(url_for('home'))
 
     if request.method == 'GET':
         error = session.pop('login_error', None)
@@ -428,8 +435,15 @@ def login_page():
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup_page():
-    if 'authenticated' in session:
-        return redirect(url_for('dashboard'))
+    # Check if user is actually authenticated (not just has old session data)
+    if 'authenticated' in session and 'user' in session and 'user_session_id' in session:
+        # Validate the session is still valid in the database
+        if validate_user_session(session['user']['id'], session['user_session_id']):
+            # Already logged in - redirect to referrer or home (not dashboard)
+            referrer = request.referrer
+            if referrer and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
+                return redirect(referrer)
+            return redirect(url_for('home'))
 
     if request.method == 'GET':
         error = session.pop('signup_error', None)

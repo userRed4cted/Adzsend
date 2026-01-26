@@ -8,32 +8,10 @@ Existing glow effects (colored box-shadows on active/selected states) are fine.
 =============================================================================
 */
 
-/* GG Sans Font */
-@font-face {
-    font-family: 'gg sans';
-    src: url('fonts/ggsans-Regular.ttf') format('truetype');
-    font-weight: 400;
-    font-style: normal;
-}
-
+/* GG Sans Font - Using Medium as base, Bold for emphasis */
 @font-face {
     font-family: 'gg sans';
     src: url('fonts/ggsans-Medium.ttf') format('truetype');
-    font-weight: 500;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'gg sans';
-    src: url('fonts/ggsans-Semibold.ttf') format('truetype');
-    font-weight: 600;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: 'gg sans';
-    src: url('fonts/ggsans-Bold.ttf') format('truetype');
-    font-weight: 700;
     font-style: normal;
 }
 
@@ -56,11 +34,17 @@ Existing glow effects (colored box-shadows on active/selected states) are fine.
     font-style: normal;
 }
 
+@font-face {
+    font-family: 'ABC Ginto Nord';
+    src: url('fonts/ABCGintoNord-Black-Trial.otf') format('opentype');
+    font-style: normal;
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'gg sans', sans-serif !important;
+    font-family: 'gg sans';
 }
 
 html {
@@ -97,7 +81,7 @@ body {
 
 /* Ensure ALL form elements use gg sans */
 input, button, select, textarea, label, a, span, p, h1, h2, h3, h4, h5, h6, div {
-    font-family: 'gg sans', sans-serif !important;
+    font-family: 'gg sans';
 }
 
 :root {
@@ -118,11 +102,10 @@ html, body {
 }
 
 body {
-    font-family: 'gg sans', sans-serif;
+    font-family: 'gg sans';
     background: #121215;
     color: #ffffff;
     overflow-x: hidden;
-    font-weight: 400;
 }
 
 /* Panel */
@@ -153,7 +136,6 @@ body {
 
 .about-title {
     font-size: 2rem;
-    font-weight: 700;
     text-align: center;
     margin-bottom: 2rem;
     color: #ffffff;
@@ -182,8 +164,7 @@ body {
 
 .why-discord-title {
     font-size: 2rem;
-    font-family: 'ABC Ginto Nord', 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-weight: 700;
+    font-family: 'ABC Ginto Nord';
     text-align: center;
     margin-bottom: 1.5rem;
     color: #ffffff;
@@ -230,7 +211,7 @@ body {
 
 .discord-stat-item .stat-number {
     font-size: 3rem;
-    font-weight: 900;
+    font-family: 'ABC Ginto Nord' !important;
     color: #ffffff;
     line-height: 1;
     contain: layout style paint;
@@ -240,7 +221,6 @@ body {
 .discord-stat-item .stat-label {
     font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.7);
-    font-weight: 500;
     letter-spacing: 0.5px;
 }
 
@@ -262,7 +242,6 @@ body {
 
 .benefit-title {
     font-size: 1.25rem;
-    font-weight: 700;
     color: #ffffff;
     margin-bottom: 0.75rem;
 }
@@ -371,7 +350,6 @@ body {
 
 .navbar-title {
     font-size: 2.1rem;
-    font-weight: 700;
     color: #ffffff;
     margin: 0;
 }
@@ -422,7 +400,6 @@ body {
     align-items: center;
     justify-content: center;
     color: white;
-    font-weight: 700;
     border: none;
 }
 
@@ -432,7 +409,6 @@ body {
 }
 
 .username {
-    font-weight: 600;
     color: #ffffff;
     font-size: 1rem;
 }
@@ -452,7 +428,6 @@ body {
 .auth-btn {
     padding: 0.6rem 1.5rem;
     border-radius: 6px;
-    font-weight: 700;
     font-size: 0.95rem;
     text-decoration: none;
     transition: all 0.3s ease;
@@ -470,7 +445,6 @@ body {
 .auth-btn.login-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     border-color: #ffffff;
-    font-weight: 700;
 }
 
 .auth-btn.signup-btn {
@@ -482,7 +456,6 @@ body {
 .auth-btn.signup-btn:hover {
     background: #e0e0e0;
     border-color: #e0e0e0;
-    font-weight: 700;
 }
 
 /* Navigation Links */
@@ -497,7 +470,6 @@ body {
     color: #81828A;
     text-decoration: none;
     font-size: 0.95rem;
-    font-weight: 500;
     padding: 0.5rem 0;
     transition: color 0.2s ease;
     cursor: pointer;
@@ -601,7 +573,6 @@ body {
     color: #15d8bc;
     padding: 0;
     font-size: 0.85rem;
-    font-weight: 500;
     text-decoration: none;
     cursor: pointer;
     line-height: 1;
@@ -821,7 +792,6 @@ body {
     color: #ffffff;
     text-decoration: none;
     font-size: 1rem;
-    font-weight: 500;
     padding: 1rem 0;
     transition: opacity 0.2s ease;
     position: relative;
@@ -895,7 +865,6 @@ body {
     padding: 0.75rem 1.25rem;
     color: #ffffff;
     text-decoration: none;
-    font-weight: 500;
     transition: all 0.3s ease;
 }
 
@@ -944,7 +913,6 @@ body {
     border: none;
     border-radius: 8px;
     color: #ffffff;
-    font-weight: 700;
     font-size: 1rem;
     letter-spacing: 0.5px;
     cursor: pointer;
@@ -1029,7 +997,6 @@ body {
 
 .hero-brand {
     font-size: 3.15rem;
-    font-weight: 700;
     color: #ffffff;
     margin: 0;
 }
@@ -1051,7 +1018,6 @@ body {
 
 .hero-tagline {
     font-size: 2.1rem;
-    font-weight: 700;
     color: #ffffff;
     margin: 0;
     white-space: nowrap;
@@ -1073,7 +1039,6 @@ body {
 
 .hero-title {
     font-size: 1.225rem;
-    font-weight: 400;
     color: #ffffff;
     line-height: 1.4;
     letter-spacing: 0.5px;
@@ -1108,7 +1073,6 @@ body {
     border: none;
     border-radius: 8px;
     color: #ffffff;
-    font-weight: 700;
     font-size: 1rem;
     letter-spacing: 0.5px;
     cursor: pointer;
@@ -1136,7 +1100,6 @@ body {
     border: none;
     border-radius: 8px;
     color: #121215;
-    font-weight: 700;
     font-size: 1rem;
     letter-spacing: 0.5px;
     cursor: pointer;
@@ -1219,7 +1182,6 @@ body {
 .scroll-text {
     font-size: 0.9rem;
     color: #81828A;
-    font-weight: 400;
 }
 
 .scroll-arrow {
@@ -1250,7 +1212,6 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     font-size: 0.95rem;
-    font-weight: 600;
     letter-spacing: 0.5px;
     box-shadow: 0 0 15px rgba(223, 40, 31, 0.4);
 }
@@ -1339,7 +1300,6 @@ body {
 }
 
 .panel-header {
-    font-weight: 600;
     color: #ffffff;
     margin-bottom: 0.5rem;
     font-size: 0.95rem;
@@ -1381,8 +1341,7 @@ body {
     border-radius: 8px;
     color: #81828A;
     font-size: 0.85rem;
-    font-family: 'gg sans', sans-serif;
-    font-weight: 400;
+    font-family: 'gg sans';
     transition: background-color 0.3s ease;
     box-sizing: border-box;
     text-overflow: ellipsis;
@@ -1487,7 +1446,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 900;
     color: white;
     font-size: 0.9rem;
     flex-shrink: 0;
@@ -1501,7 +1459,6 @@ body {
 
 .server-name {
     font-size: 0.85rem;
-    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1511,7 +1468,6 @@ body {
 .server-count {
     font-size: 0.7rem;
     color: #81828A;
-    font-weight: 600;
     margin-top: 0.15rem;
     letter-spacing: 0.5px;
 }
@@ -1561,7 +1517,6 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 1rem;
-    font-weight: 700;
     color: #ffffff;
     flex-shrink: 0;
 }
@@ -1599,7 +1554,6 @@ body {
     transform: translate(-50%, -50%);
     color: white;
     font-size: 1rem;
-    font-weight: 900;
 }
 
 .channel-label {
@@ -1608,7 +1562,6 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-weight: 400;
 }
 
 .no-selection {
@@ -1723,7 +1676,6 @@ body {
     padding: 0.3rem 0.6rem;
     border-radius: 4px;
     font-size: 0.7rem;
-    font-weight: 500;
     flex-shrink: 0;
     border: none;
 }
@@ -1760,7 +1712,6 @@ body {
     justify-content: center;
     background: transparent;
     font-size: 0.75rem;
-    font-weight: 700;
     border: none;
 }
 
@@ -1776,7 +1727,6 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-weight: 500;
 }
 
 .tag-remove {
@@ -1789,7 +1739,6 @@ body {
     font-size: 0.85rem;
     transition: all 0.2s ease;
     flex-shrink: 0;
-    font-weight: 600;
 }
 
 .tag-remove:hover {
@@ -1803,7 +1752,6 @@ body {
     border: none;
     border-radius: 8px;
     color: #121215;
-    font-weight: 500;
     font-size: 1rem;
     letter-spacing: 0.5px;
     cursor: pointer;
@@ -1829,7 +1777,6 @@ body {
     border: none;
     border-radius: 6px;
     font-size: 0.85rem;
-    font-weight: 500;
     color: #121215;
 }
 
@@ -1849,7 +1796,6 @@ body {
     color: #ffffff;
     font-family: inherit;
     font-size: 0.95rem;
-    font-weight: 400;
     resize: none;
     transition: all 0.3s ease;
     min-height: 200px;
@@ -1879,7 +1825,6 @@ body {
     background: var(--bg-tertiary);
     border: none;
     border-radius: 6px;
-    font-weight: 600;
     letter-spacing: 0.5px;
 }
 
@@ -1894,7 +1839,6 @@ body {
     border-radius: 8px;
     color: #121215;
     cursor: pointer;
-    font-weight: 500;
     transition: all 0.3s ease;
 }
 
@@ -1928,7 +1872,6 @@ body {
 .empty-state h2 {
     font-size: 1.5rem;
     color: #F7F7F8;
-    font-weight: 700;
 }
 
 .empty-state p {
@@ -1954,7 +1897,6 @@ body {
     border: none;
     border-radius: 8px;
     color: #ffffff;
-    font-weight: 600;
     font-size: 1rem;
     letter-spacing: 0.5px;
     cursor: pointer;
@@ -1981,7 +1923,6 @@ body {
     padding: 0.75rem;
     background: var(--bg-secondary);
     border-radius: 12px;
-    font-weight: 500;
 }
 
 .settings-panels {
@@ -2009,7 +1950,6 @@ body {
 
 .settings-panel-header {
     font-size: 1.5rem;
-    font-weight: 700;
     color: #ffffff;
     margin-bottom: 1rem;
     letter-spacing: 0.5px;
@@ -2032,13 +1972,11 @@ body {
 .usage-label {
     font-size: 0.9rem;
     color: #81828A;
-    font-weight: 500;
 }
 
 .usage-value {
     font-size: 1.75rem;
     color: #ffffff;
-    font-weight: 700;
 }
 
 .usage-progress-bar {
@@ -2066,7 +2004,6 @@ body {
 
 .setting-label {
     font-size: 1.1rem;
-    font-weight: 600;
     color: #ffffff;
     letter-spacing: 0.3px;
 }
@@ -2084,7 +2021,6 @@ body {
     color: #121215;
     border: none;
     border-radius: 6px;
-    font-weight: 500;
     font-size: 0.95rem;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -2178,7 +2114,6 @@ body {
 .delay-option-label {
     font-size: 0.9rem;
     color: #dcddde;
-    font-weight: 400;
     cursor: pointer;
 }
 
@@ -2211,7 +2146,6 @@ body {
     color: #ffffff;
     border: 2px solid #15d8bc;
     border-radius: 8px;
-    font-weight: 600;
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -2249,7 +2183,6 @@ body {
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
-    font-weight: 500;
     transition: color 0.2s ease;
 }
 
@@ -2284,7 +2217,6 @@ body {
 .billing-label {
     font-size: 1rem;
     color: #ffffff;
-    font-weight: 500;
 }
 
 .billing-label:first-child {
@@ -2381,12 +2313,11 @@ input:checked + .toggle-slider:before {
 
 .plan-name {
     font-size: 1.5rem;
-    font-weight: 700;
     color: #ffffff;
     margin-bottom: 1.5rem;
     text-transform: uppercase;
     letter-spacing: 1px;
-    font-family: 'ABC Ginto Nord', 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+    font-family: 'ABC Ginto Nord' !important;
 }
 
 .plan-price-section {
@@ -2413,16 +2344,14 @@ input:checked + .toggle-slider:before {
 
 .price {
     font-size: 3.5rem;
-    font-weight: 900;
     color: #ffffff;
     line-height: 1;
-    font-family: 'ABC Ginto Nord', 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+    font-family: 'ABC Ginto Nord' !important;
 }
 
 .period {
     font-size: 0.9rem;
     color: #81828A;
-    font-weight: 500;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     margin-top: 0.25rem;
@@ -2441,7 +2370,6 @@ input:checked + .toggle-slider:before {
 .yearly-savings {
     font-size: 0.75rem;
     color: #335FFF;
-    font-weight: 600;
     letter-spacing: 0.5px;
     margin-top: 0.25rem;
     text-transform: uppercase;
@@ -2494,7 +2422,6 @@ input:checked + .toggle-slider:before {
     color: #121215;
     border: none;
     border-radius: 6px;
-    font-weight: 500;
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -2530,7 +2457,6 @@ input:checked + .toggle-slider:before {
 
 .form-title {
     font-size: 1.75rem;
-    font-weight: 700;
     color: #ffffff;
     text-align: center;
     margin-bottom: 2rem;
@@ -2551,8 +2477,7 @@ input:checked + .toggle-slider:before {
     border-radius: 8px;
     color: #ffffff;
     font-size: 1rem;
-    font-family: 'gg sans', sans-serif;
-    font-weight: 400;
+    font-family: 'gg sans';
     transition: all 0.3s ease;
 }
 
@@ -2571,7 +2496,6 @@ input:checked + .toggle-slider:before {
     border: none;
     border-radius: 8px;
     color: #ffffff;
-    font-weight: 700;
     font-size: 1rem;
     letter-spacing: 0.5px;
     cursor: pointer;
@@ -2593,7 +2517,6 @@ input:checked + .toggle-slider:before {
     background: linear-gradient(to bottom, #15d8bc, #006e59) !important;
     color: #121215 !important;
     border: none !important;
-    font-weight: 500 !important;
 }
 
 #login-btn:hover:not(:disabled),
@@ -2605,7 +2528,6 @@ input:checked + .toggle-slider:before {
     color: #991a35;
     padding: 0.5rem 0;
     font-size: 0.9rem;
-    font-weight: 500;
     margin-bottom: 1rem;
     text-align: center;
 }
@@ -2615,7 +2537,6 @@ input:checked + .toggle-slider:before {
     border: none;
     color: #81828A;
     font-size: 0.9rem;
-    font-weight: 400;
     cursor: pointer;
     margin-top: 1rem;
     width: 100%;
@@ -2651,7 +2572,6 @@ input:checked + .toggle-slider:before {
     border: none;
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
-    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
     width: 100%;
@@ -2669,7 +2589,6 @@ input:checked + .toggle-slider:before {
     border: none;
     border-radius: 8px;
     color: #ffffff;
-    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -2684,7 +2603,6 @@ input:checked + .toggle-slider:before {
     border: none;
     border-radius: 8px;
     color: #121215;
-    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -2699,7 +2617,6 @@ input:checked + .toggle-slider:before {
     border: none;
     border-radius: 8px;
     color: #fff;
-    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -2793,7 +2710,7 @@ input:checked + .toggle-slider:before {
     padding: 0.6rem 0.75rem;
     color: #dcddde;
     font-size: 0.875rem;
-    font-family: "gg sans", sans-serif;
+    font-family: "gg sans";
     margin-top: 0.5rem;
     box-sizing: border-box;
 }
@@ -2832,7 +2749,6 @@ input:checked + .toggle-slider:before {
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    font-weight: 300;
     line-height: 1;
     border-radius: 4px;
 }
@@ -2847,10 +2763,9 @@ input:checked + .toggle-slider:before {
 .custom-popup-title {
     color: #ffffff;
     font-size: 1.125rem;
-    font-weight: 600;
     margin: 0 0 0.5rem 0;
     padding-right: 2rem;
-    font-family: "gg sans", sans-serif;
+    font-family: "gg sans";
 }
 
 /* Popup Text */
@@ -2859,7 +2774,7 @@ input:checked + .toggle-slider:before {
     font-size: 0.8925rem;
     margin: 0 0 1rem 0;
     line-height: 1.4;
-    font-family: "gg sans", sans-serif;
+    font-family: "gg sans";
     white-space: pre-wrap;
 }
 
@@ -2871,11 +2786,10 @@ input:checked + .toggle-slider:before {
     border-radius: 4px;
     padding: 0.65rem 1.25rem;
     font-size: 0.875rem;
-    font-weight: 600;
     cursor: pointer;
     transition: filter 0.2s ease;
     width: 100%;
-    font-family: "gg sans", sans-serif;
+    font-family: "gg sans";
 }
 
 .custom-popup-btn:hover {
@@ -3006,7 +2920,7 @@ input:checked + .toggle-slider:before {
 
 .support-hero-title {
     font-size: 48px;
-    font-family: 'ABC Ginto Nord', 'gg sans Bold', sans-serif !important;
+    font-family: 'ABC Ginto Nord', 'gg sans Bold' !important;
     color: #ffffff;
     text-align: center;
     line-height: 1.4;
@@ -3022,7 +2936,6 @@ input:checked + .toggle-slider:before {
 
 .support-faq-title {
     font-size: 1.225rem;
-    font-weight: 400;
     color: #ffffff;
     text-align: center;
     margin-top: 2rem;
@@ -3057,9 +2970,8 @@ input:checked + .toggle-slider:before {
 
 .faq-question-text {
     font-size: 1rem;
-    font-weight: 500;
     color: #dcddde;
-    font-family: 'gg sans Medium', sans-serif;
+    font-family: 'gg sans Medium';
 }
 
 .faq-toggle-icon {
@@ -3094,7 +3006,7 @@ input:checked + .toggle-slider:before {
     color: #81828A;
     font-size: 0.95rem;
     line-height: 1.6;
-    font-family: 'gg sans Medium', sans-serif;
+    font-family: 'gg sans Medium';
 }
 
 /* Contact Support Section */
@@ -3113,7 +3025,7 @@ input:checked + .toggle-slider:before {
     color: #dcddde;
     text-align: center;
     margin: 0;
-    font-family: 'gg sans Medium', sans-serif;
+    font-family: 'gg sans Medium';
 }
 
 /* Terms Page */
@@ -3130,7 +3042,6 @@ input:checked + .toggle-slider:before {
 
 .terms-hero-title {
     font-size: 2.5rem;
-    font-weight: 700;
     color: #ffffff;
     margin: 0;
 }
@@ -3149,7 +3060,6 @@ input:checked + .toggle-slider:before {
 
 .terms-subheader {
     font-size: 1.5rem;
-    font-weight: 600;
     color: #ffffff;
     margin: 0;
 }
@@ -3175,7 +3085,6 @@ input:checked + .toggle-slider:before {
 
 .guidelines-hero-title {
     font-size: 2.5rem;
-    font-weight: 700;
     color: #ffffff;
     margin: 0;
 }
@@ -3194,7 +3103,6 @@ input:checked + .toggle-slider:before {
 
 .guidelines-subheader {
     font-size: 1.5rem;
-    font-weight: 600;
     color: #ffffff;
     margin: 0;
 }

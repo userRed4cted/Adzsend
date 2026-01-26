@@ -312,7 +312,15 @@ async function autoVerifyToken() {
             // Show success popup
             await customAlert('WooHoo! Account linked', 'Your Discord account has been successfully linked.');
         } else {
-            if (statusDiv) {
+            // Check for specific error types that need a popup
+            if (data.error === 'discord_already_linked_other_account' && data.error_title && data.error_message) {
+                // Parse markdown links in the error message
+                const parsedMessage = data.error_message.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #15d8bc; text-decoration: underline;">$1</a>');
+                await customAlert(data.error_title, parsedMessage);
+                if (statusDiv) {
+                    statusDiv.textContent = '';
+                }
+            } else if (statusDiv) {
                 // Check if it's a CSRF error
                 if (response.status === 403 || (data.error && data.error.toLowerCase().includes('csrf'))) {
                     statusDiv.textContent = 'Invalid CSRF token.';

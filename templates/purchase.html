@@ -32,11 +32,6 @@
     {% if session.get('user') %}
     <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
     {% endif %}
-    <script>
-        window.DB_VERSION = {{ db_version }};
-        window.DB_WIPE_MESSAGE = "{{ db_wipe_message }}";
-    </script>
-    <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     {% include 'partials/base_scripts.html' %}
     <style>
@@ -45,7 +40,7 @@
             padding: 0;
             background-color: #121215;
             color: #ffffff;
-            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-family: 'gg sans';
             overflow: hidden;
             height: 100vh;
         }

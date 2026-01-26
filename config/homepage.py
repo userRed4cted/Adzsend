@@ -87,7 +87,7 @@ HOMEPAGE = {
 
         # SECTION TITLE
         # Element: Heading text for the section
-        'title': "Why use Discord for marketing?",
+        'title': "WHY USE DISCORD FOR MARKETING?",
 
         # DISCORD STATISTICS
         # Element: Stats displayed in a row showing Discord's reach

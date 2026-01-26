@@ -9,11 +9,6 @@
     {% include 'partials/config_styles.html' %}
     <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
     <script src="{{ url_for('static', filename='status_polling.js') }}"></script>
-    <script>
-        window.DB_VERSION = {{ db_version }};
-        window.DB_WIPE_MESSAGE = "{{ db_wipe_message }}";
-    </script>
-    <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     {% include 'partials/base_scripts.html' %}
     <style>
@@ -117,7 +112,6 @@
 
         .profile-name {
             color: #dcddde;
-            font-weight: 500;
             font-size: 0.9rem;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -143,7 +137,6 @@
         .menu-category {
             color: #81828A;
             font-size: 0.7rem;
-            font-weight: 600;
             letter-spacing: 0.5px;
             padding: 0.25rem 0.75rem;
             margin-top: 0.25rem;
@@ -160,7 +153,6 @@
             border-radius: 6px;
             color: #dcddde;
             font-size: 0.9rem;
-            font-weight: 500;
             cursor: pointer;
             background: transparent;
             border: none;
@@ -267,7 +259,6 @@
 
         .view-mode-toggle span {
             color: #dcddde;
-            font-weight: 500;
             font-size: 0.85rem;
         }
 
@@ -412,7 +403,6 @@
         .server-icon-placeholder {
             color: #dcddde;
             font-size: 1.1rem;
-            font-weight: 600;
         }
 
         /* Loading placeholder for server sidebar */
@@ -524,7 +514,6 @@
         .channels-list .channel-item .channel-hash {
             color: #81828A;
             font-size: 1rem;
-            font-weight: 500;
             flex-shrink: 0;
         }
 
@@ -535,7 +524,6 @@
         .channels-list .channel-item .channel-name {
             color: #81828A;
             font-size: 0.9rem;
-            font-weight: 500;
             flex: 1;
             min-width: 0;
             overflow: hidden;
@@ -588,7 +576,6 @@
             background: #121215;
             color: #81828A;
             font-size: 0.6rem;
-            font-weight: 500;
             padding: 0.1rem 0.35rem;
             border-radius: 3px;
             white-space: nowrap;
@@ -656,7 +643,6 @@
             justify-content: center;
             font-size: 10px;
             color: #fff;
-            font-weight: 600;
             flex-shrink: 0;
         }
 
@@ -751,7 +737,7 @@
                 text-align: left;
                 margin-left: 12px;
                 color: #dcddde;
-                font-family: 'gg sans Semibold', sans-serif;
+                font-family: 'gg sans Semibold';
                 font-size: 1rem;
             }
 
@@ -1178,7 +1164,7 @@
                             <div id="personal-message-content" style="opacity: 0; pointer-events: none; flex: 1; display: flex; flex-direction: column; height: 100%;">
                                 <!-- Personal panel label - matching view-mode-toggle position -->
                                 <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
-                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Personal panel</span>
+                                    <span style="color: #81828A; font-size: 0.85rem;">Personal panel</span>
                                 </div>
                                 <!-- Message Composer -->
                                 <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
@@ -1188,7 +1174,7 @@
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
                                     </button>
                                     <!-- Character count - bottom right corner -->
-                                    <span id="char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1; pointer-events: none;">2000</span>
+                                    <span id="char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; z-index: 1; pointer-events: none;">2000</span>
                                     <!-- Textarea with padding barriers for emoji (top-right) and counter (bottom-right) -->
                                     <textarea id="message-input" class="message-input" placeholder="Message" style="flex: 1; width: 100%; padding: 8px; padding-top: 8px; padding-right: 40px; padding-bottom: 32px; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; box-sizing: border-box; line-height: 1.4; vertical-align: top;"></textarea>
                                 </div>
@@ -1306,7 +1292,7 @@
                             <div id="team-message-content" style="opacity: 0; pointer-events: none; flex: 1; display: flex; flex-direction: column; height: 100%;">
                                 <!-- Team panel label - matching view-mode-toggle position -->
                                 <div style="display: flex; padding: 0.5rem 0.5rem; justify-content: center; margin-top: 0.25rem; margin-bottom: 0.5rem;">
-                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">Team panel (message set by team owner)</span>
+                                    <span style="color: #81828A; font-size: 0.85rem;">Team panel (message set by team owner)</span>
                                 </div>
                                 <!-- Message Composer -->
                                 <div class="message-section" style="display: flex; flex-direction: column; width: 100%; flex: 1; min-height: 0;">
@@ -1316,7 +1302,7 @@
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
                                     </button>
                                     <!-- Character count - bottom right corner -->
-                                    <span id="team-char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1; pointer-events: none;">{{ 2000 - (team.team_message or '')|length }}</span>
+                                    <span id="team-char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; z-index: 1; pointer-events: none;">{{ 2000 - (team.team_message or '')|length }}</span>
                                     <!-- Textarea with padding barriers for emoji (top-right) and counter (bottom-right) -->
                                     <textarea id="team-message-input" class="message-input" placeholder="No team message set" readonly style="flex: 1; width: 100%; padding: 8px; padding-top: 8px; padding-right: 40px; padding-bottom: 32px; background: transparent; border: none; color: #81828A; font-size: 0.9rem; resize: none; box-sizing: border-box; line-height: 1.4; vertical-align: top;">{{ team.team_message or '' }}</textarea>
                                 </div>
@@ -1358,14 +1344,14 @@
                                     </div>
                                 </div>
                                 <div id="mgmt-member-count-add" style="display: flex; justify-content: center; padding: 0.25rem 0 0 0;">
-                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">{{ active_member_count|default(0) }}/15 team members</span>
+                                    <span style="color: #81828A; font-size: 0.85rem;">{{ active_member_count|default(0) }}/15 team members</span>
                                 </div>
                             </div>
 
                             <!-- Team Members Mode Header (member count only, no search bar) -->
                             <div class="unified-header mgmt-members-mode-header" style="display: none;">
                                 <div id="mgmt-member-count-members" style="display: flex; justify-content: center; padding: 0.5rem 0;">
-                                    <span style="color: #81828A; font-weight: 500; font-size: 0.85rem;">{{ active_member_count|default(0) }}/15 team members</span>
+                                    <span style="color: #81828A; font-size: 0.85rem;">{{ active_member_count|default(0) }}/15 team members</span>
                                 </div>
                             </div>
 
@@ -1433,7 +1419,7 @@
                                         <img src="{{ url_for('static', filename='emojimain.png') }}" alt="Emoji" style="width: 20px; height: 20px; opacity: 0.7;">
                                     </button>
                                     <!-- Character count - bottom right corner -->
-                                    <span id="mgmt-char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; font-weight: 500; z-index: 1; pointer-events: none;">{{ 2000 - (team.team_message or '')|length }}</span>
+                                    <span id="mgmt-char-count" style="position: absolute; bottom: 8px; right: 8px; color: #81828A; font-size: 0.85rem; z-index: 1; pointer-events: none;">{{ 2000 - (team.team_message or '')|length }}</span>
                                     <!-- Textarea with padding barriers for emoji (top-right) and counter (bottom-right) -->
                                     <textarea id="mgmt-team-message-input" class="message-input" placeholder="Message" style="flex: 1; width: 100%; padding: 8px; padding-top: 8px; padding-right: 40px; padding-bottom: 32px; background: transparent; border: none; color: #dcddde; font-size: 0.9rem; resize: none; box-sizing: border-box; line-height: 1.4; vertical-align: top;">{{ team.team_message or '' }}</textarea>
                                 </div>
@@ -1472,27 +1458,27 @@
                                 <div id="personal-analytics-stats" style="display: flex; flex-direction: column; padding: 0 1rem; margin-bottom: 0.5rem;">
                                     <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
                                         <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across personal panel</span>
-                                        <span id="stat-personal-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                        <span id="stat-personal-all-time" style="color: #dcddde; font-size: 0.8rem;"></span>
                                     </div>
                                     <div style="height: 1px; background: #222225;"></div>
                                     <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
                                         <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across team panels</span>
-                                        <span id="stat-team-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                        <span id="stat-team-all-time" style="color: #dcddde; font-size: 0.8rem;"></span>
                                     </div>
                                     <div style="height: 1px; background: #222225;"></div>
                                     <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
                                         <span style="color: #81828A; font-size: 0.8rem;">All time messages sent across all panels</span>
-                                        <span id="stat-total-all-time" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                        <span id="stat-total-all-time" style="color: #dcddde; font-size: 0.8rem;"></span>
                                     </div>
                                     <div style="height: 1px; background: #222225;"></div>
                                     <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
                                         <span class="date-format-label" data-label-template="Peak send date on personal panel (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Peak send date on personal panel ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
-                                        <span id="stat-peak-date-personal" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                        <span id="stat-peak-date-personal" style="color: #dcddde; font-size: 0.8rem;"></span>
                                     </div>
                                     <div style="height: 1px; background: #222225;"></div>
                                     <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
                                         <span class="date-format-label" data-label-template="Peak send date across all panels (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Peak send date across all panels ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
-                                        <span id="stat-peak-date-all" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
+                                        <span id="stat-peak-date-all" style="color: #dcddde; font-size: 0.8rem;"></span>
                                     </div>
                                 </div>
 
@@ -1776,7 +1762,6 @@
         .analytics-dialog-title {
             color: #ffffff;
             font-size: 1.125rem;
-            font-weight: 600;
             margin: 0 0 0.75rem 0;
             padding-right: 2rem;
         }
@@ -1824,7 +1809,6 @@
 
         .analytics-toggle span {
             color: #dcddde;
-            font-weight: 500;
             font-size: 0.85rem;
         }
 
@@ -1861,7 +1845,6 @@
 
         .analytics-stat-value {
             color: #dcddde;
-            font-weight: 600;
         }
 
         .analytics-progress-bar {
@@ -1975,7 +1958,6 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.85rem;
-            font-weight: 500;
             margin-top: auto;
         }
 
@@ -2033,7 +2015,6 @@
         .chart-summary-value {
             color: #15d8bc;
             font-size: 1.2rem;
-            font-weight: 700;
         }
 
         .chart-summary-label {
@@ -2135,7 +2116,6 @@
 
         .member-stat-username {
             color: #dcddde;
-            font-weight: 500;
             font-size: 0.95rem;
             white-space: nowrap;
             overflow: hidden;
@@ -2145,7 +2125,7 @@
         .member-stat-id {
             color: #81828A;
             font-size: 0.8rem;
-            font-family: 'gg sans', sans-serif;
+            font-family: 'gg sans';
         }
 
         .member-stat-usage {
@@ -2160,7 +2140,6 @@
 
         .stat-number {
             color: #15d8bc;
-            font-weight: 700;
             font-size: 1.2rem;
             line-height: 1;
         }
@@ -2181,7 +2160,6 @@
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.8rem;
-            font-weight: 500;
             transition: all 0.2s ease;
             margin-left: auto;
         }

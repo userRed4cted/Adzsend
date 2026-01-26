@@ -2998,6 +2998,15 @@ def add_linked_discord_account(user_id, discord_id, username, avatar, avatar_dec
     conn = get_db()
     cursor = conn.cursor()
 
+    # Check if this Discord account is already linked to another user
+    cursor.execute('''
+        SELECT user_id FROM linked_discord_accounts WHERE discord_id = ?
+    ''', (discord_id,))
+    existing = cursor.fetchone()
+    if existing and existing['user_id'] != user_id:
+        conn.close()
+        return False, "discord_already_linked_other_account"
+
     # Encrypt tokens
     encrypted_token = encrypt_token(discord_token)
     encrypted_oauth_access = encrypt_token(oauth_access_token) if oauth_access_token else None

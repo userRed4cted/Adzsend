@@ -25,7 +25,7 @@
             padding: 0;
             background-color: #121215;
             color: #ffffff;
-            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-family: 'gg sans';
             overflow: hidden;
             height: 100vh;
         }
@@ -60,7 +60,7 @@
 
         .support-hero-title {
             font-size: 48px;
-            font-family: 'ABC Ginto Nord', 'gg sans Bold', sans-serif !important;
+            font-family: 'ABC Ginto Nord', 'gg sans Bold' !important;
             color: #ffffff;
             text-align: center;
             line-height: 1.4;
@@ -107,7 +107,6 @@
 
         .support-faq-title {
             font-size: 1.225rem;
-            font-weight: 400;
             color: #ffffff;
             text-align: center;
             margin: 0 0 40px 0;
@@ -142,9 +141,8 @@
 
         .faq-question-text {
             font-size: 1rem;
-            font-weight: 500;
             color: #ffffff;
-            font-family: 'gg sans Medium', sans-serif;
+            font-family: 'gg sans Medium';
         }
 
         .faq-toggle-icon {
@@ -173,7 +171,7 @@
             color: rgba(255, 255, 255, 0.7);
             font-size: 0.95rem;
             line-height: 1.6;
-            font-family: 'gg sans Medium', sans-serif;
+            font-family: 'gg sans Medium';
         }
 
         /* ==================== CONTACT SUPPORT SECTION ==================== */
@@ -194,7 +192,7 @@
             color: #dcddde;
             text-align: center;
             margin: 0;
-            font-family: 'gg sans Medium', sans-serif;
+            font-family: 'gg sans Medium';
         }
 
         /* ==================== RESPONSIVE ==================== */
@@ -315,7 +313,7 @@
                             <img src="{{ url_for('static', filename='openorclose.png') }}" alt="Toggle" class="faq-toggle-icon">
                         </div>
                         <div class="faq-answer">
-                            <p>{{ faq.answer }}</p>
+                            <p>{{ faq.answer|process_content_link|safe }}</p>
                         </div>
                     </div>
                     {% endfor %}

@@ -40,8 +40,7 @@ from database import (
 # Config imports
 from config import (
     BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, get_all_config, is_admin,
-    DATABASE_VERSION, DATABASE_WIPE_MESSAGE, SITE,
-    get_page_description, get_page_embed,
+    SITE, get_page_description, get_page_embed,
     SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS,
     BRIDGE_TITLE, BRIDGE_DESCRIPTION, BRIDGE_DOWNLOAD_URLS, BRIDGE_FEATURE_PILLS
 )
@@ -148,8 +147,6 @@ def inject_site_config():
         'button_styles': BUTTONS,
         'colors': COLORS,
         'pages': PAGES,
-        'db_version': DATABASE_VERSION,
-        'db_wipe_message': DATABASE_WIPE_MESSAGE,
         # Site-wide settings (font, layout, etc.)
         'site': SITE,
         # Page metadata helper functions
@@ -3481,9 +3478,7 @@ def admin_panel():
                                                 plan_status=plan_status,
                                                 has_business=has_business,
                                                 is_owner=is_business_owner(user['id']),
-                                                is_admin_user=is_admin_user,
-                                                db_version=DATABASE_VERSION,
-                                                db_wipe_message=DATABASE_WIPE_MESSAGE))
+                                                is_admin_user=is_admin_user))
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
@@ -4395,6 +4390,14 @@ def verify_link_account_token():
         )
 
         if not success:
+            # Check for specific error types
+            if result == "discord_already_linked_other_account":
+                return {
+                    'error': 'discord_already_linked_other_account',
+                    'error_title': 'Failed to Link',
+                    'error_message': "This Discord account is already linked to another Adzsend account. Unlink it from that account first to add it to this one. If you need assistance, [contact us](/support).",
+                    'valid': False
+                }, 200
             return {'error': result, 'valid': False}, 200
 
         # Clear pending data

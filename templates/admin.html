@@ -8,11 +8,6 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
     <script src="{{ url_for('static', filename='tab_enforcement.js') }}"></script>
-    <script>
-        window.DB_VERSION = {{ db_version }};
-        window.DB_WIPE_MESSAGE = "{{ db_wipe_message }}";
-    </script>
-    <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     <script src="{{ url_for('static', filename='image_loader.js') }}"></script>
     <style>
@@ -76,7 +71,6 @@
         .filter-title {
             color: #fff;
             font-size: 16px;
-            font-weight: 600;
             margin-bottom: 5px;
         }
 
@@ -169,7 +163,6 @@
             padding: 3px 8px;
             border-radius: 4px;
             font-size: 11px;
-            font-weight: 600;
             text-transform: uppercase;
         }
 
@@ -213,7 +206,6 @@
         .user-item-name {
             color: #fff;
             font-size: 14px;
-            font-weight: 500;
         }
 
         .user-item-id {
@@ -240,7 +232,6 @@
         .user-details-header {
             color: #fff;
             font-size: 24px;
-            font-weight: 600;
             margin-bottom: 25px;
             padding-bottom: 15px;
             border-bottom: 2px solid #282930;
@@ -271,12 +262,10 @@
 
         .detail-value.banned {
             color: #ff4444;
-            font-weight: 600;
         }
 
         .detail-value.flagged {
             color: #ffaa00;
-            font-weight: 600;
         }
 
         .admin-actions {
@@ -291,7 +280,6 @@
             border: none;
             border-radius: 6px;
             font-size: 14px;
-            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
             color: #ffffff;
@@ -305,7 +293,6 @@
         .admin-btn.delete {
             background: linear-gradient(to bottom, #991a35, #3b0b15);
             color: #121215;
-            font-weight: 500;
         }
 
         .admin-btn.delete:hover:not(:disabled) {
@@ -319,7 +306,6 @@
         .admin-btn.ban {
             background: linear-gradient(to bottom, #991a35, #3b0b15);
             color: #121215;
-            font-weight: 500;
         }
 
         .admin-btn.ban:hover:not(:disabled) {
@@ -339,7 +325,6 @@
             background: linear-gradient(to bottom, #3a3a4d, #2a2a3d);
             border: none;
             color: #ffffff;
-            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -383,7 +368,6 @@
         .dialog-header {
             color: #dcddde;
             font-size: 1.25rem;
-            font-weight: 600;
             margin: 0;
             text-align: center;
         }
@@ -416,7 +400,6 @@
             border: none;
             border-radius: 8px;
             font-size: 14px;
-            font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -433,7 +416,6 @@
         .dialog-btn.secondary {
             background: linear-gradient(to bottom, #3a3a4d, #2a2a3d);
             color: #ffffff;
-            font-weight: 600;
         }
 
         .dialog-btn.secondary:hover {

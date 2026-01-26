@@ -16,7 +16,7 @@ const baseStyles = `
         overflow: hidden;
     }
     body {
-        font-family: 'gg sans', 'Segoe UI', sans-serif;
+        font-family: 'gg sans';
         color: #fff;
         padding: 1px;
     }
@@ -46,7 +46,6 @@ const baseStyles = `
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 300;
         line-height: 1;
         border-radius: 4px;
         transition: all 0.2s ease;
@@ -64,7 +63,6 @@ const baseStyles = `
     }
     .title {
         font-size: 1.125rem;
-        font-weight: 600;
         margin-bottom: 0.5rem;
         color: #ffffff;
         padding-right: 2rem;
@@ -87,8 +85,7 @@ const baseStyles = `
         border-radius: 4px;
         padding: 0.65rem 1.25rem;
         font-size: 0.875rem;
-        font-weight: 600;
-        font-family: 'gg sans', 'Segoe UI', sans-serif;
+        font-family: 'gg sans';
         cursor: pointer;
         transition: filter 0.2s ease;
         min-height: 38px;
@@ -107,7 +104,7 @@ const inputStyles = `
         background: #121215;
         color: #dcddde;
         font-size: 0.875rem;
-        font-family: 'gg sans', 'Segoe UI', sans-serif;
+        font-family: 'gg sans';
         outline: none;
     }
     input:focus { border-color: #222225; }

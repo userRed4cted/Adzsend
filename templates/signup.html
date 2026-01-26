@@ -41,7 +41,7 @@
             border-radius: 8px;
             color: #dcddde;
             font-size: 0.9rem;
-            font-family: 'gg sans', sans-serif;
+            font-family: 'gg sans';
             margin-bottom: 1rem;
             box-sizing: border-box;
         }
@@ -182,7 +182,7 @@
                                 <div class="tos-checkbox">
                                     <img src="{{ url_for('static', filename='tick.png') }}" alt="Checked">
                                 </div>
-                                <span class="tos-label">I agree to <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">Adzsend's Terms of Service</a></span>
+                                <span class="tos-label">I Agree to Adzsend's <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">Terms of Service</a></span>
                             </div>
                             <!-- Cloudflare Turnstile Widget -->
                             {% if turnstile_site_key %}

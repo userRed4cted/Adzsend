@@ -764,7 +764,8 @@
             /* Page content needs to account for header */
             .page-content {
                 height: calc(100% - 56px) !important;
-                overflow-y: auto;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
             }
 
             /* Make dashboard-main-frame position relative for absolute children */
@@ -774,80 +775,159 @@
 
             /* ===== PAGE LAYOUTS - Stack vertically on mobile ===== */
 
-            /* Personal Panel & Team Panel - main-layout becomes vertical */
+            /* Personal Panel & Team Panel - column layout to stack server row + action panel */
             .main-layout {
                 flex-direction: column !important;
                 height: auto !important;
-                min-height: 100%;
+                min-height: 100% !important;
             }
 
-            /* Hide vertical dividers, show horizontal ones */
+            /* Hide vertical dividers, show horizontal ones for non-panel sections */
             .panel-divider {
                 width: 100% !important;
                 height: 1px !important;
                 margin: 0 !important;
             }
 
+            /* Server sidebar divider stays vertical within the row */
             .server-sidebar-divider {
-                width: 100% !important;
-                height: 1px !important;
+                width: 1px !important;
+                height: auto !important;
                 margin: 0 !important;
+                flex-shrink: 0 !important;
             }
 
-            /* Server sidebar - horizontal on mobile */
+            /* Server sidebar - vertical on mobile, scaled down */
             .server-sidebar {
-                width: 100% !important;
-                height: auto !important;
-                flex-direction: row !important;
-                padding: 0 1rem 0.5rem 1rem !important;
-                overflow-x: auto !important;
-                overflow-y: hidden !important;
-                flex-shrink: 0;
-                align-items: center !important;
+                width: 56px !important;
+                min-width: 56px !important;
+                height: 100% !important;
+                min-height: 150px !important;
+                flex-direction: column !important;
+                padding: 0.4rem 0 !important;
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+                flex-shrink: 0 !important;
+                align-items: flex-start !important;
+                gap: 0.4rem !important;
             }
 
             .server-icon-wrapper {
-                margin-left: 0 !important;
+                width: 36px !important;
+                height: 36px !important;
+                margin-left: 10px !important;
                 margin-top: 0 !important;
-                padding-top: 8px !important;
+                padding-top: 0 !important;
                 position: relative !important;
+                flex-shrink: 0 !important;
             }
 
-            /* Pill on top for horizontal layout - touches topbar */
+            .server-icon-holder {
+                width: 36px !important;
+                height: 36px !important;
+                border-radius: 50% !important;
+                transition: border-radius 0.15s ease-out !important;
+            }
+
+            .server-icon-wrapper:hover .server-icon-holder {
+                border-radius: 12px !important;
+            }
+
+            .server-icon-wrapper.active .server-icon-holder {
+                border-radius: 12px !important;
+            }
+
+            /* Pill on left for vertical layout */
             .server-icon-pill {
                 display: block !important;
-                left: 50% !important;
-                top: 0 !important;
-                transform: translateX(-50%) !important;
-                width: 0 !important;
-                height: 4px !important;
-                border-radius: 0 0 4px 4px !important;
+                left: -10px !important;
+                top: 50% !important;
+                transform: translateY(-50%) !important;
+                width: 3px !important;
+                height: 0 !important;
+                border-radius: 0 3px 3px 0 !important;
             }
 
             .server-icon-wrapper:hover .server-icon-pill {
-                width: 20px !important;
-                height: 4px !important;
+                width: 3px !important;
+                height: 16px !important;
             }
 
             .server-icon-wrapper.active .server-icon-pill {
-                width: 40px !important;
-                height: 4px !important;
+                width: 3px !important;
+                height: 30px !important;
             }
 
-            /* Selection panel takes proportional space */
-            .selection-panel {
-                flex: 1 !important;
-                min-height: 200px;
-                display: flex;
-                flex-direction: column;
+            .server-icon-placeholder {
+                font-size: 0.85rem !important;
             }
 
-            /* Message composer section */
+            .server-loading-placeholder {
+                margin-left: 10px !important;
+                width: 36px !important;
+                padding-top: 4px !important;
+            }
+
+            .server-loading-placeholder .server-icon-holder.placeholder {
+                width: 36px !important;
+                height: 36px !important;
+            }
+
+            /* Create a grid container for server sidebar + divider + selection panel + action panel */
+            #page-personal-panel > .main-layout,
+            #page-team-panel > .main-layout {
+                display: grid !important;
+                grid-template-columns: 56px 1px 1fr !important;
+                grid-template-rows: minmax(150px, 1fr) auto !important;
+                gap: 0 !important;
+            }
+
+            #page-personal-panel > .main-layout > .server-sidebar,
+            #page-team-panel > .main-layout > .server-sidebar {
+                grid-column: 1 !important;
+                grid-row: 1 !important;
+            }
+
+            #page-personal-panel > .main-layout > .server-sidebar-divider,
+            #page-team-panel > .main-layout > .server-sidebar-divider {
+                grid-column: 2 !important;
+                grid-row: 1 !important;
+            }
+
+            #page-personal-panel > .main-layout > .selection-panel,
+            #page-team-panel > .main-layout > .selection-panel {
+                grid-column: 3 !important;
+                grid-row: 1 !important;
+                min-height: 0 !important;
+                overflow: hidden !important;
+            }
+
+            /* Horizontal divider between selection area and action panel */
+            #page-personal-panel > .main-layout > .panel-divider:not(.server-sidebar-divider),
+            #page-team-panel > .main-layout > .panel-divider:not(.server-sidebar-divider) {
+                display: none !important;
+            }
+
+            /* Action panel spans full width below with top border as divider */
+            #page-personal-panel > .main-layout > .action-panel,
+            #page-team-panel > .main-layout > .action-panel,
             #page-personal-panel > .main-layout > div:last-child,
             #page-team-panel > .main-layout > div:last-child {
+                grid-column: 1 / -1 !important;
+                grid-row: 2 !important;
+                min-height: 200px !important;
+                padding: 0 0.75rem 0.75rem 0.75rem !important;
+                border-top: 1px solid #222225 !important;
+            }
+
+            /* Selection panel styling */
+            .selection-panel {
                 flex: 1 !important;
-                min-height: 250px;
-                padding: 0 1rem 1rem 1rem !important;
+                min-height: 0 !important;
+                min-width: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
             }
 
             /* Team Management - stack vertically */
@@ -2111,32 +2191,6 @@
         }
     </style>
 
-    <!-- Tag Limit Popup Modal -->
-    <div id="tag-limit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
-        <div style="background: #191A1F; border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; text-align: center; display: flex; flex-direction: column; gap: 1rem;">
-            <h2 style="color: #dcddde; margin: 0; font-size: 1.25rem;">Tag limit reached</h2>
-            <p style="color: #81828A; margin: 0; font-size: 0.9rem;">Maximum 6 tags allowed. Please remove a tag before adding a new one.</p>
-            <button class="grey-btn" onclick="closeTagLimitModal()" style="padding: 0.6rem 2rem;">OK</button>
-        </div>
-    </div>
-
-    <!-- Tag Character Limit Modal -->
-    <div id="tag-char-limit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
-        <div style="background: #191A1F; border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; text-align: center; display: flex; flex-direction: column; gap: 1rem;">
-            <h2 style="color: #dcddde; margin: 0; font-size: 1.25rem;">Tag character limit exceeded</h2>
-            <p style="color: #81828A; margin: 0; font-size: 0.9rem;">Each tag can only have 10 characters.</p>
-            <button class="grey-btn" onclick="closeTagCharLimitModal()" style="padding: 0.6rem 2rem;">Ok</button>
-        </div>
-    </div>
-
-    <!-- Channel Limit Per Server Modal -->
-    <div id="channel-limit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 10000; align-items: center; justify-content: center;">
-        <div style="background: #191A1F; border-radius: 12px; padding: 1.5rem; max-width: 400px; width: 90%; text-align: center; display: flex; flex-direction: column; gap: 1rem;">
-            <h2 style="color: #dcddde; margin: 0; font-size: 1.25rem;">Channel limit reached</h2>
-            <p id="channel-limit-message" style="color: #81828A; margin: 0; font-size: 0.9rem;">You can only select up to X channels per server on your current plan.</p>
-            <button class="grey-btn" onclick="closeChannelLimitModal()" style="padding: 0.6rem 2rem;">OK</button>
-        </div>
-    </div>
 
     <script>
         // Global message delay variable - can be updated by settings popup
@@ -2437,51 +2491,20 @@
             }
         });
 
-        // Tag Limit Modal functions
-        function showTagLimitModal() {
-            document.getElementById('tag-limit-modal').style.display = 'flex';
+        // Tag Limit Modal - using customAlert popup system
+        async function showTagLimitModal() {
+            await customAlert('Tag limit reached', 'Maximum 6 tags allowed. Please remove a tag before adding a new one.', 'OK');
         }
 
-        function closeTagLimitModal() {
-            document.getElementById('tag-limit-modal').style.display = 'none';
+        // Tag Character Limit Modal - using customAlert popup system
+        async function showTagCharLimitModal() {
+            await customAlert('Tag character limit exceeded', 'Each tag can only have 10 characters.', 'Ok');
         }
 
-        // Tag Character Limit Modal functions
-        function showTagCharLimitModal() {
-            document.getElementById('tag-char-limit-modal').style.display = 'flex';
+        // Channel Limit Modal - using customAlert popup system
+        async function showChannelLimitModal(limit) {
+            await customAlert('Channel limit reached', `You can only select up to ${limit} channel${limit !== 1 ? 's' : ''} per server on your current plan.`, 'OK');
         }
-
-        function closeTagCharLimitModal() {
-            document.getElementById('tag-char-limit-modal').style.display = 'none';
-        }
-
-        // Channel Limit Modal functions
-        function showChannelLimitModal(limit) {
-            document.getElementById('channel-limit-message').textContent =
-                `You can only select up to ${limit} channel${limit !== 1 ? 's' : ''} per server on your current plan.`;
-            document.getElementById('channel-limit-modal').style.display = 'flex';
-        }
-
-        function closeChannelLimitModal() {
-            document.getElementById('channel-limit-modal').style.display = 'none';
-        }
-
-        // Close modals when clicking outside
-        document.getElementById('tag-limit-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeTagLimitModal();
-            }
-        });
-        document.getElementById('tag-char-limit-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeTagCharLimitModal();
-            }
-        });
-        document.getElementById('channel-limit-modal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeChannelLimitModal();
-            }
-        });
         // Prevent page from being stored in cache
         window.addEventListener('pageshow', function(event) {
             if (event.persisted) {

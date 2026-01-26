@@ -50,7 +50,7 @@ HOMEPAGE = {
             # Description (same style as terms text)
             'description': "No more hours of copy and pasting, do it all with one button press. Send messages all across discord with a button press. No more wasting time.",
             # Video (looped mp4) or image - use 'video' key for mp4, 'image' key for static images
-            'video': "6257adef93867e50d84d30e2_6787b62a9742f59453ba8919_Discord_Websote_Refresh_Emojis2_EN-transcode (1).mp4",
+            'video': "placeholderimagething2.mp4",
             # Background color or gradient
             'gradient': True,  # Set to False for solid color
             'color_start': "rgba(255, 255, 255, 0.1)",  # Start color (or solid color if gradient is False)
@@ -59,8 +59,8 @@ HOMEPAGE = {
         },
         {
             'title': "CONTROL & POWER",
-            'description': "Everyone desires power, start controlling your marketing campaigns, instead of letting people control them for you. Overpaying marketing services that take forever and cause distress with minimal results, no longer an issue with Adzsend.",
-            'video': "6257adef93867e50d84d30e2_6763b611120b46189e164b4a_Discord_Website_Refresh_EN-transcode.mp4",
+            'description': "Everyone desires power, start controlling your marketing campaigns, instead of letting people control them for you. Overpaying marketing services that take long and result in minimal results, NO MORE!: with Adzsend.",
+            'video': "placeholderimagething2.mp4",
             'gradient': True,
             'color_start': "rgba(255, 255, 255, 0.02)",
             'color_end': "rgba(255, 255, 255, 0.1)",
@@ -69,7 +69,7 @@ HOMEPAGE = {
         {
             'title': "SPEED",
             'description': "Connect multiple Discord accounts, and send at the same time. No more long waits.",
-            'video': "6257adef93867e50d84d30e2_6787b62a9742f59453ba8919_Discord_Websote_Refresh_Emojis2_EN-transcode (1).mp4",
+            'video': "placeholderimagething2.mp4",
             'gradient': True,
             'color_start': "rgba(255, 255, 255, 0.1)",
             'color_end': "rgba(255, 255, 255, 0.02)",

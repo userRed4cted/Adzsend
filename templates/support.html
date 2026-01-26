@@ -374,6 +374,7 @@
             const RATE_LIMIT_MAX = 5;
             const RATE_LIMIT_WINDOW = 10000; // 10 seconds in ms
             let checkTimestamps = [];
+            let rateLimitLocked = false;
 
             function isRateLimited() {
                 const now = Date.now();
@@ -386,7 +387,33 @@
                 checkTimestamps.push(Date.now());
             }
 
+            function lockInput() {
+                rateLimitLocked = true;
+                input.disabled = true;
+                input.value = '';
+                input.style.opacity = '0.5';
+                input.style.cursor = 'not-allowed';
+                result.textContent = defaultText;
+                result.className = 'message-checker-label';
+                lastCheckedLink = '';
+
+                // Calculate when the oldest check expires and unlock then
+                const now = Date.now();
+                const oldestCheck = Math.min(...checkTimestamps);
+                const unlockIn = (oldestCheck + RATE_LIMIT_WINDOW) - now + 100; // +100ms buffer
+
+                setTimeout(() => {
+                    rateLimitLocked = false;
+                    input.disabled = false;
+                    input.style.opacity = '1';
+                    input.style.cursor = '';
+                }, unlockIn);
+            }
+
             async function checkMessage() {
+                // Don't check if locked
+                if (rateLimitLocked) return;
+
                 const link = input.value.trim();
 
                 // Don't re-check the same link
@@ -408,6 +435,7 @@
 
                 // Check rate limit before making API call
                 if (isRateLimited()) {
+                    lockInput();
                     await customAlert(
                         'Slow down',
                         "You're checking message links too quickly. To copy message links, right click or press and hold the message to bring up the Discord action menu, and press copy message link.",
@@ -450,6 +478,9 @@
 
             // Auto-check on input with debounce
             input.addEventListener('input', () => {
+                // Don't process input if rate limit locked
+                if (rateLimitLocked) return;
+
                 clearTimeout(debounceTimer);
                 const link = input.value.trim();
 

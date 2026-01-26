@@ -37,7 +37,8 @@ jobs:
         with:
           name: windows-installers
           path: |
-            bridge/dist/*.exe
+            bridge/dist/AdzsendBridgeSetup-x64.exe
+            bridge/dist/AdzsendBridgeSetup-arm64.exe
             bridge/dist/latest.yml
 
   # ============================================
@@ -70,7 +71,7 @@ jobs:
         with:
           name: macos-installers
           path: |
-            bridge/dist/*.dmg
+            bridge/dist/AdzsendBridgeSetup.dmg
             bridge/dist/latest-mac.yml
 
   # ============================================
@@ -103,7 +104,7 @@ jobs:
         with:
           name: linux-installers
           path: |
-            bridge/dist/*.deb
-            bridge/dist/*.tar.gz
+            bridge/dist/AdzsendBridgeSetup.deb
+            bridge/dist/AdzsendBridgeSetup.tar.gz
             bridge/dist/latest-linux.yml
 

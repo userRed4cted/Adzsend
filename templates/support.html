@@ -370,16 +370,32 @@
             let debounceTimer = null;
             let lastCheckedLink = '';
 
+            // Rate limiting: 5 checks per 10 seconds
+            const RATE_LIMIT_MAX = 5;
+            const RATE_LIMIT_WINDOW = 10000; // 10 seconds in ms
+            let checkTimestamps = [];
+
+            function isRateLimited() {
+                const now = Date.now();
+                // Remove timestamps older than the window
+                checkTimestamps = checkTimestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW);
+                return checkTimestamps.length >= RATE_LIMIT_MAX;
+            }
+
+            function recordCheck() {
+                checkTimestamps.push(Date.now());
+            }
+
             async function checkMessage() {
                 const link = input.value.trim();
 
                 // Don't re-check the same link
                 if (link === lastCheckedLink) return;
-                lastCheckedLink = link;
 
                 if (!link) {
                     result.textContent = defaultText;
                     result.className = 'message-checker-label';
+                    lastCheckedLink = '';
                     return;
                 }
 
@@ -389,6 +405,20 @@
                     result.className = 'message-checker-label';
                     return;
                 }
+
+                // Check rate limit before making API call
+                if (isRateLimited()) {
+                    await customAlert(
+                        'Slow down',
+                        "You're checking message links too quickly. To copy message links, right click or press and hold the message to bring up the Discord action menu, and press copy message link.",
+                        'Enter the chill zone'
+                    );
+                    return;
+                }
+
+                // Record this check for rate limiting
+                recordCheck();
+                lastCheckedLink = link;
 
                 try {
                     const response = await fetch('/api/check-message', {

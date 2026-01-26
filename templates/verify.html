@@ -16,22 +16,26 @@
             justify-content: center;
             margin-bottom: 1.5rem;
         }
+        /* Code input - matches site-wide search-input styling */
         .code-input {
             width: 50px;
             height: 60px;
             text-align: center;
             font-size: 1.5rem;
             font-weight: bold;
-            background: #212227;
-            border: none;
+            background-color: #1A1A1E;
+            border: 1px solid #222225;
             border-radius: 8px;
-            color: #ffffff;
+            color: #dcddde;
+            font-family: 'gg sans', sans-serif;
         }
         .code-input:focus {
             outline: none;
+            background-color: #1A1A1E;
+            border-color: #222225;
         }
         .code-input::placeholder {
-            color: #4a4a4a;
+            color: #81828A;
         }
         .resend-btn {
             background: linear-gradient(to bottom, #15d8bc, #006e59);
@@ -69,10 +73,10 @@
             margin-top: 0.5rem;
         }
         /* Center all text in the form */
-        .token-form {
+        .auth-form {
             text-align: center;
         }
-        .token-form p {
+        .auth-form p {
             text-align: center;
         }
         /* Inline error message - no yellow box */
@@ -85,6 +89,70 @@
         .verify-error.show {
             display: block;
         }
+
+        /* ==================== MOBILE RESPONSIVE ==================== */
+        @media (max-width: 900px) {
+            .login-container {
+                padding: 1.25rem;
+                min-height: calc(100vh - 80px);
+            }
+
+            .auth-form {
+                padding: 1.5rem;
+                max-width: 100%;
+            }
+
+            .form-title {
+                font-size: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .code-input {
+                width: 42px;
+                height: 52px;
+                font-size: 1.25rem;
+            }
+
+            .code-input-container {
+                gap: 0.4rem;
+            }
+
+            .resend-btn {
+                width: calc(6 * 42px + 5 * 0.4rem);
+                font-size: 0.9rem;
+                padding: 0.65rem 1.25rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 1rem;
+            }
+
+            .auth-form {
+                padding: 1.25rem;
+            }
+
+            .form-title {
+                font-size: 1.25rem;
+            }
+
+            .code-input {
+                width: 36px;
+                height: 46px;
+                font-size: 1.1rem;
+            }
+
+            .code-input-container {
+                gap: 0.3rem;
+            }
+
+            .resend-btn {
+                width: calc(6 * 36px + 5 * 0.3rem);
+                font-size: 0.85rem;
+                padding: 0.6rem 1rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -93,7 +161,7 @@
 
         <div class="panel-container">
             <div class="login-container">
-                <div class="token-form">
+                <div class="auth-form">
                     <h2 class="form-title">Enter Verification Code</h2>
 
                     <p style="color: #81828A; margin-bottom: 1.5rem;">

@@ -665,6 +665,261 @@
         .channels-list .channel-item.selected .server-icon-placeholder-small {
             /* No changes - keep original appearance */
         }
+
+        /* Mobile page header - hidden on desktop */
+        .dashboard-mobile-page-header {
+            display: none;
+        }
+
+        /* ==================== DASHBOARD MOBILE RESPONSIVE ==================== */
+        @media (max-width: 900px) {
+            /* Remove container padding on mobile */
+            .dashboard-panel-container {
+                padding: 0;
+            }
+
+            /* Full screen frame, no border/radius */
+            .dashboard-main-frame {
+                border: none;
+                border-radius: 0;
+                flex-direction: column;
+            }
+
+            /* Side menu takes full screen */
+            .side-menu {
+                width: 100%;
+                height: 100%;
+                border-right: none;
+                padding: 1rem 1.25rem;
+            }
+
+            /* Hide main content wrapper by default - slides from right, covers entire screen */
+            .main-content-wrapper {
+                display: flex;
+                flex-direction: column;
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 100%;
+                height: 100%;
+                background: #121215;
+                z-index: 100;
+                transition: right 0.3s ease;
+            }
+
+            /* Show content when page is active */
+            .main-content-wrapper.mobile-page-active {
+                right: 0;
+            }
+
+            /* Mobile page header - shown on mobile */
+            .dashboard-mobile-page-header {
+                display: flex;
+                align-items: center;
+                height: 56px;
+                min-height: 56px;
+                padding: 0 1.25rem;
+                border-bottom: 0.5px solid #222225;
+                position: relative;
+                background: #121215;
+            }
+
+            /* Mobile back button */
+            .dashboard-mobile-back-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #121215;
+                border: 1px solid #222225;
+                border-radius: 4px;
+                cursor: pointer;
+                padding: 0.25rem;
+                width: 32px;
+                height: 32px;
+            }
+
+            .dashboard-mobile-back-btn > img {
+                width: 20px;
+                height: 20px;
+                transform: rotate(90deg);
+                filter: brightness(0) saturate(100%) invert(100%);
+            }
+
+            /* Mobile page title - left aligned next to back button */
+            .dashboard-mobile-page-title {
+                flex: 1;
+                text-align: left;
+                margin-left: 12px;
+                color: #dcddde;
+                font-family: 'gg sans Semibold', sans-serif;
+                font-size: 1rem;
+            }
+
+            /* Remove active state background on mobile menu items */
+            .menu-item.active {
+                background: transparent;
+                color: #dcddde;
+            }
+
+            /* Page content needs to account for header */
+            .page-content {
+                height: calc(100% - 56px) !important;
+                overflow-y: auto;
+            }
+
+            /* Make dashboard-main-frame position relative for absolute children */
+            .dashboard-main-frame {
+                position: relative;
+            }
+
+            /* ===== PAGE LAYOUTS - Stack vertically on mobile ===== */
+
+            /* Personal Panel & Team Panel - main-layout becomes vertical */
+            .main-layout {
+                flex-direction: column !important;
+                height: auto !important;
+                min-height: 100%;
+            }
+
+            /* Hide vertical dividers, show horizontal ones */
+            .panel-divider {
+                width: 100% !important;
+                height: 1px !important;
+                margin: 0 !important;
+            }
+
+            .server-sidebar-divider {
+                width: 100% !important;
+                height: 1px !important;
+                margin: 0 !important;
+            }
+
+            /* Server sidebar - horizontal on mobile */
+            .server-sidebar {
+                width: 100% !important;
+                height: auto !important;
+                flex-direction: row !important;
+                padding: 0 1rem 0.5rem 1rem !important;
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
+                flex-shrink: 0;
+                align-items: center !important;
+            }
+
+            .server-icon-wrapper {
+                margin-left: 0 !important;
+                margin-top: 0 !important;
+                padding-top: 8px !important;
+                position: relative !important;
+            }
+
+            /* Pill on top for horizontal layout - touches topbar */
+            .server-icon-pill {
+                display: block !important;
+                left: 50% !important;
+                top: 0 !important;
+                transform: translateX(-50%) !important;
+                width: 0 !important;
+                height: 4px !important;
+                border-radius: 0 0 4px 4px !important;
+            }
+
+            .server-icon-wrapper:hover .server-icon-pill {
+                width: 20px !important;
+                height: 4px !important;
+            }
+
+            .server-icon-wrapper.active .server-icon-pill {
+                width: 40px !important;
+                height: 4px !important;
+            }
+
+            /* Selection panel takes proportional space */
+            .selection-panel {
+                flex: 1 !important;
+                min-height: 200px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Message composer section */
+            #page-personal-panel > .main-layout > div:last-child,
+            #page-team-panel > .main-layout > div:last-child {
+                flex: 1 !important;
+                min-height: 250px;
+                padding: 0 1rem 1rem 1rem !important;
+            }
+
+            /* Team Management - stack vertically */
+            #page-team-management {
+                flex-direction: column !important;
+            }
+
+            #page-team-management > div:first-child {
+                flex: 1 !important;
+                min-height: 200px;
+            }
+
+            #page-team-management > div:last-child {
+                flex: 1 !important;
+                min-height: 250px;
+                padding: 0 1rem 1rem 1rem !important;
+            }
+
+            /* Analytics - stack vertically, personal on top, team on bottom */
+            #page-analytics {
+                flex-direction: column !important;
+                height: auto !important;
+                overflow-y: auto !important;
+            }
+
+            #page-analytics > div:first-child {
+                flex: none !important;
+                height: auto !important;
+                min-height: 350px;
+            }
+
+            #page-analytics > .panel-divider {
+                width: 100% !important;
+                height: 1px !important;
+                flex-shrink: 0 !important;
+            }
+
+            #page-analytics > div:last-child {
+                flex: none !important;
+                height: auto !important;
+            }
+
+            /* Team analytics inner sections - fixed heights matching desktop proportions */
+            #page-analytics > div:last-child > div:first-child {
+                flex: none !important;
+                height: 350px !important;
+                min-height: 350px !important;
+                max-height: 350px !important;
+            }
+
+            #page-analytics > div:last-child > div:nth-child(3) {
+                flex: none !important;
+                height: 350px !important;
+                min-height: 350px !important;
+                max-height: 350px !important;
+            }
+
+            /* View mode toggle - wrap on smaller screens */
+            .view-mode-toggle {
+                flex-wrap: wrap;
+                gap: 0.75rem !important;
+                padding: 0.5rem 1rem !important;
+            }
+
+            .view-mode-toggle label {
+                font-size: 0.8rem;
+            }
+
+            .view-mode-toggle span {
+                font-size: 0.8rem !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -736,6 +991,13 @@
 
                 <!-- Main Content Area (uses styles.css classes) -->
                 <div class="main-content-wrapper">
+                    <!-- Mobile Page Header -->
+                    <div class="dashboard-mobile-page-header">
+                        <button class="dashboard-mobile-back-btn" onclick="dashboardMobileBack()">
+                            <img src="{{ url_for('static', filename='openorclose.png') }}" alt="Back">
+                        </button>
+                        <span class="dashboard-mobile-page-title" id="dashboard-mobile-page-title">Analytics</span>
+                    </div>
                     <!-- Page: Personal Panel -->
                     <div id="page-personal-panel" class="page-content" style="height: 100%; display: none; flex-direction: column;">
                     {% if discord_linked %}
@@ -1144,12 +1406,12 @@
                                     </div>
                                     <div style="height: 1px; background: #222225;"></div>
                                     <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
-                                        <span class="date-format-label" data-label-template="Date with most messages sent on personal panel (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Date with most messages sent on personal panel ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
+                                        <span class="date-format-label" data-label-template="Peak send date on personal panel (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Peak send date on personal panel ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
                                         <span id="stat-peak-date-personal" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
                                     </div>
                                     <div style="height: 1px; background: #222225;"></div>
                                     <div class="personal-stat-row" style="display: flex; justify-content: space-between; padding: 0.4rem 0;">
-                                        <span class="date-format-label" data-label-template="Date with most messages sent across all panels (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Date with most messages sent across all panels ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
+                                        <span class="date-format-label" data-label-template="Peak send date across all panels (%FORMAT%)" style="color: #81828A; font-size: 0.8rem;">Peak send date across all panels ({{ user_data.date_format if user_data.date_format else 'mm/dd/yy' }})</span>
                                         <span id="stat-peak-date-all" style="color: #dcddde; font-size: 0.8rem; font-weight: 500;"></span>
                                     </div>
                                 </div>
@@ -1311,13 +1573,18 @@
     <!-- Analytics Dialog -->
     <div class="analytics-dialog-overlay" id="analytics-dialog-overlay">
         <div class="analytics-dialog">
-            <div class="analytics-dialog-header">
-                <h3 class="analytics-dialog-title" id="analytics-dialog-title">Member Analytics</h3>
-                <button class="analytics-dialog-close" onclick="closeAnalyticsDialog()">&times;</button>
-            </div>
-            <div class="analytics-tabs">
-                <button class="analytics-tab active" data-tab="information" onclick="switchAnalyticsTab('information')">Information</button>
-                <button class="analytics-tab" data-tab="dates" onclick="switchAnalyticsTab('dates')">Dates</button>
+            <button class="analytics-dialog-close" onclick="closeAnalyticsDialog()">&times;</button>
+            <h3 class="analytics-dialog-title" id="analytics-dialog-title">Member Analytics</h3>
+            <!-- Radio Toggle for Information/Dates -->
+            <div class="analytics-toggle">
+                <label>
+                    <input type="radio" name="analytics-view-mode" value="information" checked onchange="switchAnalyticsTab('information')">
+                    <span>Information</span>
+                </label>
+                <label>
+                    <input type="radio" name="analytics-view-mode" value="dates" onchange="switchAnalyticsTab('dates')">
+                    <span>Dates</span>
+                </label>
             </div>
             <div class="analytics-content">
                 <!-- Information Panel -->
@@ -1394,7 +1661,7 @@
     {% include 'partials/settings_popup.html' %}
 
     <style>
-        /* Analytics Dialog Styles */
+        /* Analytics Dialog Styles - matching custom-popup */
         .analytics-dialog-overlay {
             display: none;
             position: fixed;
@@ -1413,73 +1680,76 @@
         }
 
         .analytics-dialog {
-            background: #1a1a1d;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 600px;
+            background: #1A1A1E;
+            border: 1px solid #222225;
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem 1.5rem 1.5rem;
+            width: 440px;
+            max-width: 95vw;
             max-height: 85vh;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-        }
-
-        .analytics-dialog-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid #282930;
+            position: relative;
         }
 
         .analytics-dialog-title {
             color: #ffffff;
-            font-size: 1.1rem;
+            font-size: 1.125rem;
             font-weight: 600;
-            margin: 0;
+            margin: 0 0 0.75rem 0;
+            padding-right: 2rem;
         }
 
         .analytics-dialog-close {
-            background: none;
-            border: none;
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 4px;
             color: #81828A;
             cursor: pointer;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 1.5rem;
             line-height: 1;
-            padding: 0;
+            transition: all 0.15s ease;
         }
 
         .analytics-dialog-close:hover {
-            color: #ffffff;
+            background: #1A1A1E;
+            border-color: #222225;
+            color: white;
         }
 
-        .analytics-tabs {
+        /* Radio toggle - same as view-mode-toggle */
+        .analytics-toggle {
             display: flex;
-            border-bottom: 1px solid #282930;
+            gap: 1.5rem;
+            padding: 0.5rem 0;
+            justify-content: center;
+            margin-bottom: 0.75rem;
         }
 
-        .analytics-tab {
-            flex: 1;
-            padding: 0.75rem;
-            background: none;
-            border: none;
-            color: #81828A;
+        .analytics-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
             cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-            border-bottom: 2px solid transparent;
         }
 
-        .analytics-tab:hover {
+        .analytics-toggle span {
             color: #dcddde;
-        }
-
-        .analytics-tab.active {
-            color: #15d8bc;
-            border-bottom-color: #15d8bc;
+            font-weight: 500;
+            font-size: 0.85rem;
         }
 
         .analytics-content {
-            padding: 0.75rem;
+            padding: 0;
             overflow-y: auto;
             flex: 1;
         }
@@ -1696,6 +1966,51 @@
             text-align: center;
             color: #81828A;
             padding: 2rem;
+        }
+
+        /* Analytics Dialog Responsive */
+        @media (max-width: 480px) {
+            .analytics-dialog {
+                width: 92vw;
+                max-width: none;
+                padding: 0.875rem 1rem 1rem 1rem;
+                max-height: 85vh;
+            }
+
+            .analytics-dialog-title {
+                font-size: 0.95rem;
+                padding-right: 1.75rem;
+            }
+
+            .analytics-dialog-close {
+                top: 0.6rem;
+                right: 0.6rem;
+                width: 24px;
+                height: 24px;
+                font-size: 1.25rem;
+            }
+
+            .analytics-toggle {
+                gap: 1rem;
+            }
+
+            .analytics-toggle span {
+                font-size: 0.8rem;
+            }
+
+            .date-range-container {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .date-input-group {
+                width: 100%;
+            }
+
+            .apply-dates-btn {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
         }
 
         /* Member Stats Styles */
@@ -2283,6 +2598,39 @@
             await customAlert('Switch account', 'Select which Discord account to use:', { contentHtml: contentHTML, hideButton: true });
         }
 
+        // Mobile dashboard navigation
+        function isDashboardMobile() {
+            return window.innerWidth <= 900;
+        }
+
+        function dashboardMobileBack() {
+            const wrapper = document.querySelector('.main-content-wrapper');
+            if (wrapper) {
+                wrapper.classList.remove('mobile-page-active');
+            }
+        }
+
+        function showDashboardMobilePage(pageName) {
+            const wrapper = document.querySelector('.main-content-wrapper');
+            const titleEl = document.getElementById('dashboard-mobile-page-title');
+
+            // Update title based on page
+            const pageTitles = {
+                'personal-panel': 'Personal panel',
+                'team-panel': 'Team panel',
+                'team-management': 'Team management',
+                'analytics': 'Analytics'
+            };
+
+            if (titleEl && pageTitles[pageName]) {
+                titleEl.textContent = pageTitles[pageName];
+            }
+
+            if (wrapper) {
+                wrapper.classList.add('mobile-page-active');
+            }
+        }
+
         // Side menu page switching
         document.addEventListener('DOMContentLoaded', async function() {
             const menuItems = document.querySelectorAll('.menu-item[data-page]');
@@ -2441,6 +2789,11 @@
                             page.style.display = 'none';
                         }
                     });
+
+                    // On mobile, show the page with slide animation
+                    if (isDashboardMobile()) {
+                        showDashboardMobilePage(targetPage);
+                    }
 
                     // Redraw personal chart when analytics page becomes visible
                     if (targetPage === 'analytics') {
@@ -5763,10 +6116,9 @@
         });
 
         function switchAnalyticsTab(tabName) {
-            // Update tab buttons
-            document.querySelectorAll('.analytics-tab').forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.tab === tabName);
-            });
+            // Update radio button state
+            const radio = document.querySelector(`input[name="analytics-view-mode"][value="${tabName}"]`);
+            if (radio) radio.checked = true;
 
             // Update panels
             document.querySelectorAll('.analytics-panel').forEach(panel => {

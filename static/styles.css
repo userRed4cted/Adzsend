@@ -632,7 +632,7 @@ body {
 }
 
 /* ==================== MOBILE NAVBAR ==================== */
-@media (max-width: 900px) {
+@media (max-width: 1150px) {
     /* Keep navbar background and border on mobile */
     .navbar {
         padding: 0.5rem 1.25rem;
@@ -658,8 +658,8 @@ body {
 
     /* Mobile profile container - compact version */
     .navbar-profile-mobile {
-        width: auto;
-        min-height: auto;
+        width: 170px;
+        min-height: 40px;
         padding: 6px 10px;
         gap: 8px;
     }
@@ -672,10 +672,6 @@ body {
     .navbar-profile-mobile .navbar-settings-icon {
         width: 24px;
         height: 24px;
-    }
-
-    .navbar-profile-mobile .navbar-auth-link {
-        font-size: 0.8rem;
     }
 
     /* Mobile welcome text - fixed width sized to fit all slideshow texts, centered */
@@ -2522,11 +2518,11 @@ input:checked + .toggle-slider:before {
     padding: 2rem;
 }
 
-.token-form {
+.auth-form {
     width: 100%;
     max-width: 420px;
     padding: 2.5rem;
-    background: #191A1F;
+    background: #1A1A1E;
     border: none;
     border-radius: 8px;
     text-align: center;

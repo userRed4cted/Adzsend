@@ -1436,8 +1436,8 @@
     }
 
     /* ==================== SETTINGS POPUP RESPONSIVE ==================== */
-    /* Mobile */
-    @media (max-width: 900px) {
+    /* Mobile - matches navbar breakpoint */
+    @media (max-width: 1150px) {
         /* Full screen settings */
         .settings-popup {
             width: 100%;
@@ -1641,9 +1641,9 @@
         }
     }
 
-    // Check if we're on mobile
+    // Check if we're on mobile - matches CSS breakpoint
     function isSettingsMobile() {
-        return window.innerWidth <= 900;
+        return window.innerWidth <= 1150;
     }
 
     // Settings popup - click overlay to close

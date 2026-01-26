@@ -1493,17 +1493,21 @@ def get_team_members(team_id, include_all=False):
     cursor = conn.cursor()
     if include_all:
         cursor.execute('''
-            SELECT btm.*, u.id as user_id, u.email as member_email, u.adzsend_id as member_adzsend_id
+            SELECT btm.*, u.id as user_id, u.email as member_email, u.adzsend_id as member_adzsend_id,
+                   ud.profile_photo
             FROM business_team_members btm
             LEFT JOIN users u ON u.discord_id = btm.member_discord_id
+            LEFT JOIN user_data ud ON u.id = ud.user_id
             WHERE btm.team_id = ?
             ORDER BY btm.added_at
         ''', (team_id,))
     else:
         cursor.execute('''
-            SELECT btm.*, u.id as user_id, u.email as member_email, u.adzsend_id as member_adzsend_id
+            SELECT btm.*, u.id as user_id, u.email as member_email, u.adzsend_id as member_adzsend_id,
+                   ud.profile_photo
             FROM business_team_members btm
             LEFT JOIN users u ON u.discord_id = btm.member_discord_id
+            LEFT JOIN user_data ud ON u.id = ud.user_id
             WHERE btm.team_id = ? AND btm.invitation_status = 'accepted'
             ORDER BY btm.added_at
         ''', (team_id,))

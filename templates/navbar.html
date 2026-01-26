@@ -30,7 +30,7 @@
                 <a href="{{ url_for('purchase') }}" class="nav-link" data-page="purchase">Purchase</a>
                 <a href="#" class="nav-link disabled" data-page="discover" onclick="return false;" title="Coming soon...">Discover</a>
                 <a href="{{ url_for('dashboard') if user else '#' }}" class="nav-link{% if not user %} disabled{% endif %}" data-page="dashboard"{% if not user %} onclick="return false;"{% endif %}>Dashboard</a>
-                <a href="{{ url_for('bridge') if user else '#' }}" class="nav-link{% if not user %} disabled{% endif %}" data-page="bridge"{% if not user %} onclick="return false;"{% endif %}>Bridge</a>
+                <a href="{{ url_for('bridge') }}" class="nav-link" data-page="bridge">Bridge</a>
                 <a href="{{ url_for('support') }}" class="nav-link" data-page="support">Support</a>
             </nav>
 
@@ -75,7 +75,7 @@
         <a href="{{ url_for('purchase') }}" class="mobile-nav-link" data-page="purchase">Purchase</a>
         <a href="#" class="mobile-nav-link disabled" data-page="discover" onclick="return false;" title="Coming soon...">Discover</a>
         <a href="{{ url_for('dashboard') if user else '#' }}" class="mobile-nav-link{% if not user %} disabled{% endif %}" data-page="dashboard"{% if not user %} onclick="return false;"{% endif %}>Dashboard</a>
-        <a href="{{ url_for('bridge') if user else '#' }}" class="mobile-nav-link{% if not user %} disabled{% endif %}" data-page="bridge"{% if not user %} onclick="return false;"{% endif %}>Bridge</a>
+        <a href="{{ url_for('bridge') }}" class="mobile-nav-link" data-page="bridge">Bridge</a>
         <a href="{{ url_for('support') }}" class="mobile-nav-link" data-page="support">Support</a>
     </nav>
 </div>
@@ -199,9 +199,6 @@ window.addEventListener('resize', function() {
 })();
 {% endif %}
 </script>
-
-<!-- Centralized Scale Manager - handles proportional scaling across all resolutions -->
-<script src="{{ url_for('static', filename='scale_manager.js') }}"></script>
 
 <!-- Centralized Image Loader -->
 <script src="{{ url_for('static', filename='image_loader.js') }}"></script>

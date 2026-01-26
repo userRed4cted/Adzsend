@@ -30,22 +30,28 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
     <style>
+        /* Email input - matches site-wide search-input styling */
         .email-input {
             width: 100%;
-            padding: 1rem;
-            background: #212227;
-            border: none;
+            padding: 0.75rem 1rem;
+            background-color: #1A1A1E;
+            border: 1px solid #222225;
             border-radius: 8px;
-            color: #ffffff;
-            font-size: 1rem;
+            color: #dcddde;
+            font-size: 0.9rem;
+            font-family: 'gg sans', sans-serif;
             margin-bottom: 1rem;
+            box-sizing: border-box;
         }
         .email-input:focus {
             outline: none;
+            background-color: #1A1A1E;
+            border-color: #222225;
         }
         .email-input::placeholder {
             color: #81828A;
         }
+
         /* Override submit button to use teal gradient */
         #login-btn {
             background: linear-gradient(to bottom, #15d8bc, #006e59) !important;
@@ -55,6 +61,43 @@
         #login-btn:hover:not(:disabled) {
             background: linear-gradient(to bottom, #10b89e, #004e40) !important;
         }
+
+        /* ==================== MOBILE RESPONSIVE ==================== */
+        @media (max-width: 900px) {
+            .login-container {
+                padding: 1.25rem;
+                min-height: calc(100vh - 80px);
+            }
+
+            .auth-form {
+                padding: 1.5rem;
+                max-width: 100%;
+            }
+
+            .form-title {
+                font-size: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .email-input {
+                padding: 0.7rem 0.9rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 1rem;
+            }
+
+            .auth-form {
+                padding: 1.25rem;
+            }
+
+            .form-title {
+                font-size: 1.25rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -63,7 +106,7 @@
 
         <div class="panel-container">
             <div class="login-container">
-                <div class="token-form">
+                <div class="auth-form">
                     <h2 class="form-title">Login</h2>
                     {% if error %}
                         <div class="error-message">{{ error }}</div>
@@ -72,7 +115,7 @@
                     <form method="POST" action="{{ url_for('login_page') }}" id="login-form">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <div class="form-group-login">
-                            <input type="email" name="email" class="email-input" placeholder="Enter your email address..." required>
+                            <input type="email" name="email" class="email-input" placeholder="Email" required>
                             <button type="submit" class="submit-btn" id="login-btn">Login</button>
                         </div>
                     </form>

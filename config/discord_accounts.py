@@ -9,18 +9,9 @@
 DEFAULT_ACCOUNT_LIMIT = 3
 
 # =============================================================================
-# ADMIN LIMIT CONFIGURATION
-# =============================================================================
-# Enable or disable special account limits for admin users
-ADMIN_HIGHER_LIMIT_ENABLED = True  # Set to False to treat admins like regular users
-
-# Maximum accounts for admin users (only applies if ADMIN_HIGHER_LIMIT_ENABLED = True)
-ADMIN_ACCOUNT_LIMIT = 10
-
-# =============================================================================
 # EMAIL-BASED OVERRIDES
 # =============================================================================
-# Email-based account limit overrides (takes precedence over admin limits)
+# Email-based account limit overrides
 # Users with these emails can link more accounts than the default
 # Format: { 'email@example.com': limit_number }
 ACCOUNT_LIMIT_OVERRIDES = {
@@ -37,7 +28,7 @@ def get_account_limit(user_email, is_admin=False):
 
     Args:
         user_email: The user's email address
-        is_admin: Whether the user is an admin
+        is_admin: Whether the user is an admin (unused, kept for compatibility)
 
     Returns:
         int: The maximum number of Discord accounts this user can link
@@ -45,14 +36,10 @@ def get_account_limit(user_email, is_admin=False):
     if not user_email:
         return DEFAULT_ACCOUNT_LIMIT
 
-    # Check for email-specific override first (highest priority)
+    # Check for email-specific override first
     override = ACCOUNT_LIMIT_OVERRIDES.get(user_email.lower())
     if override:
         return override
-
-    # Check if user is admin and admin higher limits are enabled
-    if is_admin and ADMIN_HIGHER_LIMIT_ENABLED:
-        return ADMIN_ACCOUNT_LIMIT
 
     # Return default limit
     return DEFAULT_ACCOUNT_LIMIT
@@ -65,7 +52,7 @@ def can_link_more_accounts(user_email, current_count, is_admin=False):
     Args:
         user_email: The user's email address
         current_count: Current number of linked accounts
-        is_admin: Whether the user is an admin
+        is_admin: Whether the user is an admin (unused, kept for compatibility)
 
     Returns:
         tuple: (can_link: bool, limit: int, remaining: int)

@@ -185,12 +185,12 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
+            aspect-ratio: 16 / 9;
         }
 
         .feature-pill-video {
             width: 100%;
             height: 100%;
-            max-height: 320px;
             object-fit: cover;
             border-radius: var(--media-radius);
             background: #121215;
@@ -199,7 +199,6 @@
         .feature-pill-image {
             width: 100%;
             height: 100%;
-            max-height: 320px;
             object-fit: cover;
             border-radius: var(--media-radius);
         }
@@ -301,11 +300,6 @@
                 font-size: 14px;
             }
 
-            .feature-pill-video,
-            .feature-pill-image {
-                max-height: 200px;
-            }
-
             /* Reduce why-discord margin on mobile */
             .why-discord-section {
                 margin-top: 0 !important;
@@ -344,11 +338,6 @@
             .feature-pill-description {
                 font-size: 13px;
             }
-
-            .feature-pill-video,
-            .feature-pill-image {
-                max-height: 180px;
-            }
         }
 
         /* Wide screens - scale pills proportionally */
@@ -360,11 +349,6 @@
             .feature-pill {
                 min-height: 455px;
             }
-
-            .feature-pill-video,
-            .feature-pill-image {
-                max-height: 520px;
-            }
         }
 
         @media (min-width: 1800px) {
@@ -374,11 +358,6 @@
 
             .feature-pill {
                 min-height: 520px;
-            }
-
-            .feature-pill-video,
-            .feature-pill-image {
-                max-height: 585px;
             }
         }
     </style>

@@ -554,18 +554,11 @@
             }
         });
 
-        // Purchase button handlers - uses AsyncButton for double-click prevention
+        // Purchase button handlers - placeholder for Stripe integration
         purchaseButtons.forEach(btn => {
             btn.addEventListener('click', async () => {
                 // Skip if button is disabled
                 if (btn.disabled) {
-                    return;
-                }
-
-                // Prevent double-clicks using plan ID as unique operation
-                const planId = btn.dataset.planId;
-                const operationId = `purchase_${planId}`;
-                if (AsyncButton.isProcessing(operationId)) {
                     return;
                 }
 
@@ -575,60 +568,8 @@
                     return;
                 }
 
-                const planType = btn.dataset.planType;
-
-                // Determine which billing toggle to use based on plan type
-                let isYearly = false;
-                if (planType === 'subscription') {
-                    isYearly = billingToggle && billingToggle.checked;
-                } else if (planType === 'business') {
-                    isYearly = businessBillingToggle && businessBillingToggle.checked;
-                }
-
-                // Get plan name from the card
-                const planCard = btn.closest('.plan-card');
-                const planName = planCard.querySelector('.plan-name').textContent;
-                const billingInfo = (planType === 'subscription' || planType === 'business')
-                    ? (isYearly ? ' (Yearly)' : ' (Monthly)')
-                    : '';
-
-                // Show confirmation dialog
-                const confirmMessage = `Are you sure you want to activate the ${planName}${billingInfo} plan?\n\nThis will replace any existing plan on your account.\nYour allowance will be reset and updated to match the new plan.`;
-
-                const confirmed = await customConfirm('Activate Plan', confirmMessage, 'Activate');
-                if (!confirmed) {
-                    return; // User cancelled
-                }
-
-                // Mark operation as started after confirmation
-                AsyncButton.startOperation(operationId);
-
-                // For testing: just set the plan on the account
-                try {
-                    const response = await fetch('/api/set-plan', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-Token': '{{ csrf_token }}'
-                        },
-                        body: JSON.stringify({
-                            plan_type: planType,
-                            plan_id: planId,
-                            billing_period: isYearly ? 'yearly' : 'monthly'
-                        })
-                    });
-                    const data = await response.json();
-                    if (data.success) {
-                        await customAlert('Success', `${planName}${billingInfo} plan activated successfully!`);
-                        window.location.href = data.redirect_url || '/panel';
-                    } else {
-                        await customAlert('Error', 'Error: ' + (data.error || 'Unknown error'));
-                    }
-                } catch (error) {
-                    await customAlert('Error', 'Error activating plan: ' + error);
-                } finally {
-                    AsyncButton.endOperation(operationId);
-                }
+                // TODO: Stripe integration - redirect to Stripe checkout
+                // For now, buttons are non-functional placeholders
             });
         });
 

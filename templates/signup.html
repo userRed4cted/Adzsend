@@ -30,22 +30,28 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
     <style>
+        /* Email input - matches site-wide search-input styling */
         .email-input {
             width: 100%;
-            padding: 1rem;
-            background: #212227;
-            border: none;
+            padding: 0.75rem 1rem;
+            background-color: #1A1A1E;
+            border: 1px solid #222225;
             border-radius: 8px;
-            color: #ffffff;
-            font-size: 1rem;
+            color: #dcddde;
+            font-size: 0.9rem;
+            font-family: 'gg sans', sans-serif;
             margin-bottom: 1rem;
+            box-sizing: border-box;
         }
         .email-input:focus {
             outline: none;
+            background-color: #1A1A1E;
+            border-color: #222225;
         }
         .email-input::placeholder {
             color: #81828A;
         }
+
         /* Override submit button to use teal gradient */
         #signup-btn {
             background: linear-gradient(to bottom, #15d8bc, #006e59) !important;
@@ -102,6 +108,51 @@
         .tos-label a:hover {
             text-decoration: underline;
         }
+
+        /* ==================== MOBILE RESPONSIVE ==================== */
+        @media (max-width: 900px) {
+            .login-container {
+                padding: 1.25rem;
+                min-height: calc(100vh - 80px);
+            }
+
+            .auth-form {
+                padding: 1.5rem;
+                max-width: 100%;
+            }
+
+            .form-title {
+                font-size: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .email-input {
+                padding: 0.7rem 0.9rem;
+                font-size: 0.85rem;
+            }
+
+            .tos-label {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 1rem;
+            }
+
+            .auth-form {
+                padding: 1.25rem;
+            }
+
+            .form-title {
+                font-size: 1.25rem;
+            }
+
+            .tos-label {
+                font-size: 0.75rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -110,7 +161,7 @@
 
         <div class="panel-container">
             <div class="login-container">
-                <div class="token-form">
+                <div class="auth-form">
                     <h2 class="form-title">Sign Up</h2>
                     {% if error %}
                     <div class="error-message">{{ error }}</div>
@@ -120,7 +171,7 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="tos_agreed" id="tos-agreed-input" value="{% if tos_checked %}true{% endif %}">
                         <div class="form-group-login">
-                            <input type="email" name="email" class="email-input" placeholder="Enter your email address..." value="{{ email or '' }}" required>
+                            <input type="email" name="email" class="email-input" placeholder="Email" value="{{ email or '' }}" required>
                             <div class="tos-agreement{% if tos_checked %} checked{% endif %}" id="tos-agreement">
                                 <div class="tos-checkbox">
                                     <img src="{{ url_for('static', filename='tick.png') }}" alt="Checked">

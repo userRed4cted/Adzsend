@@ -1312,16 +1312,14 @@ def dashboard():
 
 @app.route('/bridge')
 def bridge():
-    if 'authenticated' not in session:
-        return redirect(url_for('login_page'))
+    # Bridge page is accessible to everyone (logged in or not)
+    user = None
+    user_data = None
 
-    user = get_user_by_id(session.get('user_id'))
-    if not user:
-        session.clear()
-        return redirect(url_for('login_page'))
-
-    # Get user data
-    user_data = get_user_data(user['id'])
+    if 'authenticated' in session:
+        user = get_user_by_id(session.get('user_id'))
+        if user:
+            user_data = get_user_data(user['id'])
 
     csrf_token = generate_csrf_token()
     response = app.make_response(render_template('bridge.html',
@@ -2824,7 +2822,11 @@ def add_team_member_api():
         success = add_team_member(team['id'], member_discord_id, username, avatar)
 
         if success:
-            return {'success': True, 'message': 'Member added successfully', 'discord_id': member_discord_id}, 200
+            # Get the member's profile photo from user_data table
+            from database import get_user_data
+            member_data = get_user_data(member_user['id'])
+            profile_photo = member_data.get('profile_photo') or 'Light_Blue.jpg'
+            return {'success': True, 'message': 'Member added successfully', 'profile_photo': profile_photo}, 200
         else:
             return {'success': False, 'error': 'Member already exists in the team'}, 400
 

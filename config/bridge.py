@@ -33,7 +33,7 @@ BRIDGE_DOWNLOAD_URLS = {
 BRIDGE_FEATURE_PILLS = [
     {
         'title': "DOWNLOAD FOR DESKTOP",
-        'description': "Send messages all across Discord without interruption, from anywhere, at any time. Were new in town so please forgive us for any bugs you may encounter, placeholders, etc!",
+        'description': "Send messages all across Discord without interruption, from anywhere, at any time. We're new in town so please forgive us for any bugs you may encounter, placeholders, etc!",
         'image': "DiscordDesktopRandomimage.png",
         # Image offset in pixels from center (positive = right/down, negative = left/up)
         'image_offset_x': 90,  # Horizontal offset (px)
@@ -54,7 +54,7 @@ BRIDGE_FEATURE_PILLS = [
     },
     {
         'title': "COMPATIBILITY",
-        'description': "Download the bridge on any compatable device. No need for anything else or even Discord installed, just a device with a stable internet connection. Time to make use of your old laptop!",
+        'description': "Download the bridge on any compatible device. No need for anything else or even Discord installed, just a device with a stable internet connection. Time to make use of your old laptop!",
         'image': "placeholderimagething.png",
         # Image offset in pixels from center (positive = right/down, negative = left/up)
         'image_offset_x': 0,  # Horizontal offset (px)
@@ -65,7 +65,7 @@ BRIDGE_FEATURE_PILLS = [
     },
     {
         'title': "SIMPLE SETUP",
-        'description': "Just download and activate Adzsend Bridge, and your all set to start sending! No complicated setups or difficult configurations.",
+        'description': "Just download and activate Adzsend Bridge, and you're all set to start sending! No complicated setups or difficult configurations.",
         'image': "placeholderimagething.png",
         # Image offset in pixels from center (positive = right/down, negative = left/up)
         'image_offset_x': 0,  # Horizontal offset (px)

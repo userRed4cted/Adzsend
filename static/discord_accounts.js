@@ -251,7 +251,7 @@ async function initiateAccountLink() {
             // Remove listener
             window.removeEventListener('message', handleOAuthMessage);
 
-            customAlert('OAuth Failed', event.data.error || 'Unknown error');
+            customAlert('OAuth Failed', event.data.error || 'Unknown error.');
         }
     });
 }
@@ -360,11 +360,11 @@ async function unlinkDiscordAccount(accountId, event) {
             // Reload accounts
             await loadDiscordAccounts();
         } else {
-            customAlert('Unlink Failed', data.error || 'Unknown error');
+            customAlert('Unlink Failed', data.error || 'Unknown error.');
         }
     } catch (error) {
         console.error('Error unlinking account:', error);
-        customAlert('Unlink Failed', 'Failed to unlink account');
+        customAlert('Unlink Failed', 'Failed to unlink account.');
     }
 }
 

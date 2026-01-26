@@ -2606,7 +2606,7 @@
                                 // Reload page to refresh with new account
                                 window.location.reload();
                             } else {
-                                await customAlert('Error', data.error || 'Failed to switch account');
+                                await customAlert('Error', data.error || 'Failed to switch account.');
                             }
                         } catch (error) {
                             console.error('Error switching account:', error);
@@ -4036,7 +4036,7 @@
                         const cancelConfirmed = await customConfirm('Message sending', 'Are you sure you would like to cancel? This will stop any further actions.', 'Yes');
                         if (cancelConfirmed) {
                             shouldCancelSend = true;
-                            sendBtn.innerHTML = '<span id="send-progress">Checking (messages wont send)</span>';
+                            sendBtn.innerHTML = '<span id="send-progress">Checking (messages won\'t send)</span>';
                         }
                         return;
                     }
@@ -5779,7 +5779,7 @@
                             mgmtSaveBtn.innerHTML = 'Save';
                             updateMgmtSaveButton();
                         } else {
-                            await customAlert('Error', result.error || 'Failed to save team message');
+                            await customAlert('Error', result.error || 'Failed to save team message.');
                             mgmtSaveBtn.innerHTML = 'Save';
                             updateMgmtSaveButton();
                         }
@@ -5875,7 +5875,7 @@
                         }
 
                         if (!/^\d{18}$/.test(adzsendId)) {
-                            await customAlert('Failed', 'Adzsend account with this ID dose not exist, please check again.');
+                            await customAlert('Failed', 'Adzsend account with this ID does not exist. Please check again.');
                             return;
                         }
 
@@ -5920,11 +5920,11 @@
                                 `;
                                 mgmtAddList.appendChild(newItem);
                             } else {
-                                await customAlert('Failed', 'Adzsend account with this ID dose not exist, please check again.');
+                                await customAlert('Failed', 'Adzsend account with this ID does not exist. Please check again.');
                             }
                         } catch (error) {
                             console.error('Add member error:', error);
-                            await customAlert('Failed', 'Adzsend account with this ID dose not exist, please check again.');
+                            await customAlert('Failed', 'Adzsend account with this ID does not exist. Please check again.');
                         } finally {
                             AsyncButton.endOperation(operationId);
                         }
@@ -5968,7 +5968,7 @@
                             memberItem.remove();
                             updateEmptyStates();
                         } else {
-                            await customAlert('Error', result.error || 'Failed to cancel invitation');
+                            await customAlert('Error', result.error || 'Failed to cancel invitation.');
                         }
                     } catch (error) {
                         console.error('Cancel invitation error:', error);
@@ -5993,7 +5993,7 @@
 
                     if (AsyncButton.isProcessing(operationId)) return;
 
-                    const confirmed = await customConfirm('Remove this team member?', 'Remove Member', { confirmText: 'Remove' });
+                    const confirmed = await customConfirm('Remove Member', 'Are you sure you want to remove this team member?', 'Remove');
                     if (!confirmed) return;
 
                     AsyncButton.startOperation(operationId);
@@ -6015,11 +6015,11 @@
                             memberItem.remove();
                             updateEmptyStates();
                         } else {
-                            await customAlert(result.error || 'Failed to remove member', 'Error');
+                            await customAlert('Error', result.error || 'Failed to remove member.');
                         }
                     } catch (error) {
                         console.error('Remove member error:', error);
-                        await customAlert('Failed to remove member: ' + error.message, 'Error');
+                        await customAlert('Error', 'Failed to remove member: ' + error.message);
                     } finally {
                         AsyncButton.endOperation(operationId);
                     }

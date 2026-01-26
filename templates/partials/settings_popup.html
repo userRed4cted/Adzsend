@@ -92,7 +92,7 @@
                 <!-- Date Format Page -->
                 <div class="settings-page" id="settings-page-date-format" style="display: none;">
                     <div class="settings-subheader">Date format</div>
-                    <div class="settings-text">Change the websites formatting of dates to match your prefference.</div>
+                    <div class="settings-text">Change the website's formatting of dates to match your preference.</div>
 
                     <div class="time-format-options">
                         <label class="time-format-option">
@@ -114,7 +114,7 @@
                 <div class="settings-page" id="settings-page-usage" style="display: none;">
                     <!-- Personal Usage Section -->
                     <div class="settings-subheader">Personal usage</div>
-                    <div class="settings-text">Track your plans usage use, across all panels.</div>
+                    <div class="settings-text">Track your plan's usage across all panels.</div>
 
                     <div class="usage-stats-container" id="personal-usage-stats">
                         <div class="usage-stat-row">
@@ -142,7 +142,7 @@
 
                     <!-- Team Usage Section -->
                     <div class="settings-subheader" style="margin-top: 2rem;">Team usage</div>
-                    <div class="settings-text">Track your team plans usage use, across all members on the team panel.</div>
+                    <div class="settings-text">Track your team plan's usage across all members on the team panel.</div>
 
                     <div class="usage-stats-container" id="team-usage-stats">
                         <div class="usage-stat-row">
@@ -189,7 +189,7 @@
 
                         <!-- Manage Teams Section -->
                         <div class="settings-subheader" style="margin-top: 2rem;">Manage teams</div>
-                        <div class="settings-text">Manage what teams your appart of.</div>
+                        <div class="settings-text">Manage what teams you're a part of.</div>
 
                         <div class="team-current-box" id="team-current-box">
                             <div class="team-current-profile">
@@ -275,7 +275,7 @@
 
                     <!-- Delete Account Section -->
                     <div class="settings-subheader" style="margin-top: 2rem;">Delete account</div>
-                    <div class="settings-text">Delete your Adzsend account, erase all data and purchases on your account. Irreversable.</div>
+                    <div class="settings-text">Delete your Adzsend account, erase all data and purchases on your account. Irreversible.</div>
 
                     <button class="delete-account-btn" onclick="openDeleteAccountPopup()">Delete account</button>
                 </div>
@@ -369,7 +369,7 @@
 
                     <!-- Invoices Section -->
                     <div class="settings-subheader" style="margin-top: 2rem;">Invoices</div>
-                    <div class="settings-text">View your accounts billing/payment history.</div>
+                    <div class="settings-text">View your account's billing/payment history.</div>
 
                     <div class="billing-invoices-box" id="billing-invoices-box">
                         <!-- Column Headers -->
@@ -2133,7 +2133,7 @@
 
                         // Owner can't join other teams
                         if (invitationsList) {
-                            invitationsList.innerHTML = '<div class="team-no-invitations">Cant join other teams as team owner.</div>';
+                            invitationsList.innerHTML = '<div class="team-no-invitations">Can\'t join other teams as team owner.</div>';
                         }
                     } else if (data.success && data.in_team) {
                         // User is in a team - show the team owner's info with crown
@@ -2683,11 +2683,11 @@
                     // Refresh status (will show offline since key changed)
                     setTimeout(loadBridgeStatus, 1000);
                 } else {
-                    await customAlert('Error', data.error || 'Failed to regenerate secret key');
+                    await customAlert('Error', data.error || 'Failed to regenerate secret key.');
                 }
             } catch (error) {
                 console.error('Error regenerating secret key:', error);
-                await customAlert('Error', 'Failed to regenerate secret key');
+                await customAlert('Error', 'Failed to regenerate secret key.');
             } finally {
                 if (regenerateBtn) regenerateBtn.disabled = false;
                 AsyncButton.endOperation('regenerate_secret_key');
@@ -2704,7 +2704,7 @@
     <div class="custom-popup">
         <button class="custom-popup-close" onclick="closeDeleteAccountPopup()">&times;</button>
         <h2 class="custom-popup-title">Are you sure?</h2>
-        <p class="custom-popup-text">This action is irreversable, you wont have access to any paid services anymore.</p>
+        <p class="custom-popup-text">This action is irreversible, you won't have access to any paid services anymore.</p>
         <button class="custom-popup-btn" id="confirm-delete-account-btn" onclick="deleteAccount()">Delete account</button>
     </div>
 </div>
@@ -2740,13 +2740,13 @@ async function deleteAccount() {
             // Account deleted, redirect to home
             window.location.href = '/';
         } else {
-            await customAlert('Error', data.error || 'Failed to delete account');
+            await customAlert('Error', data.error || 'Failed to delete account.');
             btn.disabled = false;
             btn.textContent = 'Delete account';
         }
     } catch (error) {
         console.error('Error:', error);
-        await customAlert('Error', 'An error occurred while deleting your account');
+        await customAlert('Error', 'An error occurred while deleting your account.');
         btn.disabled = false;
         btn.textContent = 'Delete account';
     } finally {

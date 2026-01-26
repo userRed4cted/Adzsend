@@ -13,11 +13,13 @@ BRIDGE_TITLE = "ADZSEND BRIDGE"
 # Description (same style as homepage hero description)
 BRIDGE_DESCRIPTION = "Use Adzsend Bridge to start messaging with Discord effectively, without interruptions. Use on any device, from anywhere in the world!"
 
-# Download URLs for the bridge application (per OS)
+# Download URLs for the bridge application (per OS and architecture)
 BRIDGE_DOWNLOAD_URLS = {
-    'windows': "",  # Windows x64
-    'macos': "",    # macOS (universal - Intel + Apple Silicon)
-    'linux': "",    # Linux x64
+    'windows_x64': "https://github.com/userRed4cted/Adzsend/releases/download/bridge-v1.0.0/AdzsendBridgeSetup-x64.exe",
+    'windows_arm64': "https://github.com/userRed4cted/Adzsend/releases/download/bridge-v1.0.0/AdzsendBridgeSetup-arm64.exe",
+    'macos': "https://github.com/userRed4cted/Adzsend/releases/download/bridge-v1.0.0/AdzsendBridgeSetup.dmg",  # Universal (Intel + Apple Silicon)
+    'linux_x64': "https://github.com/userRed4cted/Adzsend/releases/download/bridge-v1.0.0/AdzsendBridgeSetup-x64.deb",
+    'linux_arm64': "https://github.com/userRed4cted/Adzsend/releases/download/bridge-v1.0.0/AdzsendBridgeSetup-arm64.deb",
 }
 
 # ==========================================
@@ -43,11 +45,11 @@ BRIDGE_FEATURE_PILLS = [
         # Buttons under description
         # Each button has: text, icon (image filename in static folder), url (use ~/path for internal links), and optional 'download': True
         'buttons': [
-            {'text': "Windows (x64)", 'icon': "WindowsLogo.png", 'url': "", 'download': True},
-            {'text': "Windows (ARM64)", 'icon': "WindowsLogo.png", 'url': "", 'download': True},
-            {'text': "MacOS", 'icon': "AppleLogo.png", 'url': "", 'download': True},
-            {'text': "Linux (.deb)", 'icon': "LinuxLogo.png", 'url': "", 'download': True},
-            {'text': "Linux (.tar.gz)", 'icon': "LinuxLogo.png", 'url': "", 'download': True},
+             {'text': "MacOS", 'icon': "AppleLogo.png", 'url': "https://github.com/userRed4cted/Adzsend/releases/download/bridge-v1.0.0/AdzsendBridgeSetup.dmg", 'download': True},
+            {'text': "Windows (x64)", 'icon': "WindowsLogo.png", 'url': "https://github.com/userRed4cted/Adzsend/releases/download/bridge-v1.0.0/AdzsendBridgeSetup-x64.exe", 'download': True},
+            {'text': "Windows (ARM64)", 'icon': "WindowsLogo.png", 'url': "https://github.com/userRed4cted/Adzsend/releases/download/bridge-v1.0.0/AdzsendBridgeSetup-arm64.exe", 'download': True},
+            {'text': "Linux (.deb)", 'icon': "LinuxLogo.png", 'url': "https://github.com/userRed4cted/Adzsend/releases/download/bridge-v1.0.0/AdzsendBridgeSetup.deb", 'download': True},
+            {'text': "Linux (.tar.gz)", 'icon': "LinuxLogo.png", 'url': "https://github.com/userRed4cted/Adzsend/releases/download/bridge-v1.0.0/AdzsendBridgeSetup.tar.gz", 'download': True},
         ],
     },
     {

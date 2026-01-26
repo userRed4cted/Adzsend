@@ -372,9 +372,9 @@
                 </section>
 
                 <!-- Download Button (after hero image) -->
-                <div class="bridge-hero-download">
-                    <a href="#" id="bridge-download-btn" class="bridge-download-btn">
-                        <img src="{{ url_for('static', filename='downloadIcon.png') }}" alt="Download">
+                <div class="bridge-hero-download" id="bridge-download-container">
+                    <a href="#" id="bridge-download-btn" class="bridge-download-btn" download>
+                        <img src="{{ url_for('static', filename='downloadIcon.png') }}" alt="Download" id="bridge-download-icon">
                         <span id="bridge-download-text">Download for Windows</span>
                     </a>
                 </div>
@@ -407,16 +407,20 @@
     </div>
 
     <script>
-        // OS detection for Bridge download
+        // OS and architecture detection for Bridge download
         (function() {
+            const container = document.getElementById('bridge-download-container');
             const downloadBtn = document.getElementById('bridge-download-btn');
             const downloadText = document.getElementById('bridge-download-text');
+            const downloadIcon = document.getElementById('bridge-download-icon');
 
             // Download URLs from config
             const downloadUrls = {
-                windows: '{{ bridge_download_urls.windows }}',
+                windows_x64: '{{ bridge_download_urls.windows_x64 }}',
+                windows_arm64: '{{ bridge_download_urls.windows_arm64 }}',
                 macos: '{{ bridge_download_urls.macos }}',
-                linux: '{{ bridge_download_urls.linux }}'
+                linux_x64: '{{ bridge_download_urls.linux_x64 }}',
+                linux_arm64: '{{ bridge_download_urls.linux_arm64 }}'
             };
 
             // Detect OS
@@ -434,21 +438,57 @@
                 return 'unknown';
             }
 
-            const os = detectOS();
+            // Detect CPU architecture
+            function detectArch() {
+                const userAgent = navigator.userAgent.toLowerCase();
+                const platform = navigator.platform.toLowerCase();
 
-            // Set button text and URL based on OS
+                // Check for ARM indicators
+                // Windows on ARM
+                if (userAgent.includes('arm64') || userAgent.includes('aarch64')) {
+                    return 'arm64';
+                }
+                // Windows ARM detection via platform
+                if (platform.includes('arm')) {
+                    return 'arm64';
+                }
+                // Check navigator.userAgentData if available (modern browsers)
+                if (navigator.userAgentData && navigator.userAgentData.platform) {
+                    // This is async but we can check the hints
+                    const hints = navigator.userAgentData;
+                    if (hints.platform === 'Windows') {
+                        // For Windows, check if running on ARM
+                        // WoW64 on ARM will show as x64 emulated, but native ARM64 apps can detect
+                        if (userAgent.includes('arm') || platform.includes('arm')) {
+                            return 'arm64';
+                        }
+                    }
+                }
+                // Linux ARM detection
+                if (userAgent.includes('aarch64') || userAgent.includes('arm64') || userAgent.includes('armv8')) {
+                    return 'arm64';
+                }
+
+                // Default to x64 for desktop platforms
+                return 'x64';
+            }
+
+            const os = detectOS();
+            const arch = detectArch();
+
+            // Set button text and URL based on OS and architecture
             if (os === 'windows') {
                 downloadText.textContent = 'Download for Windows';
-                downloadBtn.href = downloadUrls.windows || '#';
+                downloadBtn.href = (arch === 'arm64' ? downloadUrls.windows_arm64 : downloadUrls.windows_x64) || '#';
             } else if (os === 'macos') {
                 downloadText.textContent = 'Download for MacOS';
                 downloadBtn.href = downloadUrls.macos || '#';
             } else if (os === 'linux') {
                 downloadText.textContent = 'Download for Linux';
-                downloadBtn.href = downloadUrls.linux || '#';
+                downloadBtn.href = (arch === 'arm64' ? downloadUrls.linux_arm64 : downloadUrls.linux_x64) || '#';
             } else {
-                // Unknown OS - hide the button
-                downloadBtn.style.display = 'none';
+                // Unknown OS - hide the container
+                container.style.display = 'none';
             }
         })();
     </script>

@@ -185,8 +185,10 @@
                                 <span class="tos-label">I agree to <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">Adzsend's Terms of Service</a></span>
                             </div>
                             <!-- Cloudflare Turnstile Widget -->
+                            {% if turnstile_site_key %}
                             <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="dark" data-callback="onTurnstileSuccess" data-error-callback="onTurnstileError" style="margin-bottom: 1rem;"></div>
-                            <button type="submit" class="submit-btn" id="signup-btn" disabled>Sign Up</button>
+                            {% endif %}
+                            <button type="submit" class="submit-btn" id="signup-btn" {% if turnstile_site_key %}disabled{% endif %}>Sign Up</button>
                         </div>
                     </form>
 
@@ -200,7 +202,7 @@
 
     <script>
         // Turnstile callbacks
-        let turnstileVerified = false;
+        let turnstileVerified = {{ 'false' if turnstile_site_key else 'true' }};
 
         function onTurnstileSuccess(token) {
             turnstileVerified = true;

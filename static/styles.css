@@ -11,28 +11,28 @@ Existing glow effects (colored box-shadows on active/selected states) are fine.
 /* GG Sans Font */
 @font-face {
     font-family: 'gg sans';
-    src: url('fonts/gg sans Regular.ttf') format('truetype');
+    src: url('fonts/ggsans-Regular.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'gg sans';
-    src: url('fonts/gg sans Medium.ttf') format('truetype');
+    src: url('fonts/ggsans-Medium.ttf') format('truetype');
     font-weight: 500;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'gg sans';
-    src: url('fonts/gg sans Semibold.ttf') format('truetype');
+    src: url('fonts/ggsans-Semibold.ttf') format('truetype');
     font-weight: 600;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'gg sans';
-    src: url('fonts/gg sans Bold.ttf') format('truetype');
+    src: url('fonts/ggsans-Bold.ttf') format('truetype');
     font-weight: 700;
     font-style: normal;
 }
@@ -40,19 +40,19 @@ Existing glow effects (colored box-shadows on active/selected states) are fine.
 /* Direct font-family names for explicit font file usage */
 @font-face {
     font-family: 'gg sans Medium';
-    src: url('fonts/gg sans Medium.ttf') format('truetype');
+    src: url('fonts/ggsans-Medium.ttf') format('truetype');
     font-style: normal;
 }
 
 @font-face {
     font-family: 'gg sans Semibold';
-    src: url('fonts/gg sans Semibold.ttf') format('truetype');
+    src: url('fonts/ggsans-Semibold.ttf') format('truetype');
     font-style: normal;
 }
 
 @font-face {
     font-family: 'gg sans Bold';
-    src: url('fonts/gg sans Bold.ttf') format('truetype');
+    src: url('fonts/ggsans-Bold.ttf') format('truetype');
     font-style: normal;
 }
 

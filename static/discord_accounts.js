@@ -85,7 +85,7 @@ function createLinkAccountCardList() {
     card.style.borderRadius = '6px';
     card.style.padding = '13px';
 
-    const avatarUrl = '/static/discordlogo.png';
+    const avatarUrl = '/static/DiscordLogo.png';
     const isDisabled = !canLinkMoreAccounts || pendingLinkAccount !== null;
 
     // Apply disabled styling

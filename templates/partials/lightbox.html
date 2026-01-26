@@ -32,7 +32,7 @@
                 <!-- Video controls -->
                 <div class="unified-lightbox-video-controls" id="lightbox-video-controls">
                     <button class="unified-lightbox-play-btn" id="lightbox-play-btn" onclick="toggleLightboxVideo(event)">
-                        <img src="{{ url_for('static', filename='play.png') }}" alt="Play" id="lightbox-play-icon">
+                        <img src="{{ url_for('static', filename='Play.png') }}" alt="Play" id="lightbox-play-icon">
                     </button>
 
                     <!-- Progress bar with preview -->
@@ -699,10 +699,10 @@
     function updateVideoPlayIcon(playing) {
         const playIcon = document.getElementById('lightbox-play-icon');
         if (playing) {
-            playIcon.src = '{{ url_for("static", filename="pause.png") }}';
+            playIcon.src = '{{ url_for("static", filename="Pause.png") }}';
             playIcon.alt = 'Pause';
         } else {
-            playIcon.src = '{{ url_for("static", filename="play.png") }}';
+            playIcon.src = '{{ url_for("static", filename="Play.png") }}';
             playIcon.alt = 'Play';
         }
     }

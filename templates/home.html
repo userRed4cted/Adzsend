@@ -39,11 +39,14 @@
     <script src="{{ url_for('static', filename='db_wipe_notice.js') }}"></script>
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     {% include 'partials/base_scripts.html' %}
+    <!-- Preload critical font -->
+    <link rel="preload" href="{{ url_for('static', filename='fonts/ABCGintoNord-Black-Trial.otf') }}" as="font" type="font/otf" crossorigin>
     <style>
         /* ABC Ginto Nord font */
         @font-face {
             font-family: 'ABC Ginto Nord';
             src: url('{{ url_for("static", filename="fonts/ABCGintoNord-Black-Trial.otf") }}') format('opentype');
+            font-display: swap;
         }
 
         body {
@@ -194,6 +197,9 @@
             object-fit: cover;
             border-radius: var(--media-radius);
             background: #121215;
+            /* iOS fixes */
+            -webkit-transform: translateZ(0);
+            transform: translateZ(0);
         }
 
         .feature-pill-image {
@@ -387,7 +393,7 @@
                     </div>
                     <div class="feature-pill-media-container">
                         {% if pill.video %}
-                        <video class="feature-pill-video" autoplay loop muted playsinline>
+                        <video class="feature-pill-video" autoplay loop muted playsinline webkit-playsinline preload="auto">
                             <source src="{{ url_for('static', filename=pill.video) }}" type="video/mp4">
                         </video>
                         {% else %}
@@ -510,10 +516,12 @@
                     (entries) => {
                         entries.forEach(entry => {
                             if (entry.isIntersecting) {
-                                // Schedule animation for next idle period
-                                requestIdleCallback(() => {
-                                    animateCount();
-                                }, { timeout: 500 });
+                                // Schedule animation - use requestIdleCallback if available, otherwise setTimeout
+                                if (typeof requestIdleCallback !== 'undefined') {
+                                    requestIdleCallback(() => animateCount(), { timeout: 500 });
+                                } else {
+                                    setTimeout(animateCount, 100);
+                                }
                                 observer.unobserve(entry.target);
                             }
                         });
@@ -528,15 +536,67 @@
             });
         })();
 
-        // Pause/resume videos on tab visibility change
-        document.addEventListener('visibilitychange', () => {
+        // Video autoplay handler for iOS/mobile
+        (() => {
             const videos = document.querySelectorAll('.feature-pill-video');
-            if (document.hidden) {
-                videos.forEach(v => v.pause());
-            } else {
-                videos.forEach(v => v.play().catch(() => {}));
+            if (videos.length === 0) return;
+
+            // Function to play all videos
+            function playAllVideos() {
+                videos.forEach(v => {
+                    if (v.paused) {
+                        v.play().catch(() => {});
+                    }
+                });
             }
-        });
+
+            // Pause/resume videos on tab visibility change
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    videos.forEach(v => v.pause());
+                } else {
+                    playAllVideos();
+                }
+            });
+
+            // Play on DOMContentLoaded
+            playAllVideos();
+
+            // Retry after short delay (iOS needs this)
+            setTimeout(playAllVideos, 100);
+            setTimeout(playAllVideos, 500);
+            setTimeout(playAllVideos, 1000);
+
+            // Play on any user interaction (iOS requirement)
+            const interactionEvents = ['touchstart', 'touchend', 'click', 'scroll'];
+            let hasInteracted = false;
+
+            function onInteraction() {
+                if (hasInteracted) return;
+                hasInteracted = true;
+                playAllVideos();
+                // Remove listeners after first interaction
+                interactionEvents.forEach(evt => {
+                    document.removeEventListener(evt, onInteraction);
+                });
+            }
+
+            interactionEvents.forEach(evt => {
+                document.addEventListener(evt, onInteraction, { passive: true });
+            });
+
+            // Also use IntersectionObserver to play when visible
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    const video = entry.target;
+                    if (entry.isIntersecting) {
+                        video.play().catch(() => {});
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            videos.forEach(v => observer.observe(v));
+        })();
     </script>
 
     {% include 'partials/settings_popup.html' %}

@@ -186,7 +186,7 @@
                             </div>
                             <!-- Cloudflare Turnstile Widget -->
                             {% if turnstile_site_key %}
-                            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="dark" data-callback="onTurnstileSuccess" data-error-callback="onTurnstileError" style="margin-bottom: 1rem;"></div>
+                            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="dark" data-callback="onTurnstileSuccess" data-error-callback="onTurnstileError" data-expired-callback="onTurnstileExpired" style="margin-bottom: 1rem;"></div>
                             {% endif %}
                             <button type="submit" class="submit-btn" id="signup-btn" {% if turnstile_site_key %}disabled{% endif %}>Sign Up</button>
                         </div>
@@ -210,6 +210,11 @@
         }
 
         function onTurnstileError() {
+            turnstileVerified = false;
+            updateSignupButton();
+        }
+
+        function onTurnstileExpired() {
             turnstileVerified = false;
             updateSignupButton();
         }

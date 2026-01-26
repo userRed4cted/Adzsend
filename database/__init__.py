@@ -46,5 +46,8 @@ from .models import (
     generate_bridge_secret_key, verify_bridge_secret_key, validate_bridge_secret_key,
     create_or_get_bridge_connection, get_bridge_connection, get_bridge_connection_by_adzsend_id,
     regenerate_bridge_secret_key, set_bridge_online, set_bridge_offline,
-    is_bridge_online, get_bridge_status
+    is_bridge_online, get_bridge_status,
+    # Stripe integration functions
+    update_user_stripe_customer_id, update_user_stripe_subscription_id,
+    get_user_by_stripe_customer_id, extend_subscription_by_stripe_subscription_id
 )

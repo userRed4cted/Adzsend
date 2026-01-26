@@ -29,6 +29,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
+    <!-- Cloudflare Turnstile -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         /* Email input - matches site-wide search-input styling */
         .email-input {
@@ -60,6 +62,10 @@
         }
         #signup-btn:hover:not(:disabled) {
             background: linear-gradient(to bottom, #10b89e, #004e40) !important;
+        }
+        #signup-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         /* TOS Agreement Checkbox */
@@ -178,7 +184,9 @@
                                 </div>
                                 <span class="tos-label">I agree to <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">Adzsend's Terms of Service</a></span>
                             </div>
-                            <button type="submit" class="submit-btn" id="signup-btn">Sign Up</button>
+                            <!-- Cloudflare Turnstile Widget -->
+                            <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}" data-theme="dark" data-callback="onTurnstileSuccess" data-error-callback="onTurnstileError" style="margin-bottom: 1rem;"></div>
+                            <button type="submit" class="submit-btn" id="signup-btn" disabled>Sign Up</button>
                         </div>
                     </form>
 
@@ -191,6 +199,26 @@
     </div>
 
     <script>
+        // Turnstile callbacks
+        let turnstileVerified = false;
+
+        function onTurnstileSuccess(token) {
+            turnstileVerified = true;
+            updateSignupButton();
+        }
+
+        function onTurnstileError() {
+            turnstileVerified = false;
+            updateSignupButton();
+        }
+
+        function updateSignupButton() {
+            const signupBtn = document.getElementById('signup-btn');
+            if (signupBtn) {
+                signupBtn.disabled = !turnstileVerified;
+            }
+        }
+
         // TOS Agreement checkbox
         const tosAgreement = document.getElementById('tos-agreement');
         const tosInput = document.getElementById('tos-agreed-input');

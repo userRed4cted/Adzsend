@@ -378,21 +378,9 @@
                             <span class="billing-invoice-col-total">Total</span>
                             <span class="billing-invoice-col-actions">Actions</span>
                         </div>
-                        <!-- Invoices List -->
+                        <!-- Invoices List - Loaded dynamically from Stripe -->
                         <div id="billing-invoices-list">
-                            {% if purchase_history and purchase_history|length > 0 %}
-                                {% for invoice in purchase_history %}
-                                <div class="billing-invoice-item">
-                                    <span class="billing-invoice-col-date billing-invoice-date" data-date="{{ invoice.start_date }}"></span>
-                                    <span class="billing-invoice-col-total">${{ invoice.price }}</span>
-                                    <span class="billing-invoice-col-actions">
-                                        <button class="billing-invoice-view-btn" data-invoice-id="{{ invoice.id }}">View</button>
-                                    </span>
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="billing-no-invoices">No invoices</div>
-                            {% endif %}
+                            <div class="billing-no-invoices" id="billing-invoices-loading">Loading invoices...</div>
                         </div>
                     </div>
                 </div>
@@ -2266,18 +2254,88 @@
         // Listen for date format changes
         window.addEventListener('dateFormatChanged', updateInvoiceDates);
 
-        // Invoice view button handlers (placeholder for Stripe integration)
-        document.querySelectorAll('.billing-invoice-view-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                // TODO: Open Stripe invoice after integration
-            });
-        });
+        // Load Stripe invoices dynamically
+        async function loadStripeInvoices() {
+            const invoicesList = document.getElementById('billing-invoices-list');
+            if (!invoicesList) return;
 
-        // Adjust plan button handler (placeholder for Stripe customer portal)
+            try {
+                const response = await fetch('/api/invoices');
+                const data = await response.json();
+
+                if (data.success && data.invoices) {
+                    if (data.invoices.length === 0) {
+                        invoicesList.innerHTML = '<div class="billing-no-invoices">No invoices</div>';
+                    } else {
+                        invoicesList.innerHTML = data.invoices.map(invoice => {
+                            const date = new Date(invoice.date * 1000); // Convert Unix timestamp
+                            const formattedDate = formatInvoiceDate(date.toISOString());
+                            const amount = invoice.amount.toFixed(2);
+
+                            return `
+                                <div class="billing-invoice-item">
+                                    <span class="billing-invoice-col-date">${formattedDate}</span>
+                                    <span class="billing-invoice-col-total">$${amount}</span>
+                                    <span class="billing-invoice-col-actions">
+                                        <button class="billing-invoice-view-btn" onclick="window.open('${invoice.invoice_url}', '_blank')">View</button>
+                                    </span>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                } else {
+                    invoicesList.innerHTML = '<div class="billing-no-invoices">No invoices</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load invoices:', error);
+                invoicesList.innerHTML = '<div class="billing-no-invoices">Failed to load invoices</div>';
+            }
+        }
+
+        // Load invoices when billing page is shown
+        const billingMenuItem = document.querySelector('[data-settings-page="billing"]');
+        if (billingMenuItem) {
+            billingMenuItem.addEventListener('click', loadStripeInvoices);
+        }
+
+        // Also load on initial page load if billing is the active page
+        if (document.getElementById('settings-page-billing')?.style.display !== 'none') {
+            loadStripeInvoices();
+        }
+
+        // Adjust plan button handler - redirects to Stripe billing portal
         const adjustPlanBtn = document.getElementById('billing-adjust-plan-btn');
         if (adjustPlanBtn) {
-            adjustPlanBtn.addEventListener('click', function() {
-                // TODO: Redirect to Stripe customer portal after integration
+            adjustPlanBtn.addEventListener('click', async function() {
+                // Show loading state
+                const originalText = adjustPlanBtn.textContent;
+                adjustPlanBtn.disabled = true;
+                adjustPlanBtn.innerHTML = '<div class="loading-dots dark"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+
+                try {
+                    const response = await fetch('/api/billing-portal', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ csrf_token }}'
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success && data.portal_url) {
+                        window.location.href = data.portal_url;
+                    } else {
+                        await customAlert('Error', data.error || 'Failed to open billing portal');
+                        adjustPlanBtn.disabled = false;
+                        adjustPlanBtn.textContent = originalText;
+                    }
+                } catch (error) {
+                    console.error('Billing portal error:', error);
+                    await customAlert('Error', 'Failed to open billing portal');
+                    adjustPlanBtn.disabled = false;
+                    adjustPlanBtn.textContent = originalText;
+                }
             });
         }
     })();

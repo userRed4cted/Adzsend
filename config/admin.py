@@ -6,7 +6,7 @@
 # =============================================================================
 
 ADMIN_EMAILS = [
-    'admin@example.com',
+    'artiomroveo@gmail.com',
     # Add admin email addresses here
     # Example: 'admin@yourdomain.com',
 ]

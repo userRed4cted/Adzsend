@@ -60,6 +60,9 @@ from security import (
     is_ip_blocked, check_message_content, BLACKLISTED_WORDS, PHRASE_EXCEPTIONS
 )
 
+# Email service
+from email_service import send_verification_email
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -75,10 +78,53 @@ app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'  # 
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)  # 30 days session
 app.config['SESSION_PERMANENT'] = True
 
+# Cloudflare Turnstile configuration
+TURNSTILE_SITE_KEY = os.getenv('TURNSTILE_SITE_KEY', '')
+TURNSTILE_SECRET_KEY = os.getenv('TURNSTILE_SECRET_KEY', '')
+
+def verify_turnstile(token, remote_ip=None):
+    """Verify Cloudflare Turnstile token server-side.
+
+    SECURITY: This MUST be called server-side. The token from the client
+    is verified against Cloudflare's API using the secret key.
+    - Tokens are single-use (can't be replayed)
+    - Tokens expire after 300 seconds
+    - IP is validated if provided
+    """
+    if not TURNSTILE_SECRET_KEY:
+        # Skip verification if not configured (development only)
+        # In production, TURNSTILE_SECRET_KEY must be set
+        return True
+
+    # Token is required when secret key is configured
+    if not token or not token.strip():
+        return False
+
+    try:
+        response = requests.post(
+            'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+            data={
+                'secret': TURNSTILE_SECRET_KEY,
+                'response': token,
+                'remoteip': remote_ip
+            },
+            timeout=10
+        )
+        result = response.json()
+        return result.get('success', False)
+    except Exception:
+        # Fail closed - reject on error
+        return False
+
 # Make CSRF token available to all templates
 @app.context_processor
 def inject_csrf_token():
     return {'csrf_token': generate_csrf_token()}
+
+# Make Turnstile site key available to all templates
+@app.context_processor
+def inject_turnstile_key():
+    return {'turnstile_site_key': TURNSTILE_SITE_KEY}
 
 # Make user_data available to all templates (for navbar profile photo, settings popup, etc)
 @app.context_processor
@@ -386,10 +432,17 @@ def login_page():
     # POST request handling - email-based login
     email = request.form.get('email', '').strip().lower()
 
+    # Verify Turnstile CAPTCHA
+    turnstile_token = request.form.get('cf-turnstile-response', '')
+    if TURNSTILE_SECRET_KEY and not verify_turnstile(turnstile_token, security_get_client_ip()):
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+        return render_template('login.html', error='CAPTCHA verification failed. Please try again.', csrf_token=csrf_token), 400
+
     if not email:
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
-        return render_template('login.html', error='Email is required', csrf_token=csrf_token), 400
+        return render_template('login.html', error='Email is required.', csrf_token=csrf_token), 400
 
     # Check if email exists
     user = get_user_by_email(email)
@@ -428,7 +481,12 @@ def login_page():
             session['csrf_token'] = csrf_token
             return render_template('login.html', error='Too many incorrect attempts. Please wait 5 minutes before trying again.', csrf_token=csrf_token), 429
 
-        # TODO: Send email via Resend API
+        # Send verification email
+        email_sent, email_error = send_verification_email(email, code, 'login')
+        if not email_sent:
+            csrf_token = generate_csrf_token()
+            session['csrf_token'] = csrf_token
+            return render_template('login.html', error='Failed to send verification email. Please try again.', csrf_token=csrf_token), 500
 
     # Redirect to verification page (code already exists or was just created)
     return redirect(url_for('verify_code_page', purpose='login'))
@@ -460,16 +518,23 @@ def signup_page():
     email = request.form.get('email', '').strip().lower()
     tos_agreed = request.form.get('tos_agreed', '').strip()
 
+    # Verify Turnstile CAPTCHA
+    turnstile_token = request.form.get('cf-turnstile-response', '')
+    if TURNSTILE_SECRET_KEY and not verify_turnstile(turnstile_token, security_get_client_ip()):
+        csrf_token = generate_csrf_token()
+        session['csrf_token'] = csrf_token
+        return render_template('signup.html', error='CAPTCHA verification failed. Please try again.', csrf_token=csrf_token, email=email, tos_checked=(tos_agreed == 'true')), 400
+
     # CRITICAL: Server-side TOS validation - cannot be bypassed via DevTools
     if tos_agreed != 'true':
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
-        return render_template('signup.html', error='You must agree to our Terms of Service to use Adzsend', csrf_token=csrf_token, email=email), 400
+        return render_template('signup.html', error='You must agree to our Terms of Service to use Adzsend.', csrf_token=csrf_token, email=email), 400
 
     if not email:
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
-        return render_template('signup.html', error='Email is required', csrf_token=csrf_token, tos_checked=True), 400
+        return render_template('signup.html', error='Email is required.', csrf_token=csrf_token, tos_checked=True), 400
 
     # Validate email format and domain
     import re
@@ -532,7 +597,12 @@ def signup_page():
             session['csrf_token'] = csrf_token
             return render_template('signup.html', error='Too many incorrect attempts. Please wait 5 minutes before trying again.', csrf_token=csrf_token, email=email, tos_checked=True), 429
 
-        # TODO: Send email via Resend API
+        # Send verification email
+        email_sent, email_error = send_verification_email(email, code, 'signup')
+        if not email_sent:
+            csrf_token = generate_csrf_token()
+            session['csrf_token'] = csrf_token
+            return render_template('signup.html', error='Failed to send verification email. Please try again.', csrf_token=csrf_token, email=email, tos_checked=True), 500
 
     # Redirect to verification page (code already exists or was just created)
     return redirect(url_for('verify_code_page', purpose='signup'))
@@ -832,7 +902,13 @@ def resend_code_api():
             'blocked_seconds': blocked_seconds
         }), 429
 
-    # TODO: Send email via Resend API
+    # Send email via Resend
+    email_sent, email_error = send_verification_email(email, code_or_error, purpose)
+    if not email_sent:
+        return jsonify({
+            'success': False,
+            'error': 'Failed to send verification email. Please try again.'
+        }), 500
 
     return jsonify({'success': True, 'message': 'Verification code sent'})
 
@@ -969,9 +1045,10 @@ def verify_code_api():
 @app.route('/api/set-plan', methods=['POST'])
 @rate_limit('api')
 def set_plan():
-    """API endpoint to activate a plan for a user."""
+    """API endpoint to create Stripe checkout session for a plan."""
     from config import SUBSCRIPTION_PLANS, BUSINESS_PLANS
     from flask import jsonify
+    from stripe_service import create_checkout_session, STRIPE_PRICE_IDS
 
     # CSRF protection
     csrf_error = check_csrf()
@@ -1015,30 +1092,156 @@ def set_plan():
     if not user:
         return jsonify({'success': False, 'error': 'User not found in database'}), 404
 
+    # Map plan_type/plan_id to Stripe price ID key
+    if plan_type == 'subscription':
+        stripe_plan_key = plan_id  # plan_1, plan_2
+    else:
+        stripe_plan_key = plan_id  # team_plan_1, team_plan_2
+
+    # Check if this plan has a Stripe price configured
+    if stripe_plan_key not in STRIPE_PRICE_IDS:
+        return jsonify({'success': False, 'error': 'Payment not configured for this plan'}), 400
+
     try:
-        # Activate the plan
-        set_subscription(user['id'], plan_type, plan_id, plan_config, billing_period)
+        # Create Stripe checkout session
+        base_url = request.url_root.rstrip('/')
+        success_url = f"{base_url}/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
+        cancel_url = f"{base_url}/purchase"
 
-        # If it's a business plan, create a business team
-        redirect_url = '/dashboard'
-        if plan_type == 'business':
-            from database import create_business_team, get_active_subscription, auto_deny_pending_invitations
-            subscription = get_active_subscription(user['id'])
-            if subscription:
-                max_members = plan_config.get('max_members', 3)
-                team_id = create_business_team(user['id'], subscription['id'], max_members)
-                redirect_url = '/team-management'
+        checkout_session, error = create_checkout_session(
+            user_id=user['id'],
+            email=user['email'],
+            plan_id=stripe_plan_key,
+            billing_period=billing_period,
+            success_url=success_url,
+            cancel_url=cancel_url
+        )
 
-                # Auto-deny any pending team invitations since user is now a business owner
-                auto_deny_pending_invitations(session['user']['id'])
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
 
+        if checkout_session:
+            return jsonify({
+                'success': True,
+                'checkout_url': checkout_session.url
+            }), 200
+        else:
+            return jsonify({'success': False, 'error': 'Failed to create checkout session'}), 500
+
+    except Exception:
+        return jsonify({'success': False, 'error': 'Failed to create checkout session'}), 500
+
+
+@app.route('/api/webhooks/stripe', methods=['POST'])
+def stripe_webhook():
+    """Handle Stripe webhook events."""
+    from stripe_service import (
+        verify_webhook_signature,
+        handle_checkout_completed,
+        handle_subscription_deleted,
+        handle_invoice_payment_succeeded,
+        handle_invoice_payment_failed
+    )
+
+    payload = request.get_data()
+    sig_header = request.headers.get('Stripe-Signature')
+
+    if not sig_header:
+        return jsonify({'error': 'Missing signature'}), 400
+
+    event, error = verify_webhook_signature(payload, sig_header)
+    if error:
+        return jsonify({'error': error}), 400
+
+    # Handle the event
+    event_type = event.get('type')
+    data_object = event.get('data', {}).get('object', {})
+
+    try:
+        if event_type == 'checkout.session.completed':
+            handle_checkout_completed(data_object)
+        elif event_type == 'customer.subscription.deleted':
+            handle_subscription_deleted(data_object)
+        elif event_type == 'invoice.payment_succeeded':
+            handle_invoice_payment_succeeded(data_object)
+        elif event_type == 'invoice.payment_failed':
+            # Payment failed - cancel subscription immediately (no retries)
+            handle_invoice_payment_failed(data_object)
+
+        return jsonify({'received': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/billing-portal', methods=['POST'])
+@rate_limit('api')
+def billing_portal():
+    """Redirect user to Stripe billing portal for subscription management."""
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    # Check if user has a Stripe customer ID
+    stripe_customer_id = user.get('stripe_customer_id')
+    if not stripe_customer_id:
+        # User doesn't have Stripe billing - redirect to static portal
         return jsonify({
             'success': True,
-            'message': f"{plan_config['name']} plan activated!",
-            'redirect_url': redirect_url
+            'portal_url': 'https://billing.stripe.com/p/login/fZu8wRfFA1EW7kc00'
         }), 200
-    except Exception as e:
-        return jsonify({'success': False, 'error': 'Failed to activate plan'}), 500
+
+    # Create billing portal session for existing customers
+    from stripe_service import create_billing_portal_session
+
+    base_url = request.url_root.rstrip('/')
+    return_url = f"{base_url}/settings"
+
+    portal_session, error = create_billing_portal_session(user['id'], return_url)
+
+    if error:
+        # Fallback to static portal URL
+        return jsonify({
+            'success': True,
+            'portal_url': 'https://billing.stripe.com/p/login/fZu8wRfFA1EW7kc00'
+        }), 200
+
+    return jsonify({
+        'success': True,
+        'portal_url': portal_session.url
+    }), 200
+
+
+@app.route('/api/invoices', methods=['GET'])
+@rate_limit('api')
+def get_invoices():
+    """Get user's Stripe invoices."""
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    from stripe_service import get_customer_invoices
+
+    invoices, error = get_customer_invoices(user['id'])
+
+    if error:
+        return jsonify({'success': False, 'error': error}), 400
+
+    return jsonify({
+        'success': True,
+        'invoices': invoices
+    }), 200
+
 
 @app.route('/api/update-token', methods=['POST'])
 @rate_limit('token_update')
@@ -1099,73 +1302,6 @@ def update_token():
         return {'error': 'Discord API timeout. Please try again.'}, 500
     except Exception as e:
         return {'error': 'Failed to verify token'}, 500
-
-@app.route('/old_personal_panel')
-def old_personal_panel():
-    # Old personal panel - kept for backwards compatibility
-    if 'authenticated' not in session:
-        return redirect(url_for('login_page'))
-
-    # Get user info
-    user = get_user_by_id(session.get('user_id'))
-    if not user:
-        session.clear()
-        return redirect(url_for('login_page'))
-
-    # Redirect to new dashboard
-    return redirect(url_for('dashboard'))
-
-@app.route('/debug-guilds')
-def debug_guilds():
-    if 'authenticated' not in session:
-        return "Not logged in", 401
-
-    user = get_user_by_id(session.get('user_id'))
-    if not user:
-        return "User not found", 404
-
-    from database import get_linked_discord_accounts, get_linked_discord_account_by_id
-    linked_accounts = get_linked_discord_accounts(user['id'])
-
-    debug_info = {
-        'user_id': user['id'],
-        'linked_accounts_count': len(linked_accounts),
-        'accounts': []
-    }
-
-    for acc in linked_accounts:
-        account_details = get_linked_discord_account_by_id(acc['id'])
-        acc_info = {
-            'id': acc['id'],
-            'username': acc['username'],
-            'discord_id': acc['discord_id'],
-            'has_discord_token': account_details.get('discord_token') is not None if account_details else False
-        }
-
-        if account_details and account_details.get('discord_token'):
-            from database.models import decrypt_token
-            try:
-                decrypted_token = decrypt_token(account_details['discord_token'])
-                acc_info['token_decrypted'] = decrypted_token is not None
-
-                if decrypted_token:
-                    headers = {'Authorization': decrypted_token}
-                    guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=5)
-                    acc_info['api_status'] = guilds_resp.status_code
-
-                    if guilds_resp.status_code == 200:
-                        guilds = guilds_resp.json()
-                        acc_info['guilds_count'] = len(guilds)
-                        acc_info['guilds'] = [{'name': g['name'], 'id': g['id']} for g in guilds[:5]]
-                    else:
-                        acc_info['api_error'] = guilds_resp.text[:200]
-            except Exception as e:
-                acc_info['error'] = str(e)
-
-        debug_info['accounts'].append(acc_info)
-
-    import json
-    return f"<pre>{json.dumps(debug_info, indent=2)}</pre>"
 
 @app.route('/dashboard')
 def dashboard():
@@ -2433,6 +2569,11 @@ def api_change_email():
         # Create verification code for the new email
         code = create_verification_code(new_email, 'email_change')
 
+        # Send verification email
+        email_sent, email_error = send_verification_email(new_email, code, 'email_change')
+        if not email_sent:
+            return jsonify({'success': False, 'error': 'Failed to send verification email. Please try again.'}), 500
+
         # Return redirect URL to verification page
         return jsonify({
             'success': True,
@@ -2556,46 +2697,6 @@ def cancel_plan():
 
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/cancel')
-def dev_cancel_plan():
-    """DEV ONLY: Quick route to reset subscription to free plan."""
-    from database import cancel_subscription
-
-    if 'user' not in session:
-        return redirect(url_for('home'))
-
-    try:
-        user = get_user_by_id(session.get('user_id'))
-        if user:
-            cancel_subscription(user['id'])
-        return redirect(url_for('dashboard'))
-    except Exception as e:
-        return redirect(url_for('dashboard'))
-
-@app.route('/clear')
-def dev_clear_account():
-    """DEV ONLY: Clear all bans and flags from your own account."""
-    from database import unban_user, unflag_user
-
-    if 'user' not in session:
-        return redirect(url_for('home'))
-
-    try:
-        user = get_user_by_id(session.get('user_id'))
-        if user:
-            # Unban if banned
-            if user.get('banned'):
-                unban_user(user['id'])
-
-            # Unflag if flagged
-            if user.get('flagged'):
-                unflag_user(user['id'])
-
-
-        return redirect(url_for('dashboard'))
-    except Exception as e:
-        return redirect(url_for('dashboard'))
 
 @app.route('/api/flag-self', methods=['POST'])
 @rate_limit('api')
@@ -4628,6 +4729,12 @@ def logout():
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+
+@app.route('/payment-success')
+def payment_success():
+    """Payment success page after Stripe checkout."""
+    return render_template('payment_success.html')
+
 
 # Global error handler for API routes - return JSON instead of HTML
 @app.errorhandler(Exception)

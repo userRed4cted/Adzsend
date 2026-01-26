@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - Adzsend</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
+    {% include 'partials/config_styles.html' %}
+    <style>
+        .success-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 80px);
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .success-icon img {
+            width: 40px;
+            height: 40px;
+            filter: brightness(0) saturate(100%) invert(6%) sepia(5%) saturate(1000%) hue-rotate(201deg) brightness(95%) contrast(92%);
+        }
+
+        .success-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 0.75rem;
+        }
+
+        .success-message {
+            font-size: 1rem;
+            color: #81828A;
+            margin-bottom: 2rem;
+            max-width: 400px;
+        }
+
+        .success-btn {
+            background: linear-gradient(to bottom, #15d8bc, #006e59);
+            border: none;
+            color: #121215;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .success-btn:hover {
+            background: linear-gradient(to bottom, #10b89e, #004e40);
+        }
+
+        @media (max-width: 600px) {
+            .success-container {
+                padding: 1.5rem;
+            }
+
+            .success-icon {
+                width: 64px;
+                height: 64px;
+            }
+
+            .success-icon img {
+                width: 32px;
+                height: 32px;
+            }
+
+            .success-title {
+                font-size: 1.5rem;
+            }
+
+            .success-message {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        {% include 'navbar.html' %}
+
+        <div class="panel-container">
+            <div class="success-container">
+                <div class="success-icon">
+                    <img src="{{ url_for('static', filename='tick.png') }}" alt="Success">
+                </div>
+                <h1 class="success-title">Payment Successful!</h1>
+                <p class="success-message">
+                    Thank you for your purchase. Your subscription has been activated and you now have access to all premium features.
+                </p>
+                <a href="/dashboard" class="success-btn">Go to Dashboard</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

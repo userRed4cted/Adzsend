@@ -6,3 +6,5 @@ cryptography
 flask-sock
 gevent
 gevent-websocket
+stripe
+resend

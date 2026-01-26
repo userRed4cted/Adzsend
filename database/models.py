@@ -253,6 +253,20 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Add stripe_customer_id column for Stripe integration
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN stripe_customer_id TEXT')
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    # Add stripe_subscription_id column for Stripe integration
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT')
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Verification codes table for email authentication
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS verification_codes (
@@ -1983,15 +1997,28 @@ def unflag_user(user_id):
 
 
 def delete_user_account_admin(user_id):
-    """Delete a user account (admin function)."""
+    """Delete a user account (admin function). Also cancels Stripe subscription."""
+    import os
+
     conn = get_db()
     cursor = conn.cursor()
 
-    # Get user's email and discord_id first
-    cursor.execute('SELECT discord_id, email FROM users WHERE id = ?', (user_id,))
+    # Get user's email, discord_id, and Stripe subscription ID first
+    cursor.execute('SELECT discord_id, email, stripe_subscription_id FROM users WHERE id = ?', (user_id,))
     user_data = cursor.fetchone()
-    user_discord_id = user_data[0] if user_data else None
-    user_email = user_data[1] if user_data else None
+    user_discord_id = user_data['discord_id'] if user_data else None
+    user_email = user_data['email'] if user_data else None
+    stripe_subscription_id = user_data['stripe_subscription_id'] if user_data else None
+
+    # Cancel Stripe subscription if exists
+    if stripe_subscription_id and os.getenv('STRIPE_SECRET_KEY'):
+        try:
+            import stripe
+            stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+            stripe.Subscription.cancel(stripe_subscription_id)
+        except Exception:
+            # Continue with deletion even if Stripe cancel fails
+            pass
 
     # Delete user's subscriptions
     cursor.execute('DELETE FROM subscriptions WHERE user_id = ?', (user_id,))
@@ -2000,7 +2027,7 @@ def delete_user_account_admin(user_id):
     cursor.execute('SELECT id FROM business_teams WHERE owner_user_id = ?', (user_id,))
     team = cursor.fetchone()
     if team:
-        team_id = team[0]
+        team_id = team['id']
         cursor.execute('DELETE FROM business_team_members WHERE team_id = ?', (team_id,))
         cursor.execute('DELETE FROM business_teams WHERE id = ?', (team_id,))
 
@@ -2013,6 +2040,15 @@ def delete_user_account_admin(user_id):
 
     # Delete usage tracking
     cursor.execute('DELETE FROM usage WHERE user_id = ?', (user_id,))
+
+    # Delete linked discord accounts
+    cursor.execute('DELETE FROM linked_discord_accounts WHERE user_id = ?', (user_id,))
+
+    # Delete discord account channels
+    cursor.execute('DELETE FROM discord_account_channels WHERE user_id = ?', (user_id,))
+
+    # Delete bridge connections
+    cursor.execute('DELETE FROM bridge_connections WHERE user_id = ?', (user_id,))
 
     # Delete email verification codes (for new login system)
     if user_email:
@@ -2299,14 +2335,6 @@ def verify_code(email, code, purpose='login'):
     if now > expires_at:
         conn.close()
         return False, "Verification code has expired. Please request a new one.", False
-
-    # Development bypass code (remove in production)
-    if code == '000001':
-        # Mark the code as used
-        cursor.execute('UPDATE verification_codes SET used = 1 WHERE id = ?', (active_record['id'],))
-        conn.commit()
-        conn.close()
-        return True, None, False
 
     # Hash the submitted code and compare with stored hash
     submitted_hash = hash_verification_code(code)
@@ -3591,6 +3619,80 @@ def can_regenerate_bridge_key(user_id):
     else:
         wait_seconds = (cooldown - time_passed).total_seconds()
         return (False, int(wait_seconds))
+
+
+# =============================================================================
+# STRIPE INTEGRATION HELPERS
+# =============================================================================
+
+def update_user_stripe_customer_id(user_id, stripe_customer_id):
+    """Update user's Stripe customer ID."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE users SET stripe_customer_id = ? WHERE id = ?', (stripe_customer_id, user_id))
+    conn.commit()
+    conn.close()
+
+
+def update_user_stripe_subscription_id(user_id, stripe_subscription_id):
+    """Update user's Stripe subscription ID."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE users SET stripe_subscription_id = ? WHERE id = ?', (stripe_subscription_id, user_id))
+    conn.commit()
+    conn.close()
+
+
+def get_user_by_stripe_customer_id(stripe_customer_id):
+    """Get user by their Stripe customer ID."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE stripe_customer_id = ?', (stripe_customer_id,))
+    user = cursor.fetchone()
+    conn.close()
+    return dict(user) if user else None
+
+
+def extend_subscription_by_stripe_subscription_id(stripe_subscription_id):
+    """Extend subscription end_date for a renewal. Called when invoice.payment_succeeded for subscription_cycle."""
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Find user with this Stripe subscription
+    cursor.execute('SELECT id FROM users WHERE stripe_subscription_id = ?', (stripe_subscription_id,))
+    user = cursor.fetchone()
+    if not user:
+        conn.close()
+        return False
+
+    user_id = user[0]
+
+    # Get active subscription
+    cursor.execute('''
+        SELECT id, billing_period FROM subscriptions
+        WHERE user_id = ? AND is_active = 1 AND plan_id != 'plan_free'
+        ORDER BY created_at DESC LIMIT 1
+    ''', (user_id,))
+    subscription = cursor.fetchone()
+
+    if not subscription:
+        conn.close()
+        return False
+
+    sub_id, billing_period = subscription[0], subscription[1]
+
+    # Calculate new end date
+    now = datetime.now()
+    if billing_period == 'yearly':
+        new_end_date = (now + timedelta(days=365)).isoformat()
+    else:
+        new_end_date = (now + timedelta(days=30)).isoformat()
+
+    # Update end date
+    cursor.execute('UPDATE subscriptions SET end_date = ? WHERE id = ?', (new_end_date, sub_id))
+    conn.commit()
+    conn.close()
+    return True
 
 
 # Initialize database on import

@@ -542,6 +542,7 @@
 
         // Check if user is logged in
         const isUserLoggedIn = {{ 'true' if session.get('user') else 'false' }};
+        const csrfToken = '{{ csrf_token }}';
 
         // Disable "Current Plan" and "Must be logged in" buttons
         const purchaseButtons = document.querySelectorAll('.purchase-btn');
@@ -554,7 +555,7 @@
             }
         });
 
-        // Purchase button handlers - placeholder for Stripe integration
+        // Purchase button handlers - Stripe checkout integration
         purchaseButtons.forEach(btn => {
             btn.addEventListener('click', async () => {
                 // Skip if button is disabled
@@ -562,14 +563,83 @@
                     return;
                 }
 
-                // If this is an "Adjust Plan" button, redirect to settings
+                // If this is an "Adjust Plan" button, redirect to billing portal
                 if (btn.dataset.isAdjust === 'true') {
-                    window.location.href = '/settings';
+                    btn.disabled = true;
+                    btn.innerHTML = '<div class="loading-dots dark"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+
+                    try {
+                        const response = await fetch('/api/billing-portal', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-Token': csrfToken
+                            }
+                        });
+                        const data = await response.json();
+                        if (data.success && data.portal_url) {
+                            window.location.href = data.portal_url;
+                        } else {
+                            await customAlert('Error', data.error || 'Failed to open billing portal');
+                            btn.disabled = false;
+                            btn.textContent = 'Adjust Plan';
+                        }
+                    } catch (error) {
+                        console.error('Billing portal error:', error);
+                        await customAlert('Error', 'Failed to open billing portal');
+                        btn.disabled = false;
+                        btn.textContent = 'Adjust Plan';
+                    }
                     return;
                 }
 
-                // TODO: Stripe integration - redirect to Stripe checkout
-                // For now, buttons are non-functional placeholders
+                // Get plan details
+                const planType = btn.dataset.planType;
+                const planId = btn.dataset.planId;
+
+                // Determine billing period based on which section is visible
+                let billingPeriod = 'monthly';
+                if (planType === 'subscription') {
+                    billingPeriod = document.getElementById('subscriptionBillingToggle').checked ? 'yearly' : 'monthly';
+                } else if (planType === 'business') {
+                    billingPeriod = document.getElementById('businessBillingToggle').checked ? 'yearly' : 'monthly';
+                }
+
+                // Show loading state
+                const originalText = btn.textContent;
+                btn.disabled = true;
+                btn.innerHTML = '<div class="loading-dots dark"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+
+                try {
+                    const response = await fetch('/api/set-plan', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': csrfToken
+                        },
+                        body: JSON.stringify({
+                            plan_type: planType,
+                            plan_id: planId,
+                            billing_period: billingPeriod
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success && data.checkout_url) {
+                        // Redirect to Stripe checkout
+                        window.location.href = data.checkout_url;
+                    } else {
+                        await customAlert('Error', data.error || 'Failed to start checkout');
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }
+                } catch (error) {
+                    console.error('Checkout error:', error);
+                    await customAlert('Error', 'Failed to start checkout. Please try again.');
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
             });
         });
 

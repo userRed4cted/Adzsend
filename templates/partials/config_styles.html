@@ -7,6 +7,11 @@
 <!-- Favicon -->
 <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
 <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<!-- Font Preloading - starts loading fonts immediately with high priority -->
+<link rel="preload" href="{{ url_for('static', filename='fonts/ggsans-Medium.ttf') }}" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="{{ url_for('static', filename='fonts/ggsans-Semibold.ttf') }}" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="{{ url_for('static', filename='fonts/ggsans-Bold.ttf') }}" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="{{ url_for('static', filename='fonts/ABCGintoNord-Black-Trial.otf') }}" as="font" type="font/otf" crossorigin>
 <style>
     :root {
         /* Site-wide settings from config/site.py */

@@ -354,8 +354,11 @@ def fetch_discord_user_info(discord_id):
 @app.before_request
 def validate_session():
     """Validate user session before each request (single session enforcement)."""
-    # Skip validation for static files, login, signup, verify, logout, discord callback, and home page
-    if request.endpoint in ['static', 'login_page', 'signup_page', 'verify_page', 'logout', 'discord_oauth_callback', 'home', 'root']:
+    # Skip validation for static files, login, signup, verify, logout, discord callback, home page, and WebSocket
+    if request.endpoint in ['static', 'login_page', 'signup_page', 'verify_page', 'logout', 'discord_oauth_callback', 'home', 'root', 'bridge_websocket']:
+        return
+    # Also skip if endpoint is None (can happen with WebSocket routes)
+    if request.endpoint is None:
         return
 
     # Check if user is logged in

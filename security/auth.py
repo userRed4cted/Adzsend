@@ -310,7 +310,7 @@ def add_security_headers(response):
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' https://cdn.discordapp.com data:; "
         "font-src 'self'; "
-        "connect-src 'self' https://challenges.cloudflare.com; "
+        "connect-src 'self' https://challenges.cloudflare.com wss://adzsend.com;"
         "frame-src 'self' https://challenges.cloudflare.com; "
         "frame-ancestors 'self';"
     )

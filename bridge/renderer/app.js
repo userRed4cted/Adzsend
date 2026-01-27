@@ -121,7 +121,10 @@ async function handleActivate() {
     } else {
         // Check if we have a secret key
         if (!secretKey) {
-            await promptForSecretKey();
+            // Show error - user must use "Modify Secret Key" to enter key
+            isShowingDialog = true;
+            await window.bridge.showErrorDialog('No secret key', 'Please click "Modify Secret Key" to enter your secret key.');
+            isShowingDialog = false;
             return;
         }
 
@@ -228,13 +231,10 @@ async function handleLoggedOutElsewhere() {
     statusValue.textContent = 'offline';
     statusValue.classList.remove('online');
 
-    // Show logged out dialog - if user clicks button, prompt for new secret key
+    // Show logged out dialog
     isShowingDialog = true;
-    const updateKey = await window.bridge.showLoggedOutDialog();
+    await window.bridge.showLoggedOutDialog();
     isShowingDialog = false;
-    if (updateKey) {
-        promptForSecretKey();
-    }
 }
 
 // Update UI based on initial state

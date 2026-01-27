@@ -143,20 +143,13 @@ def verify_turnstile(token, remote_ip=None):
     import urllib.parse
     import json as json_lib
 
-    print(f"[TURNSTILE] secret_key_set={bool(TURNSTILE_SECRET_KEY)}, token_length={len(token) if token else 0}", flush=True)
-
     if not TURNSTILE_SECRET_KEY:
-        # Skip verification if not configured (development only)
-        print("[TURNSTILE] No secret key configured, skipping", flush=True)
         return True
 
-    # Token is required when secret key is configured
     if not token or not token.strip():
-        print("[TURNSTILE] Empty token received", flush=True)
         return False
 
     try:
-        # Build request data - only include remoteip if provided
         data = {
             'secret': TURNSTILE_SECRET_KEY,
             'response': token
@@ -164,7 +157,7 @@ def verify_turnstile(token, remote_ip=None):
         if remote_ip:
             data['remoteip'] = remote_ip
 
-        # Use urllib instead of requests to avoid recursion issues
+        # Use urllib instead of requests to avoid recursion issues on Render
         encoded_data = urllib.parse.urlencode(data).encode('utf-8')
         req = urllib.request.Request(
             'https://challenges.cloudflare.com/turnstile/v0/siteverify',
@@ -174,11 +167,8 @@ def verify_turnstile(token, remote_ip=None):
         with urllib.request.urlopen(req, timeout=10) as response:
             result = json_lib.loads(response.read().decode('utf-8'))
 
-        print(f"[TURNSTILE] API response: {result}", flush=True)
-
         return result.get('success', False)
-    except Exception as e:
-        print(f"[TURNSTILE] Exception: {e}", flush=True)
+    except Exception:
         return False
 
 # Make CSRF token available to all templates

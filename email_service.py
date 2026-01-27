@@ -5,7 +5,9 @@
 # ==============================================
 
 import os
-import requests
+import urllib.request
+import urllib.error
+import json
 
 # Resend configuration
 RESEND_API_KEY = os.getenv('RESEND_API_KEY', '')
@@ -35,29 +37,42 @@ def send_verification_email(to_email, code, purpose='login'):
 Don't share this code or email with anyone. If you didn't request verification, you can safely ignore this.'''
 
     try:
-        response = requests.post(
+        # Use urllib instead of requests to avoid recursion issues on Render
+        payload = json.dumps({
+            'from': FROM_EMAIL,
+            'to': [to_email],
+            'subject': subject,
+            'text': text_content
+        }).encode('utf-8')
+
+        req = urllib.request.Request(
             'https://api.resend.com/emails',
+            data=payload,
             headers={
                 'Authorization': f'Bearer {RESEND_API_KEY}',
                 'Content-Type': 'application/json'
             },
-            json={
-                'from': FROM_EMAIL,
-                'to': [to_email],
-                'subject': subject,
-                'text': text_content
-            },
-            timeout=10
+            method='POST'
         )
 
-        if response.status_code == 200:
-            return True, None
-        else:
-            error_data = response.json()
-            error_msg = error_data.get('message', f'HTTP {response.status_code}')
-            return False, error_msg
+        with urllib.request.urlopen(req, timeout=10) as response:
+            if response.status == 200:
+                return True, None
+            else:
+                error_data = json.loads(response.read().decode('utf-8'))
+                error_msg = error_data.get('message', f'HTTP {response.status}')
+                return False, error_msg
 
-    except requests.exceptions.Timeout:
-        return False, "Email service timeout"
+    except urllib.error.HTTPError as e:
+        try:
+            error_data = json.loads(e.read().decode('utf-8'))
+            error_msg = error_data.get('message', f'HTTP {e.code}')
+        except Exception:
+            error_msg = f'HTTP {e.code}'
+        return False, error_msg
+    except urllib.error.URLError as e:
+        if 'timed out' in str(e.reason).lower():
+            return False, "Email service timeout"
+        return False, str(e.reason)
     except Exception as e:
         return False, str(e)

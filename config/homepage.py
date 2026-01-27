@@ -48,7 +48,7 @@ HOMEPAGE = {
             # Title (same style as terms subheader)
             'title': "SEND MESSAGES INSTANTLY",
             # Description (same style as terms text)
-            'description': "No more hours of copy and pasting, do it all with one button press. Send messages all across discord with a button press. No more wasting time.",
+            'description': "No more hours of copy and pasting messages or promoting to individual people. Send messages all across discord with a button press. No more wasting time.",
             # Video (looped mp4) or image - use 'video' key for mp4, 'image' key for static images
             'video': "placeholderimagething2.mp4",
             # Background color or gradient
@@ -59,7 +59,7 @@ HOMEPAGE = {
         },
         {
             'title': "CONTROL",
-            'description': "Everyone desires power, start finally controlling your marketing campaigns, instead of letting people control them for you. Overpaying marketing services that take long and have minimal results, NO MORE!",
+            'description': "Start finally controlling your marketing campaigns, instead of letting people control them for you. Overpaying marketing services that take long and have minimal results, NO MORE!",
             'video': "placeholderimagething2.mp4",
             'gradient': True,
             'color_start': "rgba(255, 255, 255, 0.02)",
@@ -68,7 +68,7 @@ HOMEPAGE = {
         },
         {
             'title': "SPEED",
-            'description': "Connect multiple Discord accounts, and send at the same time. No more long waits.",
+            'description': "Connect multiple Discord accounts, and send at the same time. No more long waits for results.",
             'video': "placeholderimagething2.mp4",
             'gradient': True,
             'color_start': "rgba(255, 255, 255, 0.1)",

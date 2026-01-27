@@ -9,6 +9,9 @@ import urllib.error
 import urllib.parse
 import json
 
+# Default User-Agent to avoid Cloudflare blocks
+DEFAULT_USER_AGENT = 'Adzsend/1.0'
+
 
 class HTTPResponse:
     """Simple response object mimicking requests.Response"""
@@ -34,7 +37,10 @@ class TimeoutError(Exception):
 def get(url, headers=None, timeout=10):
     """Make a GET request using urllib"""
     try:
-        req = urllib.request.Request(url, headers=headers or {}, method='GET')
+        request_headers = headers.copy() if headers else {}
+        if 'User-Agent' not in request_headers:
+            request_headers['User-Agent'] = DEFAULT_USER_AGENT
+        req = urllib.request.Request(url, headers=request_headers, method='GET')
         with urllib.request.urlopen(req, timeout=timeout) as response:
             return HTTPResponse(
                 status_code=response.status,
@@ -57,6 +63,8 @@ def post(url, data=None, json_data=None, headers=None, timeout=10):
     """Make a POST request using urllib"""
     try:
         request_headers = headers.copy() if headers else {}
+        if 'User-Agent' not in request_headers:
+            request_headers['User-Agent'] = DEFAULT_USER_AGENT
 
         if json_data is not None:
             body = json.dumps(json_data).encode('utf-8')

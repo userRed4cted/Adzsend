@@ -55,7 +55,8 @@ Don't share this code or email with anyone. If you didn't request verification, 
             data=payload,
             headers={
                 'Authorization': f'Bearer {RESEND_API_KEY}',
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'User-Agent': 'Adzsend/1.0'
             },
             method='POST'
         )

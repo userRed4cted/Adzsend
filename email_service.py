@@ -25,8 +25,11 @@ def send_verification_email(to_email, code, purpose='login'):
     Returns:
         (success: bool, error_message: str or None)
     """
+    print(f"[EMAIL] API key set: {bool(RESEND_API_KEY)}, from: {FROM_EMAIL}", flush=True)
+
     if not RESEND_API_KEY:
         # Development mode - skip sending
+        print("[EMAIL] No API key, skipping (dev mode)", flush=True)
         return True, None
 
     subject = f'Adzsend Verification Code: {code}'
@@ -45,6 +48,8 @@ Don't share this code or email with anyone. If you didn't request verification, 
             'text': text_content
         }).encode('utf-8')
 
+        print(f"[EMAIL] Sending to {to_email}", flush=True)
+
         req = urllib.request.Request(
             'https://api.resend.com/emails',
             data=payload,
@@ -56,11 +61,13 @@ Don't share this code or email with anyone. If you didn't request verification, 
         )
 
         with urllib.request.urlopen(req, timeout=10) as response:
+            print(f"[EMAIL] Response status: {response.status}", flush=True)
             if response.status == 200:
                 return True, None
             else:
                 error_data = json.loads(response.read().decode('utf-8'))
                 error_msg = error_data.get('message', f'HTTP {response.status}')
+                print(f"[EMAIL] Error: {error_msg}", flush=True)
                 return False, error_msg
 
     except urllib.error.HTTPError as e:
@@ -69,10 +76,13 @@ Don't share this code or email with anyone. If you didn't request verification, 
             error_msg = error_data.get('message', f'HTTP {e.code}')
         except Exception:
             error_msg = f'HTTP {e.code}'
+        print(f"[EMAIL] HTTPError: {error_msg}", flush=True)
         return False, error_msg
     except urllib.error.URLError as e:
+        print(f"[EMAIL] URLError: {e.reason}", flush=True)
         if 'timed out' in str(e.reason).lower():
             return False, "Email service timeout"
         return False, str(e.reason)
     except Exception as e:
+        print(f"[EMAIL] Exception: {e}", flush=True)
         return False, str(e)

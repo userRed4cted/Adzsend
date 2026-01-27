@@ -5163,4 +5163,6 @@ def handle_error(e):
 if __name__ == '__main__':
     # Use environment variable for debug mode (default: False for production safety)
     debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
-    app.run(debug=debug_mode)
+    # Render requires host 0.0.0.0 and uses PORT env var (default 10000)
+    port = int(os.getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

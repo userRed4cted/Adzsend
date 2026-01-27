@@ -4,7 +4,7 @@
 def delete_user_account(user_id):
     """
     Completely delete a user and all their data from the database.
-    Also cancels any active Stripe subscriptions.
+    Also cancels any active Stripe subscriptions and deletes the Stripe customer.
     Returns (success: bool, error: str or None)
     """
     import sqlite3
@@ -16,20 +16,37 @@ def delete_user_account(user_id):
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        # Get user's Stripe subscription ID before deleting
+        # Get user's Stripe subscription ID and customer ID before deleting
         cursor.execute('SELECT stripe_subscription_id, stripe_customer_id FROM users WHERE id = ?', (user_id,))
         user_row = cursor.fetchone()
 
         stripe_subscription_id = user_row['stripe_subscription_id'] if user_row else None
+        stripe_customer_id = user_row['stripe_customer_id'] if user_row else None
 
-        # Cancel Stripe subscription if exists
-        if stripe_subscription_id and os.getenv('STRIPE_SECRET_KEY'):
+        # Cancel Stripe subscription and delete customer if exists
+        if os.getenv('STRIPE_SECRET_KEY'):
             try:
                 import stripe
                 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
-                stripe.Subscription.cancel(stripe_subscription_id)
+
+                # Cancel subscription first (if exists)
+                if stripe_subscription_id:
+                    try:
+                        stripe.Subscription.cancel(stripe_subscription_id)
+                    except stripe.error.InvalidRequestError:
+                        # Subscription might already be cancelled
+                        pass
+
+                # Delete the Stripe customer entirely (this also cancels any remaining subscriptions)
+                # Since account deletion is permanent, we fully remove the customer from Stripe
+                if stripe_customer_id:
+                    try:
+                        stripe.Customer.delete(stripe_customer_id)
+                    except stripe.error.InvalidRequestError:
+                        # Customer might already be deleted
+                        pass
             except Exception:
-                # Continue with deletion even if Stripe cancel fails
+                # Continue with deletion even if Stripe operations fail
                 pass
 
         # Delete from all tables where user data exists

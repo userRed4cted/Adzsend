@@ -549,11 +549,6 @@ body {
     height: 29px;
     cursor: pointer;
     filter: brightness(0) saturate(100%) invert(56%) sepia(6%) saturate(340%) hue-rotate(194deg) brightness(93%) contrast(87%);
-    transition: filter 0.2s ease;
-}
-
-.navbar-settings-icon:hover {
-    filter: brightness(0) saturate(100%) invert(100%);
 }
 
 /* Navbar Bottom Links */
@@ -2888,6 +2883,133 @@ input:checked + .toggle-slider:before {
 
     .custom-popup-status {
         font-size: 0.65rem;
+    }
+}
+
+/* ==============================================
+   ADJUST PLAN POPUP STYLES
+   ============================================== */
+
+.adjust-plan-popup {
+    width: 480px;
+}
+
+.adjust-plan-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.adjust-plan-item {
+    display: flex;
+    align-items: center;
+    padding: 0.875rem 1rem;
+    background: #121215;
+    border: 1px solid #222225;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+/* Hover effect removed per user request */
+
+.adjust-plan-item.selected {
+    border-color: #15d8bc;
+}
+
+.adjust-plan-item.processing {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.adjust-plan-radio {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #4a4a4f;
+    border-radius: 50%;
+    margin-right: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: border-color 0.2s ease;
+}
+
+.adjust-plan-item.selected .adjust-plan-radio {
+    border-color: #15d8bc;
+}
+
+.adjust-plan-radio-inner {
+    width: 10px;
+    height: 10px;
+    background: #15d8bc;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.adjust-plan-item.selected .adjust-plan-radio-inner {
+    opacity: 1;
+}
+
+.adjust-plan-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.adjust-plan-name {
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-family: "gg sans";
+}
+
+.adjust-plan-label {
+    color: #15d8bc;
+    font-size: 0.75rem;
+    font-family: "gg sans";
+    margin-left: 0.5rem;
+}
+
+.adjust-plan-label.downgrading {
+    color: #ffffff;
+}
+
+.adjust-plan-price {
+    color: #81828A;
+    font-size: 0.85rem;
+    font-family: "gg sans";
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .adjust-plan-popup {
+        width: 92vw;
+    }
+
+    .adjust-plan-item {
+        padding: 0.75rem;
+    }
+
+    .adjust-plan-radio {
+        width: 16px;
+        height: 16px;
+    }
+
+    .adjust-plan-radio-inner {
+        width: 8px;
+        height: 8px;
+    }
+
+    .adjust-plan-name {
+        font-size: 0.875rem;
+    }
+
+    .adjust-plan-price {
+        font-size: 0.8rem;
     }
 }
 

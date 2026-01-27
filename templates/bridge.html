@@ -420,11 +420,33 @@
                 linux_arm64: '{{ bridge_download_urls.linux_arm64 }}'
             };
 
-            // Detect OS
+            // Detect OS - returns the desktop OS or 'unsupported' for mobile/unknown
             function detectOS() {
                 const userAgent = navigator.userAgent.toLowerCase();
                 const platform = navigator.platform.toLowerCase();
 
+                // Check for mobile/unsupported OS first (these don't get download button)
+                const unsupportedKeywords = [
+                    'iphone', 'ipad', 'ipod',  // iOS
+                    'android',                  // Android
+                    'mobile', 'phone',          // Generic mobile
+                    'blackberry', 'bb10',       // BlackBerry
+                    'opera mini', 'opera mobi', // Mobile browsers
+                    'windows phone', 'windows ce', // Windows Mobile
+                    'kindle', 'silk',           // Kindle/Fire tablets
+                    'playstation', 'xbox', 'nintendo', // Gaming consoles
+                    'smart-tv', 'smarttv', 'googletv', 'appletv', 'hbbtv', 'pov_tv', 'netcast.tv', // Smart TVs
+                    'roku', 'firetv', 'chromecast', // Streaming devices
+                    'tizen', 'webos'            // Smart TV OS
+                ];
+
+                for (const keyword of unsupportedKeywords) {
+                    if (userAgent.includes(keyword)) {
+                        return 'unsupported';
+                    }
+                }
+
+                // Detect desktop OS
                 if (platform.includes('win') || userAgent.includes('windows')) {
                     return 'windows';
                 } else if (platform.includes('mac') || userAgent.includes('macintosh') || userAgent.includes('mac os')) {
@@ -481,10 +503,15 @@
                 downloadText.textContent = 'Download for MacOS';
                 downloadBtn.href = downloadUrls.macos || '#';
             } else if (os === 'linux') {
-                downloadText.textContent = 'Download for Linux';
-                downloadBtn.href = (arch === 'arm64' ? downloadUrls.linux_arm64 : downloadUrls.linux_x64) || '#';
+                // Linux ARM64 is not supported - hide button
+                if (arch === 'arm64' && !downloadUrls.linux_arm64) {
+                    container.style.display = 'none';
+                } else {
+                    downloadText.textContent = 'Download for Linux';
+                    downloadBtn.href = (arch === 'arm64' ? downloadUrls.linux_arm64 : downloadUrls.linux_x64) || '#';
+                }
             } else {
-                // Unknown OS - hide the container
+                // Unsupported OS (mobile, unknown, etc.) - hide the container
                 container.style.display = 'none';
             }
         })();

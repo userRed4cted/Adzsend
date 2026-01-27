@@ -63,8 +63,15 @@
         .page-scroll-container {
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
             padding-top: 60px;
             background: #121215;
+            /* Smooth scrolling optimization */
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: auto;
+            /* GPU acceleration for smoother scroll */
+            will-change: scroll-position;
+            transform: translateZ(0);
         }
 
         /* ==================== HERO SECTION ==================== */
@@ -182,6 +189,7 @@
             justify-content: center;
             padding: 20px;
             aspect-ratio: 16 / 9;
+            position: relative;
         }
 
         .feature-pill-video {
@@ -190,9 +198,13 @@
             object-fit: cover;
             border-radius: var(--media-radius);
             background: #121215;
-            /* iOS fixes */
+            /* iOS/Safari video fixes */
             -webkit-transform: translateZ(0);
             transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            /* Ensure video displays on iOS */
+            display: block;
         }
 
         .feature-pill-image {
@@ -288,6 +300,19 @@
             .feature-pill-media-container {
                 order: 2;
                 padding: 0 16px 16px 16px;
+                /* Ensure centered and maintain aspect ratio on mobile */
+                width: calc(100% - 32px);
+                margin: 0 auto;
+                aspect-ratio: 16 / 9;
+                flex: none;
+            }
+
+            .feature-pill-video {
+                /* iOS video display fixes */
+                width: 100%;
+                height: 100%;
+                min-height: 0;
+                object-fit: cover;
             }
 
             .feature-pill-title {
@@ -328,6 +353,7 @@
 
             .feature-pill-media-container {
                 padding: 0 12px 12px 12px;
+                width: calc(100% - 24px);
             }
 
             .feature-pill-title {
@@ -457,42 +483,46 @@
 
                 const numericValue = parseFloat(match[1]);
                 const suffix = match[2];
-
-                // Pre-calculate step size for better performance
-                const steps = 60; // 60 updates total
-                const stepValue = numericValue / steps;
+                const hasDecimal = targetValue.includes('.');
+                const decimalPlaces = hasDecimal ? (match[1].split('.')[1] || '').length : 0;
 
                 function animateCount() {
                     if (hasAnimated) return;
                     hasAnimated = true;
 
-                    // Enable GPU acceleration for this element
-                    statNumber.style.willChange = 'contents';
-
-                    const duration = 1200;
+                    // Longer duration for smoother animation
+                    const duration = 2000;
                     const startTime = performance.now();
-                    let lastUpdate = 0;
+                    let lastDisplayValue = '';
 
                     function update(currentTime) {
                         const elapsed = currentTime - startTime;
                         const progress = Math.min(elapsed / duration, 1);
 
-                        // Ease-out curve
-                        const easeOut = 1 - Math.pow(1 - progress, 2);
-                        const currentValue = Math.round(numericValue * easeOut);
+                        // Smoother ease-out cubic curve
+                        const easeOut = 1 - Math.pow(1 - progress, 3);
+                        const currentValue = numericValue * easeOut;
 
-                        // Only update if value changed (reduces reflows)
-                        if (currentValue !== lastUpdate) {
-                            statNumber.textContent = currentValue + suffix;
-                            lastUpdate = currentValue;
+                        // Format the display value
+                        let displayValue;
+                        if (hasDecimal) {
+                            displayValue = currentValue.toFixed(decimalPlaces) + suffix;
+                        } else {
+                            // For integers, use floor during animation for smooth counting
+                            displayValue = Math.floor(currentValue) + suffix;
+                        }
+
+                        // Only update DOM if display value changed
+                        if (displayValue !== lastDisplayValue) {
+                            statNumber.textContent = displayValue;
+                            lastDisplayValue = displayValue;
                         }
 
                         if (progress < 1) {
                             requestAnimationFrame(update);
                         } else {
+                            // Ensure final value is exact
                             statNumber.textContent = targetValue;
-                            // Remove will-change after animation
-                            statNumber.style.willChange = 'auto';
                         }
                     }
 
@@ -500,23 +530,20 @@
                 }
 
                 // Use IntersectionObserver for efficient visibility detection
+                // Trigger animation when element is at least 50% visible on screen
                 const observer = new IntersectionObserver(
                     (entries) => {
                         entries.forEach(entry => {
                             if (entry.isIntersecting) {
-                                // Schedule animation - use requestIdleCallback if available, otherwise setTimeout
-                                if (typeof requestIdleCallback !== 'undefined') {
-                                    requestIdleCallback(() => animateCount(), { timeout: 500 });
-                                } else {
-                                    setTimeout(animateCount, 100);
-                                }
+                                // Start animation immediately when visible
+                                animateCount();
                                 observer.unobserve(entry.target);
                             }
                         });
                     },
                     {
-                        threshold: 0.3,
-                        rootMargin: '100px'
+                        threshold: 0.5,  // Trigger when 50% of element is visible
+                        rootMargin: '0px'  // No margin - trigger exactly when visible on screen
                     }
                 );
 

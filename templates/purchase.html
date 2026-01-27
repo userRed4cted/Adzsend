@@ -558,33 +558,10 @@
                     return;
                 }
 
-                // If this is an "Adjust Plan" button, redirect to billing portal
+                // If this is an "Adjust Plan" button, open settings popup with billing page
                 if (btn.dataset.isAdjust === 'true') {
-                    btn.disabled = true;
-                    btn.innerHTML = '<div class="loading-dots dark"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
-
-                    try {
-                        const response = await fetch('/api/billing-portal', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-Token': csrfToken
-                            }
-                        });
-                        const data = await response.json();
-                        if (data.success && data.portal_url) {
-                            window.location.href = data.portal_url;
-                        } else {
-                            await customAlert('Error', data.error || 'Failed to open billing portal');
-                            btn.disabled = false;
-                            btn.textContent = 'Adjust Plan';
-                        }
-                    } catch (error) {
-                        console.error('Billing portal error:', error);
-                        await customAlert('Error', 'Failed to open billing portal');
-                        btn.disabled = false;
-                        btn.textContent = 'Adjust Plan';
-                    }
+                    openSettings();
+                    navigateToSettingsPage('billing');
                     return;
                 }
 
@@ -595,7 +572,7 @@
                 // Determine billing period based on which section is visible
                 let billingPeriod = 'monthly';
                 if (planType === 'subscription') {
-                    billingPeriod = document.getElementById('subscriptionBillingToggle').checked ? 'yearly' : 'monthly';
+                    billingPeriod = document.getElementById('billingToggle').checked ? 'yearly' : 'monthly';
                 } else if (planType === 'business') {
                     billingPeriod = document.getElementById('businessBillingToggle').checked ? 'yearly' : 'monthly';
                 }

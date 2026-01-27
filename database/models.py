@@ -267,6 +267,25 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
 
+    # Add scheduled plan change columns for downgrade scheduling
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN scheduled_plan_id TEXT')
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN scheduled_billing_period TEXT')
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute('ALTER TABLE users ADD COLUMN scheduled_change_date TEXT')
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
     # Verification codes table for email authentication
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS verification_codes (
@@ -572,7 +591,9 @@ def init_db():
 
     # Linked Discord accounts indexes
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_linked_discord_user_id ON linked_discord_accounts(user_id)')
-    cursor.execute('CREATE INDEX IF NOT EXISTS idx_linked_discord_discord_id ON linked_discord_accounts(discord_id)')
+    # UNIQUE index on discord_id prevents same Discord from being linked to multiple Adzsend accounts
+    # This also handles race conditions at the database level
+    cursor.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_linked_discord_discord_id_unique ON linked_discord_accounts(discord_id)')
 
     # Migration: Add selected_channels column to linked_discord_accounts for per-account channel storage
     cursor.execute("PRAGMA table_info(linked_discord_accounts)")
@@ -705,81 +726,93 @@ def save_user_data(user_id, selected_channels=None, draft_message=None, message_
             raise ValueError("Invalid profile photo filename")
 
     conn = get_db()
-    cursor = conn.cursor()
+    try:
+        cursor = conn.cursor()
 
-    # Convert channels list to JSON string
-    channels_json = json.dumps(selected_channels) if selected_channels is not None else None
-    business_channels_json = json.dumps(business_selected_channels) if business_selected_channels is not None else None
+        # Convert channels list to JSON string
+        channels_json = json.dumps(selected_channels) if selected_channels is not None else None
+        business_channels_json = json.dumps(business_selected_channels) if business_selected_channels is not None else None
 
-    # Check if user_data exists
-    cursor.execute('SELECT id FROM user_data WHERE user_id = ?', (user_id,))
-    existing = cursor.fetchone()
+        # Check if user_data exists
+        cursor.execute('SELECT id FROM user_data WHERE user_id = ?', (user_id,))
+        existing = cursor.fetchone()
 
-    if existing:
-        # Update existing record
-        update_parts = []
-        params = []
+        if existing:
+            # Update existing record
+            update_parts = []
+            params = []
 
-        if selected_channels is not None:
-            update_parts.append('selected_channels = ?')
-            params.append(channels_json)
+            if selected_channels is not None:
+                update_parts.append('selected_channels = ?')
+                params.append(channels_json)
 
-        if draft_message is not None:
-            update_parts.append('draft_message = ?')
-            params.append(draft_message)
+            if draft_message is not None:
+                update_parts.append('draft_message = ?')
+                params.append(draft_message)
 
-        if message_delay is not None:
-            update_parts.append('message_delay = ?')
-            params.append(message_delay)
+            if message_delay is not None:
+                update_parts.append('message_delay = ?')
+                params.append(message_delay)
 
-        if date_format is not None:
-            update_parts.append('date_format = ?')
-            params.append(date_format)
+            if date_format is not None:
+                update_parts.append('date_format = ?')
+                params.append(date_format)
 
-        if profile_photo is not None:
-            update_parts.append('profile_photo = ?')
-            params.append(profile_photo)
+            if profile_photo is not None:
+                update_parts.append('profile_photo = ?')
+                params.append(profile_photo)
 
-        if business_selected_channels is not None:
-            update_parts.append('business_selected_channels = ?')
-            params.append(business_channels_json)
+            if business_selected_channels is not None:
+                update_parts.append('business_selected_channels = ?')
+                params.append(business_channels_json)
 
-        if update_parts:
-            update_parts.append('updated_at = ?')
-            params.append(datetime.now().isoformat())
-            params.append(user_id)
+            if update_parts:
+                update_parts.append('updated_at = ?')
+                params.append(datetime.now().isoformat())
+                params.append(user_id)
 
-            # Build query safely - update_parts are hardcoded column names, not user input
-            query = f'UPDATE user_data SET {", ".join(update_parts)} WHERE user_id = ?'
-            cursor.execute(query, params)
-    else:
-        # Insert new record
-        cursor.execute('''
-            INSERT INTO user_data (user_id, selected_channels, draft_message, message_delay, date_format, profile_photo, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (user_id, channels_json, draft_message, message_delay if message_delay is not None else DEFAULT_MESSAGE_DELAY_MS, date_format if date_format is not None else 'mm/dd/yy', profile_photo if profile_photo is not None else 'Light_Blue.jpg', datetime.now().isoformat()))
+                # Build query safely - update_parts are hardcoded column names, not user input
+                query = f'UPDATE user_data SET {", ".join(update_parts)} WHERE user_id = ?'
+                cursor.execute(query, params)
+        else:
+            # Insert new record
+            cursor.execute('''
+                INSERT INTO user_data (user_id, selected_channels, draft_message, message_delay, date_format, profile_photo, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (user_id, channels_json, draft_message, message_delay if message_delay is not None else DEFAULT_MESSAGE_DELAY_MS, date_format if date_format is not None else 'mm/dd/yy', profile_photo if profile_photo is not None else 'Light_Blue.jpg', datetime.now().isoformat()))
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        conn.close()
 
 def get_user_data(user_id):
     """Get user's selected channels, draft message, message delay, date format, profile photo, and business selected channels."""
     conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('SELECT selected_channels, draft_message, message_delay, date_format, profile_photo, business_selected_channels FROM user_data WHERE user_id = ?', (user_id,))
-    data = cursor.fetchone()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('SELECT selected_channels, draft_message, message_delay, date_format, profile_photo, business_selected_channels FROM user_data WHERE user_id = ?', (user_id,))
+        data = cursor.fetchone()
+    finally:
+        conn.close()
 
     if not data:
         return {'selected_channels': [], 'draft_message': '', 'message_delay': 1000, 'date_format': 'mm/dd/yy', 'profile_photo': 'Light_Blue.jpg', 'business_selected_channels': []}
 
-    # Parse JSON channels
-    channels = json.loads(data[0]) if data[0] else []
+    # Parse JSON channels with error handling
+    try:
+        channels = json.loads(data[0]) if data[0] else []
+    except (json.JSONDecodeError, TypeError):
+        channels = []
+
     message = data[1] if data[1] else ''
     delay = data[2] if data[2] is not None else 1000
     date_fmt = data[3] if data[3] else 'mm/dd/yy'
     profile_photo = data[4] if data[4] else 'Light_Blue.jpg'
-    business_channels = json.loads(data[5]) if data[5] else []
+
+    try:
+        business_channels = json.loads(data[5]) if data[5] else []
+    except (json.JSONDecodeError, TypeError):
+        business_channels = []
 
     return {
         'selected_channels': channels,
@@ -796,53 +829,57 @@ def delete_user(discord_id):
     This ensures complete removal with no recovery possible.
     """
     conn = get_db()
-    cursor = conn.cursor()
+    try:
+        cursor = conn.cursor()
 
-    # Get user_id and email first
-    cursor.execute('SELECT id, email FROM users WHERE discord_id = ?', (discord_id,))
-    user = cursor.fetchone()
+        # Get user_id and email first
+        cursor.execute('SELECT id, email FROM users WHERE discord_id = ?', (discord_id,))
+        user = cursor.fetchone()
 
-    if user:
-        user_id = user[0]
-        user_email = user[1]
+        if user:
+            user_id = user[0]
+            user_email = user[1]
 
-        # Delete business team if user owns one
-        cursor.execute('SELECT id FROM business_teams WHERE owner_user_id = ?', (user_id,))
-        team = cursor.fetchone()
-        if team:
-            team_id = team[0]
-            # Delete all team members first
-            cursor.execute('DELETE FROM business_team_members WHERE team_id = ?', (team_id,))
-            # Delete the team
-            cursor.execute('DELETE FROM business_teams WHERE id = ?', (team_id,))
+            # Delete business team if user owns one
+            cursor.execute('SELECT id FROM business_teams WHERE owner_user_id = ?', (user_id,))
+            team = cursor.fetchone()
+            if team:
+                team_id = team[0]
+                # Delete all team members first
+                cursor.execute('DELETE FROM business_team_members WHERE team_id = ?', (team_id,))
+                # Delete the team
+                cursor.execute('DELETE FROM business_teams WHERE id = ?', (team_id,))
 
-        # Remove user from any business teams they're a member of
-        cursor.execute('DELETE FROM business_team_members WHERE member_discord_id = ?', (discord_id,))
+            # Remove user from any business teams they're a member of
+            cursor.execute('DELETE FROM business_team_members WHERE member_discord_id = ?', (discord_id,))
 
-        # Delete all subscriptions
-        cursor.execute('DELETE FROM subscriptions WHERE user_id = ?', (user_id,))
+            # Delete all subscriptions
+            cursor.execute('DELETE FROM subscriptions WHERE user_id = ?', (user_id,))
 
-        # Delete all usage data
-        cursor.execute('DELETE FROM usage WHERE user_id = ?', (user_id,))
+            # Delete all usage data
+            cursor.execute('DELETE FROM usage WHERE user_id = ?', (user_id,))
 
-        # Delete all user data (saved channels, drafts, etc.)
-        cursor.execute('DELETE FROM user_data WHERE user_id = ?', (user_id,))
+            # Delete all user data (saved channels, drafts, etc.)
+            cursor.execute('DELETE FROM user_data WHERE user_id = ?', (user_id,))
 
-        # Delete email verification codes (for new login system)
-        if user_email:
-            cursor.execute('DELETE FROM verification_codes WHERE email = ?', (user_email.lower(),))
-            cursor.execute('DELETE FROM auth_rate_limits WHERE email = ?', (user_email.lower(),))
+            # Delete email verification codes (for new login system)
+            if user_email:
+                cursor.execute('DELETE FROM verification_codes WHERE email = ?', (user_email.lower(),))
+                cursor.execute('DELETE FROM auth_rate_limits WHERE email = ?', (user_email.lower(),))
 
-        # Finally delete the user record (includes encrypted token and OAuth data)
-        cursor.execute('DELETE FROM users WHERE discord_id = ?', (discord_id,))
+            # Finally delete the user record (includes encrypted token and OAuth data)
+            cursor.execute('DELETE FROM users WHERE discord_id = ?', (discord_id,))
 
-        conn.commit()
+            conn.commit()
 
-        # Run VACUUM to permanently remove deleted data from database file
-        # This ensures data cannot be recovered from disk
-        cursor.execute('VACUUM')
-
-    conn.close()
+            # Run VACUUM in a separate connection to not block other operations
+            # This permanently removes deleted data from disk
+            try:
+                cursor.execute('VACUUM')
+            except Exception:
+                pass  # VACUUM failure is non-critical
+    finally:
+        conn.close()
 
 
 def delete_user_by_email(email):
@@ -999,12 +1036,26 @@ def set_subscription(user_id, plan_type, plan_id, plan_config, billing_period=No
                         ''', (start_date.isoformat(), member_user_id))
     else:
         # For non-team plans, reset personal usage
-        cursor.execute('''
-            UPDATE usage SET messages_sent = 0, last_reset = ? WHERE user_id = ?
-        ''', (start_date.isoformat(), user_id))
+        # First check if usage record exists
+        cursor.execute('SELECT id FROM usage WHERE user_id = ?', (user_id,))
+        existing_usage = cursor.fetchone()
+        if existing_usage:
+            # Update existing record
+            cursor.execute('''
+                UPDATE usage SET messages_sent = 0, last_reset = ?
+                WHERE user_id = ?
+            ''', (start_date.isoformat(), user_id))
+        else:
+            # Create new record
+            cursor.execute('''
+                INSERT INTO usage (user_id, messages_sent, last_reset, all_time_sent)
+                VALUES (?, 0, ?, 0)
+            ''', (user_id, start_date.isoformat()))
 
     conn.commit()
     conn.close()
+    return True
+
 
 def cancel_subscription(user_id):
     conn = get_db()
@@ -1015,6 +1066,7 @@ def cancel_subscription(user_id):
 
     # Auto-activate free plan after cancelling
     activate_free_plan(user_id)
+    return True
 
 def activate_free_plan(user_id):
     """Activate the free plan for a user (used when no plan or after cancellation)."""
@@ -1065,6 +1117,82 @@ def activate_free_plan(user_id):
 
     conn.commit()
     conn.close()
+
+
+def set_scheduled_plan_change(user_id, plan_id, billing_period, effective_date):
+    """Store a scheduled plan change (for downgrades that take effect at period end).
+
+    Args:
+        user_id: User's database ID
+        plan_id: The plan to switch to (e.g., 'plan_1')
+        billing_period: 'monthly' or 'yearly'
+        effective_date: Unix timestamp when the change takes effect
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE users SET
+            scheduled_plan_id = ?,
+            scheduled_billing_period = ?,
+            scheduled_change_date = ?
+        WHERE id = ?
+    ''', (plan_id, billing_period, str(effective_date), user_id))
+    conn.commit()
+    conn.close()
+
+
+def get_scheduled_plan_change(user_id):
+    """Get any scheduled plan change for a user.
+
+    Returns:
+        dict with keys: plan_id, billing_period, effective_date
+        or None if no scheduled change
+    """
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT scheduled_plan_id, scheduled_billing_period, scheduled_change_date
+            FROM users WHERE id = ?
+        ''', (user_id,))
+        row = cursor.fetchone()
+    except Exception:
+        # Columns might not exist yet
+        return None
+    finally:
+        conn.close()
+
+    if not row:
+        return None
+
+    # Check if scheduled_plan_id key exists (columns might not exist)
+    try:
+        scheduled_plan_id = row['scheduled_plan_id']
+        if not scheduled_plan_id:
+            return None
+        return {
+            'plan_id': scheduled_plan_id,
+            'billing_period': row['scheduled_billing_period'],
+            'effective_date': int(row['scheduled_change_date']) if row['scheduled_change_date'] else None
+        }
+    except (KeyError, IndexError):
+        return None
+
+
+def clear_scheduled_plan_change(user_id):
+    """Clear any scheduled plan change for a user."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE users SET
+            scheduled_plan_id = NULL,
+            scheduled_billing_period = NULL,
+            scheduled_change_date = NULL
+        WHERE id = ?
+    ''', (user_id,))
+    conn.commit()
+    conn.close()
+
 
 def get_usage(user_id):
     conn = get_db()
@@ -2586,7 +2714,11 @@ def get_discord_oauth_info(user_id):
 
 def complete_discord_link(user_id, discord_token):
     """Complete Discord account linking after token is verified.
-    Updates the main discord_id, username, avatar, and token fields."""
+    Updates the main discord_id, username, avatar, and token fields.
+
+    Returns (success, error_message) tuple.
+    Error messages: "No Discord OAuth data found", "discord_already_linked_other_account"
+    """
     conn = get_db()
     cursor = conn.cursor()
 
@@ -2605,24 +2737,41 @@ def complete_discord_link(user_id, discord_token):
     oauth_username = result[1]
     oauth_avatar = result[2]
 
+    # Check if this Discord account is already linked to another Adzsend user
+    # This prevents the same Discord from being used on multiple accounts
+    cursor.execute('''
+        SELECT id FROM users
+        WHERE discord_id = ? AND id != ? AND discord_oauth_linked = 1
+    ''', (oauth_discord_id, user_id))
+    existing_user = cursor.fetchone()
+    if existing_user:
+        conn.close()
+        return False, "discord_already_linked_other_account"
+
     # Encrypt the Discord token
     encrypted_token = encrypt_token(discord_token)
 
     # Update the user with the linked Discord account
-    cursor.execute('''
-        UPDATE users SET
-            discord_id = ?,
-            username = ?,
-            avatar = ?,
-            discord_token = ?,
-            discord_oauth_linked = 1,
-            discord_oauth_linked_at = ?
-        WHERE id = ?
-    ''', (oauth_discord_id, oauth_username, oauth_avatar, encrypted_token, datetime.now().isoformat(), user_id))
+    # The UNIQUE constraint on discord_id will catch any race conditions
+    try:
+        cursor.execute('''
+            UPDATE users SET
+                discord_id = ?,
+                username = ?,
+                avatar = ?,
+                discord_token = ?,
+                discord_oauth_linked = 1,
+                discord_oauth_linked_at = ?
+            WHERE id = ?
+        ''', (oauth_discord_id, oauth_username, oauth_avatar, encrypted_token, datetime.now().isoformat(), user_id))
 
-    conn.commit()
+        conn.commit()
+    except sqlite3.IntegrityError:
+        # Race condition: another user linked this Discord at the same time
+        conn.close()
+        return False, "discord_already_linked_other_account"
+
     conn.close()
-
     return True, None
 
 
@@ -2994,18 +3143,28 @@ def get_personal_analytics_summary(user_id):
 
 def add_linked_discord_account(user_id, discord_id, username, avatar, avatar_decoration, discord_token,
                                 oauth_access_token=None, oauth_refresh_token=None, oauth_expires_at=None):
-    """Add a new linked Discord account for the user."""
+    """Add a new linked Discord account for the user.
+
+    Returns (success, result) tuple where result is account_id on success or error string on failure.
+    Error strings: "discord_already_linked_other_account", "discord_already_linked_this_account"
+
+    Race condition safety: Uses UNIQUE index on discord_id to prevent simultaneous linking.
+    """
     conn = get_db()
     cursor = conn.cursor()
 
-    # Check if this Discord account is already linked to another user
+    # Pre-check if this Discord account is already linked (for better error messages)
+    # The UNIQUE index on discord_id will also catch race conditions at INSERT time
     cursor.execute('''
         SELECT user_id FROM linked_discord_accounts WHERE discord_id = ?
     ''', (discord_id,))
     existing = cursor.fetchone()
-    if existing and existing['user_id'] != user_id:
+    if existing:
         conn.close()
-        return False, "discord_already_linked_other_account"
+        if existing['user_id'] == user_id:
+            return False, "discord_already_linked_this_account"
+        else:
+            return False, "discord_already_linked_other_account"
 
     # Encrypt tokens
     encrypted_token = encrypt_token(discord_token)
@@ -3027,8 +3186,17 @@ def add_linked_discord_account(user_id, discord_id, username, avatar, avatar_dec
         conn.close()
         return True, account_id
     except sqlite3.IntegrityError:
+        # Race condition: UNIQUE constraint violation
+        # Check who now owns this Discord to return proper error
         conn.close()
-        return False, "Account already linked"
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute('SELECT user_id FROM linked_discord_accounts WHERE discord_id = ?', (discord_id,))
+        owner = cursor.fetchone()
+        conn.close()
+        if owner and owner['user_id'] == user_id:
+            return False, "discord_already_linked_this_account"
+        return False, "discord_already_linked_other_account"
 
 
 def get_linked_discord_accounts(user_id):
@@ -3155,19 +3323,58 @@ def save_discord_account_channels(account_id, user_id, selected_channels):
 def get_discord_account_channels(account_id, user_id):
     """Get selected channels for a specific Discord account."""
     conn = get_db()
-    cursor = conn.cursor()
+    try:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        SELECT selected_channels FROM linked_discord_accounts
-        WHERE id = ? AND user_id = ?
-    ''', (account_id, user_id))
+        cursor.execute('''
+            SELECT selected_channels FROM linked_discord_accounts
+            WHERE id = ? AND user_id = ?
+        ''', (account_id, user_id))
 
-    row = cursor.fetchone()
-    conn.close()
+        row = cursor.fetchone()
+    finally:
+        conn.close()
 
     if row and row[0]:
-        return json.loads(row[0])
+        try:
+            return json.loads(row[0])
+        except (json.JSONDecodeError, TypeError):
+            return []
     return []
+
+
+def clear_user_channel_selections(user_id):
+    """Clear all channel selections for a user when switching plans.
+
+    This resets:
+    - selected_channels in user_data (personal panel)
+    - business_selected_channels in user_data (business panel)
+    - selected_channels in all linked_discord_accounts
+
+    Called when user switches to a different plan tier to avoid
+    issues with different channel limits per plan.
+    """
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+
+        # Clear user_data channel selections
+        cursor.execute('''
+            UPDATE user_data
+            SET selected_channels = '[]', business_selected_channels = '[]'
+            WHERE user_id = ?
+        ''', (user_id,))
+
+        # Clear all linked Discord accounts channel selections
+        cursor.execute('''
+            UPDATE linked_discord_accounts
+            SET selected_channels = '[]'
+            WHERE user_id = ?
+        ''', (user_id,))
+
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def mark_linked_account_invalid(account_id):

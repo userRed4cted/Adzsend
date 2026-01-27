@@ -81,6 +81,55 @@ app.config['SESSION_PERMANENT'] = True
 TURNSTILE_SITE_KEY = os.getenv('TURNSTILE_SITE_KEY', '')
 TURNSTILE_SECRET_KEY = os.getenv('TURNSTILE_SECRET_KEY', '')
 
+
+def is_safe_redirect_url(url):
+    """Validate that a URL is safe for redirecting (prevents open redirect attacks).
+
+    Returns True if the URL is safe (internal), False otherwise.
+    Safe URLs:
+    - Relative paths starting with / (but not //)
+    - URLs pointing to the same host
+
+    Unsafe URLs:
+    - Protocol-relative URLs (//evil.com)
+    - External URLs (https://evil.com)
+    - URLs with @ (user info that could redirect)
+    """
+    if not url:
+        return False
+
+    # Block protocol-relative URLs
+    if url.startswith('//'):
+        return False
+
+    # Allow relative paths
+    if url.startswith('/'):
+        # Block any attempts to include protocols or user info
+        if '://' in url or '@' in url:
+            return False
+        return True
+
+    # For absolute URLs, verify they match our host
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(url)
+        # Get our host from the request
+        our_host = request.host.split(':')[0].lower()  # Remove port if present
+        url_host = parsed.netloc.split(':')[0].lower() if parsed.netloc else ''
+
+        # Only allow if same host or no host (relative)
+        if url_host and url_host != our_host:
+            return False
+
+        # Block javascript: and data: URLs
+        if parsed.scheme and parsed.scheme.lower() not in ['http', 'https', '']:
+            return False
+
+        return True
+    except Exception:
+        return False
+
+
 def verify_turnstile(token, remote_ip=None):
     """Verify Cloudflare Turnstile token server-side.
 
@@ -111,7 +160,7 @@ def verify_turnstile(token, remote_ip=None):
         )
         result = response.json()
         return result.get('success', False)
-    except Exception:
+    except Exception as e:
         # Fail closed - reject on error
         return False
 
@@ -403,7 +452,7 @@ def login_page():
         if validate_user_session(session['user']['id'], session['user_session_id']):
             # Already logged in - redirect to referrer or home (not dashboard)
             referrer = request.referrer
-            if referrer and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
+            if referrer and is_safe_redirect_url(referrer) and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
                 return redirect(referrer)
             return redirect(url_for('home'))
 
@@ -415,7 +464,7 @@ def login_page():
         # Store referrer if it's a valid page to return to after login
         # Only store on first visit (not when redirected from verify)
         referrer = request.referrer
-        if referrer and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
+        if referrer and is_safe_redirect_url(referrer) and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
             if 'login_referrer' not in session:
                 session['login_referrer'] = referrer
                 session.modified = True  # Force session save
@@ -496,7 +545,7 @@ def signup_page():
         if validate_user_session(session['user']['id'], session['user_session_id']):
             # Already logged in - redirect to referrer or home (not dashboard)
             referrer = request.referrer
-            if referrer and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
+            if referrer and is_safe_redirect_url(referrer) and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
                 return redirect(referrer)
             return redirect(url_for('home'))
 
@@ -729,7 +778,7 @@ def verify_code_page():
 
     # Login - get the page they were on before login (stored in session)
     redirect_url = session.pop('login_referrer', None)
-    if not redirect_url:
+    if not redirect_url or not is_safe_redirect_url(redirect_url):
         redirect_url = url_for('home')
     return redirect(redirect_url)
 
@@ -1035,17 +1084,24 @@ def verify_code_api():
     else:
         # Login - get the page they were on before login (stored in session)
         redirect_url = session.pop('login_referrer', None)
-        if not redirect_url:
+        if not redirect_url or not is_safe_redirect_url(redirect_url):
             redirect_url = url_for('home')
         return jsonify({'success': True, 'redirect': redirect_url})
 
 @app.route('/api/set-plan', methods=['POST'])
 @rate_limit('api')
 def set_plan():
-    """API endpoint to create Stripe checkout session for a plan."""
+    """API endpoint to handle plan purchases, upgrades, and downgrades.
+
+    For users without a paid subscription: Creates Stripe checkout session
+    For users with an active subscription:
+        - Upgrades: Immediate switch with proration
+        - Downgrades: Scheduled for end of billing period
+    """
     from config import SUBSCRIPTION_PLANS, BUSINESS_PLANS
     from flask import jsonify
-    from stripe_service import create_checkout_session, STRIPE_PRICE_IDS
+    from stripe_service import create_checkout_session, handle_plan_change, STRIPE_PRICE_IDS
+    from database import get_active_subscription
 
     # CSRF protection
     csrf_error = check_csrf()
@@ -1059,9 +1115,16 @@ def set_plan():
     if not data:
         return jsonify({'success': False, 'error': 'Invalid request data'}), 400
 
-    plan_type = data.get('plan_type')  # 'subscription' or 'business'
+    plan_type = data.get('plan_type')  # 'subscription' or 'business' (optional - can be inferred)
     plan_id = data.get('plan_id')
     billing_period = data.get('billing_period')  # 'monthly' or 'yearly'
+
+    # Infer plan_type from plan_id if not provided
+    if not plan_type and plan_id:
+        if plan_id.startswith('team_'):
+            plan_type = 'business'
+        elif plan_id.startswith('plan_'):
+            plan_type = 'subscription'
 
     # Validate plan data
     is_valid, error_msg = validate_plan_data(plan_type, plan_id, billing_period)
@@ -1099,34 +1162,111 @@ def set_plan():
     if stripe_plan_key not in STRIPE_PRICE_IDS:
         return jsonify({'success': False, 'error': 'Payment not configured for this plan'}), 400
 
+    # Check if user has an active paid subscription
+    current_subscription = get_active_subscription(user['id'])
+    has_paid_subscription = (
+        current_subscription and
+        current_subscription.get('plan_id') not in ['plan_free', None] and
+        user.get('stripe_subscription_id')
+    )
+
+    # Check if trying to select the exact same plan AND billing period
+    # Note: Same plan with different billing period is allowed (monthly <-> yearly switch)
+    if (current_subscription and
+        current_subscription.get('plan_id') == stripe_plan_key and
+        current_subscription.get('billing_period') == billing_period):
+        return jsonify({'success': False, 'error': 'You are already on this plan'}), 400
+
     try:
-        # Create Stripe checkout session
-        base_url = request.url_root.rstrip('/')
-        success_url = f"{base_url}/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
-        cancel_url = f"{base_url}/purchase"
+        if has_paid_subscription:
+            # User has active subscription - handle upgrade/downgrade
+            success, result = handle_plan_change(
+                user_id=user['id'],
+                new_plan_id=stripe_plan_key,
+                new_billing_period=billing_period
+            )
 
-        checkout_session, error = create_checkout_session(
-            user_id=user['id'],
-            email=user['email'],
-            plan_id=stripe_plan_key,
-            billing_period=billing_period,
-            success_url=success_url,
-            cancel_url=cancel_url
-        )
+            if not success:
+                return jsonify({'success': False, 'error': result}), 400
 
-        if error:
-            return jsonify({'success': False, 'error': error}), 400
+            # Return appropriate response based on action type
+            if result.get('action') == 'upgrade':
+                # Upgrades require checkout - redirect to Stripe Checkout for full payment
+                if result.get('requires_checkout'):
+                    base_url = request.url_root.rstrip('/')
+                    success_url = f"{base_url}/payment-success"
+                    cancel_url = f"{base_url}/purchase"
 
-        if checkout_session:
-            return jsonify({
-                'success': True,
-                'checkout_url': checkout_session.url
-            }), 200
+                    checkout_session, error = create_checkout_session(
+                        user_id=user['id'],
+                        email=user['email'],
+                        plan_id=result.get('plan_id'),
+                        billing_period=result.get('billing_period'),
+                        success_url=success_url,
+                        cancel_url=cancel_url
+                    )
+
+                    if error:
+                        return jsonify({'success': False, 'error': error}), 400
+
+                    if checkout_session:
+                        # Set flag to allow access to payment success page after checkout
+                        session['payment_success_allowed'] = True
+                        return jsonify({
+                            'success': True,
+                            'checkout_url': checkout_session.url
+                        }), 200
+                    else:
+                        return jsonify({'success': False, 'error': 'Failed to create checkout session'}), 500
+
+                # Fallback for direct upgrades (shouldn't happen with new flow)
+                return jsonify({
+                    'success': True,
+                    'action': 'upgrade',
+                    'message': 'Plan upgraded successfully! Your new plan is now active.'
+                }), 200
+            elif result.get('action') == 'downgrade':
+                from config.plans import SUBSCRIPTION_PLANS as SUB_PLANS, BUSINESS_PLANS as BUS_PLANS
+                new_plan_config = SUB_PLANS.get(stripe_plan_key) or BUS_PLANS.get(stripe_plan_key)
+                new_plan_name = new_plan_config.get('name', stripe_plan_key) if new_plan_config else stripe_plan_key
+                return jsonify({
+                    'success': True,
+                    'action': 'downgrade',
+                    'message': f'Downgrade to {new_plan_name} scheduled. Your current plan remains active until the end of your billing period.',
+                    'effective_date': result.get('effective_date')
+                }), 200
         else:
-            return jsonify({'success': False, 'error': 'Failed to create checkout session'}), 500
+            # New subscriber - create checkout session
+            base_url = request.url_root.rstrip('/')
+            success_url = f"{base_url}/payment-success"
+            cancel_url = f"{base_url}/purchase"
 
-    except Exception:
-        return jsonify({'success': False, 'error': 'Failed to create checkout session'}), 500
+            checkout_session, error = create_checkout_session(
+                user_id=user['id'],
+                email=user['email'],
+                plan_id=stripe_plan_key,
+                billing_period=billing_period,
+                success_url=success_url,
+                cancel_url=cancel_url
+            )
+
+            if error:
+                return jsonify({'success': False, 'error': error}), 400
+
+            if checkout_session:
+                # Set flag to allow access to payment success page after checkout
+                session['payment_success_allowed'] = True
+                return jsonify({
+                    'success': True,
+                    'checkout_url': checkout_session.url
+                }), 200
+            else:
+                return jsonify({'success': False, 'error': 'Failed to create checkout session'}), 500
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'Failed to process plan change: {str(e)}'}), 500
 
 
 @app.route('/api/webhooks/stripe', methods=['POST'])
@@ -1136,6 +1276,7 @@ def stripe_webhook():
         verify_webhook_signature,
         handle_checkout_completed,
         handle_subscription_deleted,
+        handle_subscription_updated,
         handle_invoice_payment_succeeded,
         handle_invoice_payment_failed
     )
@@ -1159,15 +1300,16 @@ def stripe_webhook():
             handle_checkout_completed(data_object)
         elif event_type == 'customer.subscription.deleted':
             handle_subscription_deleted(data_object)
+        elif event_type == 'customer.subscription.updated':
+            handle_subscription_updated(data_object)
         elif event_type == 'invoice.payment_succeeded':
             handle_invoice_payment_succeeded(data_object)
         elif event_type == 'invoice.payment_failed':
-            # Payment failed - cancel subscription immediately (no retries)
             handle_invoice_payment_failed(data_object)
 
         return jsonify({'received': True}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        return jsonify({'error': 'Webhook processing failed'}), 500
 
 
 @app.route('/api/billing-portal', methods=['POST'])
@@ -1190,16 +1332,28 @@ def billing_portal():
     stripe_customer_id = user.get('stripe_customer_id')
     if not stripe_customer_id:
         # User doesn't have Stripe billing - redirect to static portal
+        from stripe_service import get_portal_url
         return jsonify({
             'success': True,
-            'portal_url': 'https://billing.stripe.com/p/login/fZu8wRfFA1EW7kc00'
+            'portal_url': get_portal_url()
         }), 200
 
     # Create billing portal session for existing customers
-    from stripe_service import create_billing_portal_session
+    from stripe_service import create_billing_portal_session, get_portal_url
 
     base_url = request.url_root.rstrip('/')
-    return_url = f"{base_url}/settings"
+
+    # Get return URL from request, default to /purchase
+    data = request.get_json() or {}
+    client_return_path = data.get('return_url', '/purchase')
+    # Security: Ensure it's a valid internal path (not an external URL or protocol-relative)
+    # Must start with / but not // (which could be //evil.com)
+    if not client_return_path.startswith('/') or client_return_path.startswith('//'):
+        client_return_path = '/purchase'
+    # Additional security: strip any potential URL-encoded characters that could bypass
+    if '://' in client_return_path or '@' in client_return_path:
+        client_return_path = '/purchase'
+    return_url = f"{base_url}{client_return_path}"
 
     portal_session, error = create_billing_portal_session(user['id'], return_url)
 
@@ -1207,13 +1361,218 @@ def billing_portal():
         # Fallback to static portal URL
         return jsonify({
             'success': True,
-            'portal_url': 'https://billing.stripe.com/p/login/fZu8wRfFA1EW7kc00'
+            'portal_url': get_portal_url()
         }), 200
 
     return jsonify({
         'success': True,
         'portal_url': portal_session.url
     }), 200
+
+
+@app.route('/api/cancel-scheduled-downgrade', methods=['POST'])
+@rate_limit('api')
+def cancel_scheduled_downgrade_endpoint():
+    """Cancel a scheduled plan downgrade and keep the current plan."""
+    from stripe_service import cancel_scheduled_downgrade
+
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    success, error = cancel_scheduled_downgrade(user['id'])
+
+    if not success:
+        return jsonify({'success': False, 'error': error or 'Failed to cancel scheduled downgrade'}), 400
+
+    return jsonify({
+        'success': True,
+        'message': 'Scheduled downgrade cancelled. You will remain on your current plan.'
+    }), 200
+
+
+@app.route('/api/scheduled-plan-change', methods=['GET'])
+@rate_limit('api')
+def get_scheduled_plan_change_endpoint():
+    """Get any scheduled plan change for the current user."""
+    from stripe_service import get_scheduled_plan_change
+    from config.plans import SUBSCRIPTION_PLANS, BUSINESS_PLANS
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    scheduled = get_scheduled_plan_change(user['id'])
+
+    if not scheduled:
+        return jsonify({'success': True, 'scheduled_change': None}), 200
+
+    # Get plan name
+    plan_id = scheduled.get('plan_id')
+    plan_config = SUBSCRIPTION_PLANS.get(plan_id) or BUSINESS_PLANS.get(plan_id)
+    plan_name = plan_config.get('name', plan_id) if plan_config else plan_id
+
+    return jsonify({
+        'success': True,
+        'scheduled_change': {
+            'plan_id': plan_id,
+            'plan_name': plan_name,
+            'billing_period': scheduled.get('billing_period'),
+            'effective_date': scheduled.get('effective_date')
+        }
+    }), 200
+
+
+@app.route('/api/cancel-subscription', methods=['POST'])
+@rate_limit('api')
+def cancel_subscription_endpoint():
+    """Cancel subscription at the end of the current billing period.
+
+    Sets cancel_at_period_end=True in Stripe. User keeps their plan until
+    the period ends, then goes to free tier.
+    """
+    from stripe_service import cancel_subscription_at_period_end
+
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    success, error = cancel_subscription_at_period_end(user['id'])
+
+    if not success:
+        return jsonify({'success': False, 'error': error or 'Failed to cancel subscription'}), 400
+
+    return jsonify({
+        'success': True,
+        'message': 'Subscription will be cancelled at the end of your billing period.'
+    }), 200
+
+
+@app.route('/api/reactivate-subscription', methods=['POST'])
+@rate_limit('api')
+def reactivate_subscription_endpoint():
+    """Reactivate a subscription that was set to cancel at period end.
+
+    Sets cancel_at_period_end=False in Stripe. Subscription will continue
+    to renew normally.
+    """
+    from stripe_service import reactivate_subscription
+
+    # CSRF protection
+    csrf_error = check_csrf()
+    if csrf_error:
+        return csrf_error
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    success, error = reactivate_subscription(user['id'])
+
+    if not success:
+        return jsonify({'success': False, 'error': error or 'Failed to reactivate subscription'}), 400
+
+    return jsonify({
+        'success': True,
+        'message': 'Subscription reactivated. Your plan will renew normally.'
+    }), 200
+
+
+@app.route('/api/subscription-status', methods=['GET'])
+@rate_limit('api')
+def get_subscription_status_endpoint():
+    """Get current subscription status including cancel_at_period_end state."""
+    from stripe_service import get_subscription_status
+    from config.plans import SUBSCRIPTION_PLANS, BUSINESS_PLANS
+
+    if 'user' not in session:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    user = get_user_by_id(session.get('user_id'))
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    try:
+        # Get current plan info from database
+        subscription_data = get_active_subscription(user['id'])
+
+        # Get Stripe subscription status (may fail if Stripe not configured)
+        stripe_status = None
+        try:
+            stripe_status = get_subscription_status(user['id'])
+        except Exception:
+            pass
+
+        # Get scheduled plan change if any
+        from stripe_service import get_scheduled_plan_change
+        scheduled_change = None
+        try:
+            scheduled_change = get_scheduled_plan_change(user['id'])
+        except Exception:
+            pass  # Columns might not exist yet
+
+        response = {
+            'success': True,
+            'has_paid_subscription': False,
+            'cancel_at_period_end': False,
+            'current_period_end': None,
+            'plan_id': None,
+            'plan_name': None,
+            'billing_period': None,
+            'scheduled_change': None
+        }
+
+        if subscription_data and subscription_data.get('plan_id') != 'plan_free':
+            plan_id = subscription_data.get('plan_id')
+            plan_config = SUBSCRIPTION_PLANS.get(plan_id) or BUSINESS_PLANS.get(plan_id)
+
+            response['has_paid_subscription'] = True
+            response['plan_id'] = plan_id
+            response['plan_name'] = plan_config.get('name', plan_id) if plan_config else plan_id
+            response['billing_period'] = subscription_data.get('billing_period')
+
+        if stripe_status:
+            response['cancel_at_period_end'] = stripe_status.get('cancel_at_period_end', False)
+            response['current_period_end'] = stripe_status.get('current_period_end')
+
+        if scheduled_change:
+            scheduled_plan_id = scheduled_change.get('plan_id')
+            scheduled_plan_config = SUBSCRIPTION_PLANS.get(scheduled_plan_id) or BUSINESS_PLANS.get(scheduled_plan_id)
+            response['scheduled_change'] = {
+                'plan_id': scheduled_plan_id,
+                'plan_name': scheduled_plan_config.get('name', scheduled_plan_id) if scheduled_plan_config else scheduled_plan_id,
+                'billing_period': scheduled_change.get('billing_period'),
+                'effective_date': scheduled_change.get('effective_date')
+            }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Failed to get subscription status'}), 500
 
 
 @app.route('/api/invoices', methods=['GET'])
@@ -2005,6 +2364,10 @@ def send_message_single():
     is_business = data.get('is_business', False)
     owner_user_id = None  # Will be set if business send
 
+    # Get current plan_id for plan change detection during sending
+    current_subscription = get_active_subscription(user['id'])
+    current_plan_id = current_subscription.get('plan_id') if current_subscription else 'plan_free'
+
     if is_business:
         # For business sends, check owner's usage limits
         from database import get_business_team_by_owner, get_business_team_by_member
@@ -2113,7 +2476,7 @@ def send_message_single():
                 import traceback
                 traceback.print_exc()
                 # Message was sent successfully, return success anyway
-            return {'success': True, 'channel': channel_name}, 200
+            return {'success': True, 'channel': channel_name, 'plan_id': current_plan_id}, 200
         else:
             # Handle bridge errors
             error = bridge_result.get('error', 'Unknown error')
@@ -3976,7 +4339,7 @@ def discord_oauth_callback():
     stored_state = session.pop('discord_oauth_state', None)
 
     if not state or state != stored_state:
-        return render_template('settings.html', error='Invalid OAuth state. Please try again.')
+        return redirect(url_for('dashboard') + '?open_settings=discord-accounts&oauth_error=Invalid%20OAuth%20state.%20Please%20try%20again.')
 
     # Check for error response
     error = request.args.get('error')
@@ -4172,6 +4535,12 @@ def discord_link():
         # Complete the linking
         success, error = complete_discord_link(user_id, token)
         if not success:
+            if error == "discord_already_linked_other_account":
+                return {
+                    'error': 'discord_already_linked_other_account',
+                    'error_title': 'Discord Already Linked',
+                    'error_message': "This Discord account is already linked to another Adzsend account. Unlink it from that account first to add it to this one. If you need assistance, [contact us](/support)."
+                }, 400
             return {'error': error or 'Failed to link account'}, 500
 
         # Update session with new Discord info
@@ -4293,6 +4662,29 @@ def get_pending_link_account():
             'avatar_decoration': pending_data.get('avatar_decoration')
         }
     }
+
+
+@app.route('/api/linked-accounts/cancel-pending', methods=['POST'])
+@rate_limit('api')
+def cancel_pending_link_account():
+    """Cancel any pending link account in session.
+
+    Called when user refreshes page, navigates away from Discord accounts page,
+    or manually cancels the linking process.
+    """
+    user_id = get_session_user_id()
+    if not user_id:
+        return jsonify({'success': False, 'error': 'Not logged in'}), 401
+
+    # Clear pending account data from session
+    if 'pending_link_account' in session:
+        del session['pending_link_account']
+
+    # Also clear OAuth state if present
+    if 'discord_link_account_state' in session:
+        del session['discord_link_account_state']
+
+    return jsonify({'success': True})
 
 
 @app.route('/discord/link-account')
@@ -4714,7 +5106,7 @@ def logout():
     private_pages = ['/dashboard', '/admin', '/bridge', '/settings', '/purchase']
 
     redirect_url = url_for('home')  # Default to home
-    if referrer:
+    if referrer and is_safe_redirect_url(referrer):
         # Check if referrer is a public page (not private)
         is_private = any(private in referrer for private in private_pages)
         if not is_private and not any(path in referrer for path in ['/login', '/signup', '/verify', '/logout']):
@@ -4735,8 +5127,26 @@ def logout():
 
 @app.route('/payment-success')
 def payment_success():
-    """Payment success page after Stripe checkout."""
-    return render_template('payment_success.html')
+    """Payment success page after Stripe checkout.
+
+    This page is only accessible once after a successful checkout.
+    Access is controlled via server-side session flag.
+    """
+    # Check for valid payment session flag (set by checkout redirect)
+    # The flag is set when redirecting from checkout and cleared after viewing
+    if not session.get('payment_success_allowed'):
+        # Not a valid payment flow - redirect to home
+        return redirect(url_for('home'))
+
+    # Clear the flag so page can't be accessed again
+    session.pop('payment_success_allowed', None)
+
+    # Get user if logged in (for navbar)
+    user = None
+    if 'user' in session:
+        user = get_user_by_id(session.get('user_id'))
+
+    return render_template('payment_success.html', user=user)
 
 
 # Global error handler for API routes - return JSON instead of HTML

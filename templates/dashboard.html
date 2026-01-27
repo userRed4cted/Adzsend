@@ -4299,6 +4299,7 @@
                             let succeededChannels = [];
                             let rateLimitedChannels = [];
                             let failedChannelsList = [];
+                            let initialPlanId = null; // Track plan at start of sending
 
                             // Helper function to wait/delay
                             const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -4372,6 +4373,24 @@
 
                                 // Check if send was successful (200/201 response)
                                 if (response.ok && result.success) {
+                                    // Track initial plan_id on first successful send
+                                    if (initialPlanId === null && result.plan_id) {
+                                        initialPlanId = result.plan_id;
+                                    }
+
+                                    // Check if plan changed during sending - abort silently if so
+                                    if (initialPlanId && result.plan_id && result.plan_id !== initialPlanId) {
+                                        isSending = false;
+                                        sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
+                                        sendBtn.innerHTML = 'Send';
+                                        AsyncButton.endOperation('personal_send');
+                                        // Show partial results if any (plan changed mid-send)
+                                        if (succeededChannels.length > 0 || rateLimitedChannels.length > 0 || failedChannelsList.length > 0) {
+                                            await showSendResults(succeededChannels, rateLimitedChannels, failedChannelsList, true);
+                                        }
+                                        return; // Silent abort - plan changed
+                                    }
+
                                     succeededChannels.push(channel.name);
                                     // Clear any previous failure status for this channel
                                     const channelKey = `${channel.guildId}-${channel.id}`;
@@ -4406,14 +4425,17 @@
                                     });
                                     return; // Stop execution
                                 } else if (result.limit_reached) {
-                                    // Usage limit reached - cancel all and redirect to billing
+                                    // Usage limit reached during sending - abort silently
+                                    // (popup only shows if user tries to send again after)
                                     isSending = false;
                                     sendBtn.disabled = selectedChannels.length === 0 || !messageInput.value.trim();
                                     sendBtn.innerHTML = 'Send';
                                     AsyncButton.endOperation('personal_send');
-                                    await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
-                                    window.location.href = '/settings#billing';
-                                    return; // Stop execution
+                                    // Show partial results if any
+                                    if (succeededChannels.length > 0 || rateLimitedChannels.length > 0 || failedChannelsList.length > 0) {
+                                        await showSendResults(succeededChannels, rateLimitedChannels, failedChannelsList, true);
+                                    }
+                                    return; // Silent abort - limit reached
                                 } else if (result.bridge_required) {
                                     // Bridge not connected - cancel all and show popup
                                     isSending = false;
@@ -5477,6 +5499,7 @@
                         let succeededChannels = [];
                         let rateLimitedChannels = [];
                         let failedChannelsList = [];
+                        let initialPlanId = null; // Track plan at start of sending
 
                         const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
                         const getCustomDelay = () => window.userMessageDelay || 1000;
@@ -5543,6 +5566,24 @@
                                 const result = await response.json();
 
                                 if (response.ok && result.success) {
+                                    // Track initial plan_id on first successful send
+                                    if (initialPlanId === null && result.plan_id) {
+                                        initialPlanId = result.plan_id;
+                                    }
+
+                                    // Check if plan changed during sending - abort silently if so
+                                    if (initialPlanId && result.plan_id && result.plan_id !== initialPlanId) {
+                                        teamIsSending = false;
+                                        teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessageInput.value.trim();
+                                        teamSendBtn.innerHTML = 'Send';
+                                        AsyncButton.endOperation('team_send');
+                                        // Show partial results if any (plan changed mid-send)
+                                        if (succeededChannels.length > 0 || rateLimitedChannels.length > 0 || failedChannelsList.length > 0) {
+                                            await showTeamSendResults(succeededChannels, rateLimitedChannels, failedChannelsList, true);
+                                        }
+                                        return; // Silent abort - plan changed
+                                    }
+
                                     succeededChannels.push(channel.name);
                                     const channelKey = `${channel.guildId}-${channel.id}`;
                                     teamFailedChannels.delete(channelKey);
@@ -5576,14 +5617,17 @@
                                     });
                                     return;
                                 } else if (result.limit_reached) {
-                                    // Usage limit reached - cancel all and redirect to billing
+                                    // Usage limit reached during sending - abort silently
+                                    // (popup only shows if user tries to send again after)
                                     teamIsSending = false;
                                     teamSendBtn.disabled = teamSelectedChannels.length === 0 || !teamMessageInput.value.trim();
                                     teamSendBtn.innerHTML = 'Send';
                                     AsyncButton.endOperation('team_send');
-                                    await customAlert('Limit reached', 'Usage limit reached!\n\nYou have reached your message limit for this period.\nRedirecting to billing...');
-                                    window.location.href = '/settings#billing';
-                                    return;
+                                    // Show partial results if any
+                                    if (succeededChannels.length > 0 || rateLimitedChannels.length > 0 || failedChannelsList.length > 0) {
+                                        await showTeamSendResults(succeededChannels, rateLimitedChannels, failedChannelsList, true);
+                                    }
+                                    return; // Silent abort - limit reached
                                 } else if (result.bridge_required) {
                                     // Bridge not connected - cancel all and show popup
                                     teamIsSending = false;

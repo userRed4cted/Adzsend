@@ -15,6 +15,78 @@
 
 
 # =============================================================================
+# PLAN HIERARCHY (for upgrade/downgrade detection)
+# =============================================================================
+# Higher tier = higher number. Used to determine if a plan change is an
+# upgrade (immediate switch) or downgrade (scheduled at period end).
+# Personal and Business plans are separate hierarchies.
+#
+# Hierarchy (tier is primary, billing period is secondary):
+#   Pro Monthly < Pro Yearly < Max Monthly < Max Yearly
+#   Startup Monthly < Startup Yearly < Premium Monthly < Premium Yearly
+#
+# Personal plans: plan_free (0) < plan_1/Pro (1) < plan_2/Max (2)
+# Business plans: team_plan_1/Startup (1) < team_plan_2/Premium (2)
+PLAN_TIERS = {
+    'plan_free': 0,
+    'plan_1': 1,      # Pro
+    'plan_2': 2,      # Max
+    'team_plan_1': 1,  # Startup
+    'team_plan_2': 2,  # Premium
+}
+
+# Billing period hierarchy (yearly > monthly within same tier)
+BILLING_PERIOD_VALUE = {
+    'monthly': 0,
+    'yearly': 1,
+}
+
+
+def is_upgrade(current_plan_id, new_plan_id, current_billing_period=None, new_billing_period=None):
+    """Determine if changing from current_plan to new_plan is an upgrade.
+
+    Returns True if upgrade (immediate switch), False if downgrade (scheduled).
+    Cross-category changes (personal <-> business) are always treated as upgrades
+    (immediate switch with payment).
+
+    Hierarchy: Tier is primary, billing period is secondary.
+    - Pro Monthly < Pro Yearly < Max Monthly < Max Yearly
+    - Changing to higher tier = upgrade (regardless of billing period)
+    - Changing to lower tier = downgrade (regardless of billing period)
+    - Same tier, monthly to yearly = upgrade
+    - Same tier, yearly to monthly = downgrade
+    """
+    if not current_plan_id or current_plan_id == 'plan_free':
+        return True  # From free to anything is an upgrade
+
+    current_is_business = current_plan_id.startswith('team_')
+    new_is_business = new_plan_id.startswith('team_')
+
+    # Cross-category change (personal <-> business) = immediate switch
+    if current_is_business != new_is_business:
+        return True
+
+    current_tier = PLAN_TIERS.get(current_plan_id, 0)
+    new_tier = PLAN_TIERS.get(new_plan_id, 0)
+
+    # Different tier - tier takes precedence
+    if new_tier != current_tier:
+        return new_tier > current_tier
+
+    # Same tier - compare billing periods
+    if current_billing_period and new_billing_period:
+        current_period_value = BILLING_PERIOD_VALUE.get(current_billing_period, 0)
+        new_period_value = BILLING_PERIOD_VALUE.get(new_billing_period, 0)
+        # Same plan same period = not an upgrade (no change needed)
+        if current_period_value == new_period_value:
+            return False  # Will be caught as "same plan" elsewhere
+        return new_period_value > current_period_value
+
+    # No billing period info provided - fall back to tier comparison only
+    return new_tier > current_tier
+
+
+# =============================================================================
 # SUBSCRIPTION PLANS (Monthly/Yearly recurring)
 # =============================================================================
 # Displayed in the "Personal" section of the Purchase page.

@@ -27,8 +27,12 @@ def send_verification_email(to_email, code, purpose='login'):
         # Development mode - skip sending
         return True, None
 
-    subject = 'Adzsend verification'
-    text_content = f'Your account verification code is: {code}'
+    subject = f'Adzsend Verification Code: {code}'
+    text_content = f'''Enter this code:
+
+{code}
+
+Don't share this code or email with anyone. If you didn't request verification, you can safely ignore this.'''
 
     try:
         response = requests.post(

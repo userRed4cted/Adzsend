@@ -115,25 +115,13 @@ function watchForNewImages() {
     });
 }
 
-/**
- * Periodic scan for any missed images (fallback)
- */
-function startPeriodicScan() {
-    setInterval(() => {
-        const images = document.querySelectorAll('img:not([data-image-loader-attached])');
-        images.forEach(img => attachImageListeners(img));
-    }, 500);
-}
-
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initImageLoader();
         watchForNewImages();
-        startPeriodicScan();
     }, { once: true });
 } else {
     initImageLoader();
     watchForNewImages();
-    startPeriodicScan();
 }

@@ -39,7 +39,7 @@ from .models import (
     update_linked_discord_account_profile, mark_linked_account_invalid, mark_linked_account_valid,
     search_linked_discord_accounts,
     # Per-Discord-account channel storage
-    save_discord_account_channels, get_discord_account_channels,
+    save_discord_account_channels, get_discord_account_channels, clear_user_channel_selections,
     # Sent message verification
     log_sent_message, check_sent_message, cleanup_old_sent_messages,
     # Bridge connection functions
@@ -49,5 +49,7 @@ from .models import (
     is_bridge_online, get_bridge_status,
     # Stripe integration functions
     update_user_stripe_customer_id, update_user_stripe_subscription_id,
-    get_user_by_stripe_customer_id, extend_subscription_by_stripe_subscription_id
+    get_user_by_stripe_customer_id, extend_subscription_by_stripe_subscription_id,
+    # Scheduled plan change functions (for downgrades)
+    set_scheduled_plan_change, get_scheduled_plan_change, clear_scheduled_plan_change
 )

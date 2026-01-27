@@ -122,7 +122,7 @@
                             <span class="usage-stat-value">{% if plan_status and plan_status.is_unlimited %}inf{% elif plan_status and plan_status.has_plan %}{{ plan_status.message_limit }}{% endif %}</span>
                         </div>
                         <div class="usage-stat-row">
-                            <span class="usage-stat-label">Advertisements sent (current cycle)</span>
+                            <span class="usage-stat-label">Messages sent (current cycle)</span>
                             <span class="usage-stat-value">{% if plan_status and plan_status.has_plan %}{{ plan_status.messages_sent }}{% endif %}</span>
                         </div>
                         <div class="usage-stat-row" style="flex-direction: column; align-items: stretch;">
@@ -150,7 +150,7 @@
                             <span class="usage-stat-value">{% if business_plan_status and business_plan_status.is_unlimited %}inf{% elif business_plan_status %}{{ business_plan_status.message_limit }}{% endif %}</span>
                         </div>
                         <div class="usage-stat-row">
-                            <span class="usage-stat-label">Advertisements sent (current cycle)</span>
+                            <span class="usage-stat-label">Messages sent (current cycle)</span>
                             <span class="usage-stat-value">{% if business_plan_status %}{{ business_plan_status.messages_sent }}{% endif %}</span>
                         </div>
                         <div class="usage-stat-row" style="flex-direction: column; align-items: stretch;">
@@ -340,47 +340,66 @@
                 </div>
 
                 <!-- Billing Page -->
-                <div class="settings-page" id="settings-page-billing" style="display: none;">
-                    <!-- Plan Information Section -->
-                    <div class="settings-subheader">Plan information</div>
-                    <div class="settings-text-with-action">
-                        <span>View billing information about your plan.</span>
-                        <button class="billing-adjust-plan-btn" id="billing-adjust-plan-btn">Adjust plan</button>
+                <div class="settings-page" id="settings-page-billing" style="display: none; position: relative; min-height: 300px;">
+                    <!-- Loading overlay - shows in center until everything loads -->
+                    <div id="billing-page-loading" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center; z-index: 10;">
+                        <div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
                     </div>
 
-                    <div class="usage-stats-container" id="billing-plan-info">
-                        <div class="usage-stat-row">
-                            <span class="usage-stat-label">Current plan</span>
-                            <span class="usage-stat-value">{% if plan_status and plan_status.has_plan %}{{ plan_status.plan_name }}{% elif plan_status %}Free{% endif %}</span>
-                        </div>
-                        <div class="usage-stat-row">
-                            <span class="usage-stat-label">Billing period</span>
-                            <span class="usage-stat-value">{% if plan_status and plan_status.has_plan and plan_status.plan_type == 'subscription' and plan_status.plan_id != 'plan_free' %}{{ plan_status.billing_period|capitalize }}{% endif %}</span>
-                        </div>
-                        <div class="usage-stat-row">
-                            <span class="usage-stat-label">Plan started <span class="date-format-label" data-label-template="(%FORMAT%)">{% if plan_status %}({{ plan_status.date_format or 'mm/dd/yy' }}){% endif %}</span></span>
-                            <span class="usage-stat-value">{% if plan_status and plan_status.has_plan and plan_status.plan_id != 'plan_free' %}{{ plan_status.started_at|format_date }}{% endif %}</span>
-                        </div>
-                        <div class="usage-stat-row">
-                            <span class="usage-stat-label">Next billing date <span class="date-format-label" data-label-template="(%FORMAT%)">{% if plan_status %}({{ plan_status.date_format or 'mm/dd/yy' }}){% endif %}</span></span>
-                            <span class="usage-stat-value">{% if plan_status and plan_status.has_plan and plan_status.expires_at and plan_status.plan_id != 'plan_free' %}{{ plan_status.expires_at|format_date }}{% endif %}</span>
-                        </div>
-                    </div>
+                    <!-- Content - hidden until loaded -->
+                    <div id="billing-page-content" style="opacity: 0; pointer-events: none;">
+                        <!-- Plan Information Section -->
+                        <div class="settings-subheader">Plan information</div>
+                        <div class="settings-text">View billing information about your plan.</div>
 
-                    <!-- Invoices Section -->
-                    <div class="settings-subheader" style="margin-top: 2rem;">Invoices</div>
-                    <div class="settings-text">View your account's billing/payment history.</div>
-
-                    <div class="billing-invoices-box" id="billing-invoices-box">
-                        <!-- Column Headers -->
-                        <div class="billing-invoices-header">
-                            <span class="billing-invoice-col-date">Date <span class="date-format-label" data-label-template="(%FORMAT%)">(mm/dd/yy)</span></span>
-                            <span class="billing-invoice-col-total">Total</span>
-                            <span class="billing-invoice-col-actions">Actions</span>
+                        <div class="usage-stats-container" id="billing-plan-info">
+                            <div class="usage-stat-row">
+                                <span class="usage-stat-label">Current plan</span>
+                                <span class="usage-stat-value" id="billing-current-plan">{% if plan_status and plan_status.has_plan %}{{ plan_status.plan_name }}{% elif plan_status %}Free{% endif %}</span>
+                            </div>
+                            <div class="usage-stat-row">
+                                <span class="usage-stat-label">Billing period</span>
+                                <span class="usage-stat-value" id="billing-period-value">{% if plan_status and plan_status.has_plan and plan_status.plan_type == 'subscription' and plan_status.plan_id != 'plan_free' %}{{ plan_status.billing_period|capitalize }}{% endif %}</span>
+                            </div>
+                            <div class="usage-stat-row">
+                                <span class="usage-stat-label">Plan started <span class="date-format-label" data-label-template="(%FORMAT%)">{% if plan_status %}({{ plan_status.date_format or 'mm/dd/yy' }}){% endif %}</span></span>
+                                <span class="usage-stat-value">{% if plan_status and plan_status.has_plan and plan_status.plan_id != 'plan_free' %}{{ plan_status.started_at|format_date }}{% endif %}</span>
+                            </div>
+                            <div class="usage-stat-row">
+                                <span class="usage-stat-label">Next billing date <span class="date-format-label" data-label-template="(%FORMAT%)">{% if plan_status %}({{ plan_status.date_format or 'mm/dd/yy' }}){% endif %}</span></span>
+                                <span class="usage-stat-value" id="billing-next-date">{% if plan_status and plan_status.has_plan and plan_status.expires_at and plan_status.plan_id != 'plan_free' %}{{ plan_status.expires_at|format_date }}{% endif %}</span>
+                            </div>
+                            <!-- Scheduled change info (shown when downgrading) -->
+                            <div class="usage-stat-row" id="billing-scheduled-change-row" style="display: none;">
+                                <span class="usage-stat-label">Changing to</span>
+                                <span class="usage-stat-value" id="billing-scheduled-plan"></span>
+                            </div>
                         </div>
-                        <!-- Invoices List - Loaded dynamically from Stripe -->
-                        <div id="billing-invoices-list">
-                            <div class="billing-no-invoices" id="billing-invoices-loading">Loading invoices...</div>
+
+                        <!-- Action buttons - below the plan info box -->
+                        <div class="billing-action-buttons" id="billing-action-buttons-container">
+                            <!-- For free/no subscription users -->
+                            <button class="billing-upgrade-plan-btn" id="billing-upgrade-plan-btn" style="display: none;">Upgrade plan</button>
+                            <!-- For paid subscribers only -->
+                            <button class="billing-update-payment-btn" id="billing-update-payment-btn" style="display: none;">Update payment information</button>
+                            <button class="billing-adjust-plan-btn" id="billing-adjust-plan-btn" style="display: none;">Adjust plan</button>
+                            <button class="billing-cancel-btn" id="billing-cancel-btn" style="display: none;">Cancel</button>
+                        </div>
+
+                        <!-- Invoices Section -->
+                        <div class="settings-subheader" style="margin-top: 2rem;">Invoices</div>
+                        <div class="settings-text">View your account's billing/payment history.</div>
+
+                        <div class="billing-invoices-box" id="billing-invoices-box">
+                            <!-- Column Headers -->
+                            <div class="billing-invoices-header">
+                                <span class="billing-invoice-col-date">Date <span class="date-format-label" data-label-template="(%FORMAT%)">(mm/dd/yy)</span></span>
+                                <span class="billing-invoice-col-total">Total</span>
+                                <span class="billing-invoice-col-actions">Actions</span>
+                            </div>
+                            <!-- Invoices List - Loaded dynamically from Stripe -->
+                            <div id="billing-invoices-list">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -972,6 +991,56 @@
         font-family: 'gg sans Medium';
     }
 
+    .billing-action-buttons {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-top: 1rem;
+        justify-content: flex-start;
+    }
+
+    .billing-upgrade-plan-btn {
+        background: transparent;
+        border: none;
+        color: #15d8bc;
+        padding: 0;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-family: 'gg sans Medium';
+        transition: color 0.2s ease, opacity 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .billing-upgrade-plan-btn:hover:not(:disabled) {
+        color: #10b89e;
+    }
+
+    .billing-upgrade-plan-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .billing-update-payment-btn {
+        background: transparent;
+        border: none;
+        color: #15d8bc;
+        padding: 0;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-family: 'gg sans Medium';
+        transition: color 0.2s ease, opacity 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .billing-update-payment-btn:hover:not(:disabled) {
+        color: #10b89e;
+    }
+
+    .billing-update-payment-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
     .billing-adjust-plan-btn {
         background: transparent;
         border: none;
@@ -980,12 +1049,43 @@
         cursor: pointer;
         font-size: 0.85rem;
         font-family: 'gg sans Medium';
-        transition: color 0.2s ease;
+        transition: color 0.2s ease, opacity 0.2s ease;
         flex-shrink: 0;
     }
 
-    .billing-adjust-plan-btn:hover {
+    .billing-adjust-plan-btn:hover:not(:disabled) {
         color: #10b89e;
+    }
+
+    .billing-adjust-plan-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .billing-cancel-btn {
+        background: transparent;
+        border: none;
+        color: #991a35;
+        padding: 0;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-family: 'gg sans Medium';
+        transition: color 0.2s ease, opacity 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .billing-cancel-btn:hover:not(:disabled) {
+        color: #7a1529;
+    }
+
+    .billing-cancel-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .billing-cancel-btn.processing {
+        opacity: 0.5;
+        pointer-events: none;
     }
 
     .billing-invoices-box {
@@ -1582,30 +1682,40 @@
 
 <script>
     // Open settings popup
-    async function openSettings() {
+    function openSettings() {
         document.getElementById('settings-popup-overlay').classList.add('show');
 
-        // Fetch fresh account status
-        try {
-            const response = await fetch('/api/user/status');
-            const data = await response.json();
-            if (data.success) {
-                // Update standing bar based on fresh data
-                const steps = document.querySelectorAll('.standing-step');
-                if (steps && steps.length >= 3) {
-                    steps.forEach(step => step.classList.remove('active'));
-                    if (data.banned) {
-                        steps[2].classList.add('active');
-                    } else if (data.flagged) {
-                        steps[1].classList.add('active');
-                    } else {
-                        steps[0].classList.add('active');
+        // Start usage countdown when popup opens
+        if (typeof startUsageCountdown === 'function') {
+            startUsageCountdown();
+        }
+
+        // Load billing subscription status in background (non-blocking)
+        // This ensures cancel button shows correct state regardless of which page opens first
+        if (window.loadBillingSubscriptionStatus) {
+            window.loadBillingSubscriptionStatus();
+        }
+
+        // Fetch fresh account status in background (non-blocking)
+        fetch('/api/user/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update standing bar based on fresh data
+                    const steps = document.querySelectorAll('.standing-step');
+                    if (steps && steps.length >= 3) {
+                        steps.forEach(step => step.classList.remove('active'));
+                        if (data.banned) {
+                            steps[2].classList.add('active');
+                        } else if (data.flagged) {
+                            steps[1].classList.add('active');
+                        } else {
+                            steps[0].classList.add('active');
+                        }
                     }
                 }
-            }
-        } catch (error) {
-            console.error('Error fetching account status:', error);
-        }
+            })
+            .catch(error => console.error('Error fetching account status:', error));
     }
 
     // Close settings popup
@@ -1614,6 +1724,14 @@
         // Stop bridge status polling when popup closes
         if (typeof stopBridgeStatusPolling === 'function') {
             stopBridgeStatusPolling();
+        }
+        // Cancel any pending Discord link when closing settings
+        if (typeof cancelPendingLink === 'function') {
+            cancelPendingLink();
+        }
+        // Stop usage countdown when popup closes
+        if (typeof stopUsageCountdown === 'function') {
+            stopUsageCountdown();
         }
         // Reset mobile page view when closing
         settingsMobileBack();
@@ -1633,15 +1751,32 @@
     }
 
     // Settings popup - click overlay to close
-    document.getElementById('settings-popup-overlay').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeSettingsPopup();
-        }
-    });
+    const settingsOverlay = document.getElementById('settings-popup-overlay');
+    if (settingsOverlay) {
+        settingsOverlay.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSettingsPopup();
+            }
+        });
+    }
+
+    // Track current settings page for cleanup
+    let currentSettingsPage = 'my-account';
 
     // Settings menu navigation
     document.querySelectorAll('.settings-menu-item').forEach(item => {
         item.addEventListener('click', function() {
+            const newPage = this.getAttribute('data-settings-page');
+
+            // If leaving Discord accounts page, cancel any pending link
+            if (currentSettingsPage === 'discord-accounts' && newPage !== 'discord-accounts') {
+                if (typeof cancelPendingLink === 'function') {
+                    cancelPendingLink();
+                }
+            }
+
+            currentSettingsPage = newPage;
+
             // Update active state
             document.querySelectorAll('.settings-menu-item').forEach(i => i.classList.remove('active'));
             this.classList.add('active');
@@ -1912,58 +2047,72 @@
     })();
 
     // Usage countdown functionality
-    (function() {
-        function updateCountdown(elementId) {
-            const element = document.getElementById(elementId);
-            if (!element) return;
+    let usageCountdownInterval = null;
 
-            const resetTime = element.getAttribute('data-reset-time');
-            if (!resetTime) return;
+    function updateCountdown(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
 
-            const resetDate = new Date(resetTime);
-            const now = new Date();
-            const diff = resetDate - now;
+        const resetTime = element.getAttribute('data-reset-time');
+        if (!resetTime) return;
 
-            if (diff <= 0) {
-                element.textContent = 'Resetting...';
-                return;
-            }
+        const resetDate = new Date(resetTime);
+        const now = new Date();
+        const diff = resetDate - now;
 
-            const weeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
-            const days = Math.floor((diff % (1000 * 60 * 60 * 24 * 7)) / (1000 * 60 * 60 * 24));
-            const totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-            let timeStr = '';
-
-            if (totalDays >= 7) {
-                // Above 7 days: show weeks and days only
-                timeStr = weeks + 'w ' + days + 'd';
-            } else if (totalDays >= 1) {
-                // Above 1 day: show days and hours only
-                timeStr = totalDays + 'd ' + hours + 'h';
-            } else {
-                // Under 1 day: show hours, minutes, seconds
-                if (hours > 0) timeStr += hours + 'h ';
-                if (minutes > 0 || hours > 0) timeStr += minutes + 'm ';
-                timeStr += seconds + 's';
-            }
-
-            element.textContent = timeStr;
+        if (diff <= 0) {
+            element.textContent = 'Resetting...';
+            return;
         }
 
-        // Update countdowns every second
-        function updateAllCountdowns() {
-            updateCountdown('personal-reset-countdown');
-            updateCountdown('team-reset-countdown');
+        const weeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
+        const days = Math.floor((diff % (1000 * 60 * 60 * 24 * 7)) / (1000 * 60 * 60 * 24));
+        const totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        let timeStr = '';
+
+        if (totalDays >= 7) {
+            // Above 7 days: show weeks and days only
+            timeStr = weeks + 'w ' + days + 'd';
+        } else if (totalDays >= 1) {
+            // Above 1 day: show days and hours only
+            timeStr = totalDays + 'd ' + hours + 'h';
+        } else {
+            // Under 1 day: show hours, minutes, seconds
+            if (hours > 0) timeStr += hours + 'h ';
+            if (minutes > 0 || hours > 0) timeStr += minutes + 'm ';
+            timeStr += seconds + 's';
         }
 
-        // Initial update and set interval
-        updateAllCountdowns();
-        setInterval(updateAllCountdowns, 1000);
-    })();
+        element.textContent = timeStr;
+    }
+
+    // Update countdowns every second
+    function updateAllCountdowns() {
+        updateCountdown('personal-reset-countdown');
+        updateCountdown('team-reset-countdown');
+    }
+
+    // Start usage countdown interval
+    function startUsageCountdown() {
+        if (usageCountdownInterval) return; // Already running
+        updateAllCountdowns(); // Initial update
+        usageCountdownInterval = setInterval(updateAllCountdowns, 1000);
+    }
+
+    // Stop usage countdown interval
+    function stopUsageCountdown() {
+        if (usageCountdownInterval) {
+            clearInterval(usageCountdownInterval);
+            usageCountdownInterval = null;
+        }
+    }
+
+    // Start countdown on page load (will be stopped when settings closes)
+    startUsageCountdown();
 
     // Teams functionality
     (function() {
@@ -2252,7 +2401,7 @@
         // Listen for date format changes
         window.addEventListener('dateFormatChanged', updateInvoiceDates);
 
-        // Load Stripe invoices dynamically
+        // Load Stripe invoices dynamically (returns promise for coordinated loading)
         async function loadStripeInvoices() {
             const invoicesList = document.getElementById('billing-invoices-list');
             if (!invoicesList) return;
@@ -2290,28 +2439,185 @@
             }
         }
 
-        // Load invoices when billing page is shown
+        // Track if billing page has been loaded
+        let billingPageLoaded = false;
+
+        // Show billing page content after loading completes
+        function showBillingContent() {
+            const loadingEl = document.getElementById('billing-page-loading');
+            const contentEl = document.getElementById('billing-page-content');
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (contentEl) {
+                contentEl.style.opacity = '1';
+                contentEl.style.pointerEvents = 'auto';
+            }
+        }
+
+        // Reset billing page to loading state
+        function resetBillingLoading() {
+            const loadingEl = document.getElementById('billing-page-loading');
+            const contentEl = document.getElementById('billing-page-content');
+            if (loadingEl) loadingEl.style.display = 'flex';
+            if (contentEl) {
+                contentEl.style.opacity = '0';
+                contentEl.style.pointerEvents = 'none';
+            }
+        }
+
+        // Load all billing page data (subscription status + invoices) then show content
+        async function loadBillingPageData() {
+            // Show loading state
+            resetBillingLoading();
+
+            try {
+                // Load both subscription status and invoices in parallel
+                await Promise.all([
+                    loadSubscriptionStatusInternal(),
+                    loadStripeInvoices()
+                ]);
+            } catch (error) {
+                console.error('Error loading billing data:', error);
+            } finally {
+                // ALWAYS show content after loading, success or fail
+                showBillingContent();
+                billingPageLoaded = true;
+            }
+        }
+
+        // Get billing menu item
         const billingMenuItem = document.querySelector('[data-settings-page="billing"]');
-        if (billingMenuItem) {
-            billingMenuItem.addEventListener('click', loadStripeInvoices);
+
+        // Billing page state management
+        let billingState = {
+            hasPaidSubscription: false,
+            cancelAtPeriodEnd: false,
+            currentPeriodEnd: null,
+            planId: null,
+            planName: null,
+            billingPeriod: null,
+            scheduledChange: null,
+            isProcessing: false
+        };
+
+        // Plan configurations for the adjust plan popup
+        const personalPlans = [
+            { id: 'plan_1', name: 'Pro', monthlyPrice: 8, yearlyPrice: 72 },
+            { id: 'plan_2', name: 'Max', monthlyPrice: 17.50, yearlyPrice: 160 }
+        ];
+
+        const businessPlans = [
+            { id: 'team_plan_1', name: 'Startup', monthlyPrice: 20, yearlyPrice: 192 },
+            { id: 'team_plan_2', name: 'Premium', monthlyPrice: 30, yearlyPrice: 288 }
+        ];
+
+        // Internal function to load subscription status (used by loadBillingPageData)
+        async function loadSubscriptionStatusInternal() {
+            try {
+                const response = await fetch('/api/subscription-status');
+                const data = await response.json();
+
+                if (data.success) {
+                    billingState.hasPaidSubscription = data.has_paid_subscription;
+                    billingState.cancelAtPeriodEnd = data.cancel_at_period_end;
+                    billingState.currentPeriodEnd = data.current_period_end;
+                    billingState.planId = data.plan_id;
+                    billingState.planName = data.plan_name;
+                    billingState.billingPeriod = data.billing_period;
+                    billingState.scheduledChange = data.scheduled_change;
+
+                    updateBillingUI();
+                }
+            } catch (error) {
+                console.error('Failed to load subscription status:', error);
+            }
         }
 
-        // Also load on initial page load if billing is the active page
-        if (document.getElementById('settings-page-billing')?.style.display !== 'none') {
-            loadStripeInvoices();
+        // Public function to load subscription status (can be called externally)
+        async function loadSubscriptionStatus() {
+            await loadBillingPageData();
         }
 
-        // Adjust plan button handler - redirects to Stripe billing portal
-        const adjustPlanBtn = document.getElementById('billing-adjust-plan-btn');
-        if (adjustPlanBtn) {
-            adjustPlanBtn.addEventListener('click', async function() {
-                // Show loading state
-                const originalText = adjustPlanBtn.textContent;
-                adjustPlanBtn.disabled = true;
-                adjustPlanBtn.innerHTML = '<div class="loading-dots dark"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+        // Update billing UI based on current state
+        function updateBillingUI() {
+            const upgradePlanBtn = document.getElementById('billing-upgrade-plan-btn');
+            const adjustPlanBtn = document.getElementById('billing-adjust-plan-btn');
+            const cancelBtn = document.getElementById('billing-cancel-btn');
+            const updatePaymentBtn = document.getElementById('billing-update-payment-btn');
+            const scheduledRow = document.getElementById('billing-scheduled-change-row');
+            const scheduledPlanEl = document.getElementById('billing-scheduled-plan');
+            const nextDateEl = document.getElementById('billing-next-date');
+
+            // For free/no subscription users - show Upgrade plan button only
+            if (upgradePlanBtn) {
+                upgradePlanBtn.style.display = billingState.hasPaidSubscription ? 'none' : 'inline-block';
+            }
+
+            // For paid subscribers - show Update payment, Adjust plan, and Cancel buttons
+            if (updatePaymentBtn) {
+                updatePaymentBtn.style.display = billingState.hasPaidSubscription ? 'inline-block' : 'none';
+            }
+
+            if (adjustPlanBtn) {
+                // Only show for paid subscribers
+                adjustPlanBtn.style.display = billingState.hasPaidSubscription ? 'inline-block' : 'none';
+                // Disable if subscription is set to cancel
+                adjustPlanBtn.disabled = billingState.cancelAtPeriodEnd;
+            }
+
+            // Cancel/Renew button - only visible for paid subscribers
+            if (cancelBtn) {
+                if (!billingState.hasPaidSubscription) {
+                    // Free tier - hide cancel button
+                    cancelBtn.style.display = 'none';
+                } else if (billingState.cancelAtPeriodEnd) {
+                    // Subscription set to cancel - show Don't cancel
+                    cancelBtn.style.display = 'inline-block';
+                    cancelBtn.disabled = false;
+                    cancelBtn.textContent = "Don't cancel";
+                } else {
+                    // Active subscription - show Cancel
+                    cancelBtn.style.display = 'inline-block';
+                    cancelBtn.disabled = false;
+                    cancelBtn.textContent = 'Cancel';
+                }
+            }
+
+            // Scheduled change row
+            if (scheduledRow && scheduledPlanEl) {
+                if (billingState.scheduledChange) {
+                    scheduledRow.style.display = 'flex';
+                    const periodText = billingState.scheduledChange.billing_period === 'yearly' ? 'Yearly' : 'Monthly';
+                    scheduledPlanEl.textContent = `${billingState.scheduledChange.plan_name} (${periodText})`;
+                } else {
+                    scheduledRow.style.display = 'none';
+                }
+            }
+
+            // Next billing date - clear if cancelled
+            if (nextDateEl && billingState.cancelAtPeriodEnd) {
+                // Keep showing the date but could add "(cancelling)" indicator if desired
+            }
+        }
+
+        // Cancel/Renew button handler
+        const cancelBtn = document.getElementById('billing-cancel-btn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', async function() {
+                if (billingState.isProcessing) return;
+
+                billingState.isProcessing = true;
+                cancelBtn.disabled = true;
+
+                // Save original text and show loading dots
+                const originalText = cancelBtn.textContent;
+                cancelBtn.innerHTML = '<div class="loading-dots" style="display: inline-flex; gap: 4px;"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+                cancelBtn.classList.add('processing');
+
+                const isRenew = billingState.cancelAtPeriodEnd;
+                const endpoint = isRenew ? '/api/reactivate-subscription' : '/api/cancel-subscription';
 
                 try {
-                    const response = await fetch('/api/billing-portal', {
+                    const response = await fetch(endpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2321,21 +2627,94 @@
 
                     const data = await response.json();
 
+                    if (data.success) {
+                        // Toggle the state
+                        billingState.cancelAtPeriodEnd = !billingState.cancelAtPeriodEnd;
+                        updateBillingUI();
+                    } else {
+                        // Restore original text on failure
+                        cancelBtn.textContent = originalText;
+                        console.error('Cancel/Reactivate failed:', data);
+                        await customAlert('Error', data.error || 'Failed to process request');
+                    }
+                } catch (error) {
+                    console.error('Cancel/Renew error:', error);
+                    // Restore original text on error
+                    cancelBtn.textContent = originalText;
+                    await customAlert('Error', 'An error occurred. Please try again.');
+                } finally {
+                    billingState.isProcessing = false;
+                    cancelBtn.disabled = false;
+                    cancelBtn.classList.remove('processing');
+                }
+            });
+        }
+
+        // Upgrade plan button handler - redirects to purchase page
+        const upgradePlanBtn = document.getElementById('billing-upgrade-plan-btn');
+        if (upgradePlanBtn) {
+            upgradePlanBtn.addEventListener('click', function() {
+                if (upgradePlanBtn.disabled) return;
+                if (AsyncButton.isProcessing('billing_upgrade_plan')) return;
+                AsyncButton.startOperation('billing_upgrade_plan');
+                window.location.href = '/purchase';
+            });
+        }
+
+        // Update payment information button handler - opens Stripe customer portal
+        const updatePaymentBtn = document.getElementById('billing-update-payment-btn');
+        if (updatePaymentBtn) {
+            updatePaymentBtn.addEventListener('click', async function() {
+                if (updatePaymentBtn.disabled) return;
+                if (AsyncButton.isProcessing('billing_update_payment')) return;
+                AsyncButton.startOperation('billing_update_payment');
+
+                try {
+                    const response = await fetch('/api/billing-portal', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({ return_url: window.location.pathname })
+                    });
+                    const data = await response.json();
                     if (data.success && data.portal_url) {
                         window.location.href = data.portal_url;
                     } else {
                         await customAlert('Error', data.error || 'Failed to open billing portal');
-                        adjustPlanBtn.disabled = false;
-                        adjustPlanBtn.textContent = originalText;
+                        AsyncButton.endOperation('billing_update_payment');
                     }
                 } catch (error) {
                     console.error('Billing portal error:', error);
                     await customAlert('Error', 'Failed to open billing portal');
-                    adjustPlanBtn.disabled = false;
-                    adjustPlanBtn.textContent = originalText;
+                    AsyncButton.endOperation('billing_update_payment');
                 }
             });
         }
+
+        // Adjust plan button handler - opens popup
+        const adjustPlanBtn = document.getElementById('billing-adjust-plan-btn');
+        if (adjustPlanBtn) {
+            adjustPlanBtn.addEventListener('click', function() {
+                if (adjustPlanBtn.disabled) return;
+                openAdjustPlanPopup();
+            });
+        }
+
+        // Load billing page data when billing page is shown
+        if (billingMenuItem) {
+            billingMenuItem.addEventListener('click', function() {
+                // Always reload when clicking billing menu item
+                loadBillingPageData();
+            });
+        }
+
+        // Expose loadSubscriptionStatus globally so it can be called when settings opens
+        window.loadBillingSubscriptionStatus = loadSubscriptionStatus;
+
+        // Don't load on initial page load - wait until billing page is actually shown
+        // This prevents unnecessary API calls on every page load
     })();
 
     // My Account functionality
@@ -2755,6 +3134,18 @@
 <!-- Discord Accounts Management Script -->
 <script src="{{ url_for('static', filename='discord_accounts.js') }}"></script>
 
+<!-- Adjust Plan Popup -->
+<div class="custom-popup-overlay" id="adjust-plan-popup">
+    <div class="custom-popup adjust-plan-popup">
+        <button class="custom-popup-close" onclick="closeAdjustPlanPopup()">&times;</button>
+        <h2 class="custom-popup-title">Adjust Plan</h2>
+        <p class="custom-popup-text">Downgraded plans will begin at next billing date, upgraded plans will begin straight away.</p>
+        <div class="adjust-plan-list" id="adjust-plan-list">
+            <!-- Plans will be populated dynamically -->
+        </div>
+    </div>
+</div>
+
 <!-- Delete Account Confirmation Popup -->
 <div class="custom-popup-overlay" id="delete-account-popup">
     <div class="custom-popup">
@@ -2766,6 +3157,259 @@
 </div>
 
 <script>
+// =============================================
+// ADJUST PLAN POPUP FUNCTIONS
+// =============================================
+
+// Plan configurations
+const adjustPlanConfig = {
+    personal: [
+        { id: 'plan_1', name: 'Pro', monthlyPrice: 8, yearlyPrice: 72 },
+        { id: 'plan_2', name: 'Max', monthlyPrice: 17.50, yearlyPrice: 160 }
+    ],
+    business: [
+        { id: 'team_plan_1', name: 'Startup', monthlyPrice: 20, yearlyPrice: 192 },
+        { id: 'team_plan_2', name: 'Premium', monthlyPrice: 30, yearlyPrice: 288 }
+    ]
+};
+
+let adjustPlanState = {
+    isProcessing: false,
+    currentPlanId: null,
+    currentBillingPeriod: null,
+    scheduledPlanId: null,
+    scheduledBillingPeriod: null
+};
+
+function openAdjustPlanPopup() {
+    // Fetch current subscription status first
+    fetch('/api/subscription-status')
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success || !data.has_paid_subscription) {
+                return;
+            }
+
+            adjustPlanState.currentPlanId = data.plan_id;
+            adjustPlanState.currentBillingPeriod = data.billing_period;
+
+            if (data.scheduled_change) {
+                adjustPlanState.scheduledPlanId = data.scheduled_change.plan_id;
+                adjustPlanState.scheduledBillingPeriod = data.scheduled_change.billing_period;
+            } else {
+                adjustPlanState.scheduledPlanId = null;
+                adjustPlanState.scheduledBillingPeriod = null;
+            }
+
+            // Determine which plans to show (personal or business)
+            const isBusinessPlan = data.plan_id && data.plan_id.startsWith('team_');
+            const plans = isBusinessPlan ? adjustPlanConfig.business : adjustPlanConfig.personal;
+
+            renderAdjustPlanList(plans);
+            document.getElementById('adjust-plan-popup').classList.add('active');
+        })
+        .catch(error => {
+            console.error('Failed to load subscription status:', error);
+        });
+}
+
+function closeAdjustPlanPopup() {
+    document.getElementById('adjust-plan-popup').classList.remove('active');
+}
+
+function renderAdjustPlanList(plans) {
+    const listEl = document.getElementById('adjust-plan-list');
+    listEl.innerHTML = '';
+
+    // Generate plan items: each plan has monthly and yearly variants
+    // Order: Plan1 Monthly, Plan1 Yearly, Plan2 Monthly, Plan2 Yearly
+    plans.forEach(plan => {
+        ['monthly', 'yearly'].forEach(period => {
+            const isCurrentPlan = plan.id === adjustPlanState.currentPlanId &&
+                                  period === adjustPlanState.currentBillingPeriod;
+            const isDowngradingTo = plan.id === adjustPlanState.scheduledPlanId &&
+                                    period === adjustPlanState.scheduledBillingPeriod;
+
+            const price = period === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
+            const priceText = period === 'monthly'
+                ? `$${price}/month`
+                : `$${price}/year`;
+
+            let labelHtml = '';
+            if (isCurrentPlan) {
+                labelHtml = '<span class="adjust-plan-label">(current plan)</span>';
+            } else if (isDowngradingTo) {
+                labelHtml = '<span class="adjust-plan-label downgrading">(downgrading to)</span>';
+            }
+
+            // Determine which item should be selected (current or scheduled downgrade target)
+            const shouldBeSelected = isDowngradingTo || (isCurrentPlan && !adjustPlanState.scheduledPlanId);
+
+            const itemHtml = `
+                <div class="adjust-plan-item${shouldBeSelected ? ' selected' : ''}"
+                     data-plan-id="${plan.id}"
+                     data-billing-period="${period}"
+                     data-is-current="${isCurrentPlan}"
+                     data-is-downgrading="${isDowngradingTo}"
+                     onclick="handleAdjustPlanClick(this)">
+                    <div class="adjust-plan-radio">
+                        <div class="adjust-plan-radio-inner"></div>
+                    </div>
+                    <div class="adjust-plan-info">
+                        <div>
+                            <span class="adjust-plan-name">${plan.name} ${period.charAt(0).toUpperCase() + period.slice(1)}</span>
+                            ${labelHtml}
+                        </div>
+                        <span class="adjust-plan-price">${priceText}</span>
+                    </div>
+                </div>
+            `;
+            listEl.innerHTML += itemHtml;
+        });
+    });
+}
+
+async function handleAdjustPlanClick(element) {
+    if (adjustPlanState.isProcessing) return;
+
+    const planId = element.dataset.planId;
+    const billingPeriod = element.dataset.billingPeriod;
+    const isCurrent = element.dataset.isCurrent === 'true';
+    const isDowngrading = element.dataset.isDowngrading === 'true';
+
+    // If clicking on current plan while there's a scheduled downgrade, cancel the downgrade
+    if (isCurrent && adjustPlanState.scheduledPlanId) {
+        await cancelScheduledDowngrade(element);
+        return;
+    }
+
+    // If clicking the exact same plan/period that's already selected (and is current), do nothing
+    if (isCurrent && !adjustPlanState.scheduledPlanId) {
+        return;
+    }
+
+    // If clicking on the plan we're already downgrading to, do nothing
+    if (isDowngrading) {
+        return;
+    }
+
+    // Otherwise, initiate plan change
+    await changePlan(element, planId, billingPeriod);
+}
+
+async function cancelScheduledDowngrade(element) {
+    adjustPlanState.isProcessing = true;
+    element.classList.add('processing');
+
+    try {
+        const response = await fetch('/api/cancel-scheduled-downgrade', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': window.csrfToken
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Clear scheduled state and re-render
+            adjustPlanState.scheduledPlanId = null;
+            adjustPlanState.scheduledBillingPeriod = null;
+
+            // Determine which plans to show
+            const isBusinessPlan = adjustPlanState.currentPlanId.startsWith('team_');
+            const plans = isBusinessPlan ? adjustPlanConfig.business : adjustPlanConfig.personal;
+            renderAdjustPlanList(plans);
+
+            // Also refresh the billing page state
+            if (typeof loadSubscriptionStatus === 'function') {
+                loadSubscriptionStatus();
+            }
+        } else {
+            await customAlert('Error', data.error || 'Failed to cancel scheduled downgrade');
+        }
+    } catch (error) {
+        console.error('Cancel downgrade error:', error);
+        await customAlert('Error', 'An error occurred. Please try again.');
+    } finally {
+        adjustPlanState.isProcessing = false;
+        element.classList.remove('processing');
+    }
+}
+
+async function changePlan(element, planId, billingPeriod) {
+    adjustPlanState.isProcessing = true;
+
+    // Mark all items as processing
+    document.querySelectorAll('.adjust-plan-item').forEach(item => {
+        item.classList.add('processing');
+    });
+
+    try {
+        const response = await fetch('/api/set-plan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': window.csrfToken
+            },
+            body: JSON.stringify({
+                plan_id: planId,
+                billing_period: billingPeriod
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            if (data.action === 'upgrade') {
+                // Upgrade happened immediately - close popup and refresh
+                closeAdjustPlanPopup();
+                // Reload page to get updated plan info
+                window.location.reload();
+            } else if (data.action === 'downgrade') {
+                // Downgrade scheduled - update state and re-render
+                adjustPlanState.scheduledPlanId = planId;
+                adjustPlanState.scheduledBillingPeriod = billingPeriod;
+
+                // Determine which plans to show
+                const isBusinessPlan = adjustPlanState.currentPlanId.startsWith('team_');
+                const plans = isBusinessPlan ? adjustPlanConfig.business : adjustPlanConfig.personal;
+                renderAdjustPlanList(plans);
+
+                // Also refresh the billing page state
+                if (typeof loadSubscriptionStatus === 'function') {
+                    loadSubscriptionStatus();
+                }
+            } else if (data.checkout_url) {
+                // Redirect to checkout (for new subscriptions, shouldn't happen in adjust popup)
+                window.location.href = data.checkout_url;
+            }
+        } else {
+            await customAlert('Error', data.error || 'Failed to change plan');
+        }
+    } catch (error) {
+        console.error('Change plan error:', error);
+        await customAlert('Error', 'An error occurred. Please try again.');
+    } finally {
+        adjustPlanState.isProcessing = false;
+        document.querySelectorAll('.adjust-plan-item').forEach(item => {
+            item.classList.remove('processing');
+        });
+    }
+}
+
+// Close popup when clicking overlay
+document.getElementById('adjust-plan-popup')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAdjustPlanPopup();
+    }
+});
+
+// =============================================
+// DELETE ACCOUNT POPUP FUNCTIONS
+// =============================================
+
 function openDeleteAccountPopup() {
     document.getElementById('delete-account-popup').classList.add('active');
 }
@@ -2809,4 +3453,5 @@ async function deleteAccount() {
         AsyncButton.endOperation('delete_account');
     }
 }
+
 </script>

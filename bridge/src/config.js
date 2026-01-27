@@ -6,7 +6,7 @@
 // EDIT THIS LINE ONLY:
 // =====================
 // Set to true for local Flask testing, false for production (adzsend.com)
-const USE_LOCAL_SERVER = false;
+const USE_LOCAL_SERVER = true;
 
 // Server URLs (don't edit these)
 const PRODUCTION_WS_URL = 'wss://adzsend.com/bridge/ws';

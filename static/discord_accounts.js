@@ -7,6 +7,8 @@ let accountLimit = 3;
 let currentAccountCount = 0;
 let canLinkMoreAccounts = true;
 let pendingLinkAccount = null; // Store pending account data after OAuth
+let isInitialLoad = true; // Track if this is the first load
+let oauthJustCompleted = false; // Track if OAuth just completed (don't clear pending)
 
 // Initialize Discord accounts page
 async function initDiscordAccountsPage() {
@@ -16,8 +18,38 @@ async function initDiscordAccountsPage() {
         searchInput.addEventListener('input', debounce(handleDiscordAccountsSearch, 300));
     }
 
+    // Check URL params for oauth return (on mobile, they return with params)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('oauth_success') || urlParams.has('open_settings')) {
+        // OAuth just completed - don't clear pending
+        oauthJustCompleted = true;
+    }
+
+    // On initial load (page refresh), clear any pending link UNLESS OAuth just completed
+    // This ensures stale pending links are cleared when user refreshes
+    if (isInitialLoad && !oauthJustCompleted) {
+        await cancelPendingLink();
+    }
+    isInitialLoad = false;
+
     // Load accounts
     await loadDiscordAccounts();
+}
+
+// Cancel pending link account on server
+async function cancelPendingLink() {
+    try {
+        await fetch('/api/linked-accounts/cancel-pending', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': window.csrfToken || ''
+            }
+        });
+        pendingLinkAccount = null;
+    } catch (error) {
+        console.error('Error canceling pending link:', error);
+    }
 }
 
 // Load all Discord accounts
@@ -126,9 +158,15 @@ function createPendingLinkCard() {
     card.style.borderRadius = '6px';
     card.style.padding = '13px';
 
+    // Avatar decoration HTML (same as linked account cards)
+    const decorationHtml = pendingLinkAccount.avatar_decoration
+        ? `<img class="avatar-decoration" src="https://cdn.discordapp.com/avatar-decoration-presets/${pendingLinkAccount.avatar_decoration}.png?size=160&passthrough=true" alt="">`
+        : '';
+
     card.innerHTML = `
         <div class="team-current-avatar" style="background: #1A1A1E; position: relative;">
             <img src="${getDiscordAvatarUrl(pendingLinkAccount.discord_id, pendingLinkAccount.avatar)}" alt="${pendingLinkAccount.username}">
+            ${decorationHtml}
         </div>
         <div class="team-current-info" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; flex: 1;">
             <span class="team-current-id" style="color: #dcddde;">${escapeHtml(pendingLinkAccount.username)}</span>
@@ -233,14 +271,18 @@ async function initiateAccountLink() {
         return;
     }
 
+    // Use AbortController for clean listener removal
+    const oauthAbortController = new AbortController();
+
     // Listen for messages from the popup
-    window.addEventListener('message', async function handleOAuthMessage(event) {
-        // Verify origin
+    window.addEventListener('message', async function(event) {
+        // Verify origin - ignore messages from other origins
         if (event.origin !== window.location.origin) return;
 
+        // Only handle our OAuth messages
         if (event.data.type === 'oauth_success') {
-            // Remove listener
-            window.removeEventListener('message', handleOAuthMessage);
+            // Remove listener immediately
+            oauthAbortController.abort();
 
             // Fetch pending account data
             await fetchPendingAccount();
@@ -248,12 +290,12 @@ async function initiateAccountLink() {
             // Reload accounts list to show token input
             await loadDiscordAccounts();
         } else if (event.data.type === 'oauth_error') {
-            // Remove listener
-            window.removeEventListener('message', handleOAuthMessage);
+            // Remove listener immediately
+            oauthAbortController.abort();
 
             customAlert('OAuth Failed', event.data.error || 'Unknown error.');
         }
-    });
+    }, { signal: oauthAbortController.signal });
 }
 
 // Auto-verify and link token (called on input with debounce)
@@ -315,7 +357,7 @@ async function autoVerifyToken() {
             // Check for specific error types that need a popup
             if (data.error === 'discord_already_linked_other_account' && data.error_title && data.error_message) {
                 // Parse markdown links in the error message
-                const parsedMessage = data.error_message.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #15d8bc; text-decoration: underline;">$1</a>');
+                const parsedMessage = data.error_message.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" style="color: #15d8bc; text-decoration: underline;">$1</a>');
                 await customAlert(data.error_title, parsedMessage);
                 if (statusDiv) {
                     statusDiv.textContent = '';

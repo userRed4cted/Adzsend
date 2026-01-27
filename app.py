@@ -139,13 +139,16 @@ def verify_turnstile(token, remote_ip=None):
     - Tokens expire after 300 seconds
     - IP is validated if provided
     """
+    print(f"[TURNSTILE] secret_key_set={bool(TURNSTILE_SECRET_KEY)}, token_length={len(token) if token else 0}", flush=True)
+
     if not TURNSTILE_SECRET_KEY:
         # Skip verification if not configured (development only)
-        # In production, TURNSTILE_SECRET_KEY must be set
+        print("[TURNSTILE] No secret key configured, skipping", flush=True)
         return True
 
     # Token is required when secret key is configured
     if not token or not token.strip():
+        print("[TURNSTILE] Empty token received", flush=True)
         return False
 
     try:
@@ -164,16 +167,11 @@ def verify_turnstile(token, remote_ip=None):
             timeout=10
         )
         result = response.json()
-
-        # Log failure reasons for debugging (remove in production if too verbose)
-        if not result.get('success', False):
-            error_codes = result.get('error-codes', [])
-            print(f"Turnstile verification failed: {error_codes}")
+        print(f"[TURNSTILE] API response: {result}", flush=True)
 
         return result.get('success', False)
     except Exception as e:
-        # Fail closed - reject on error
-        print(f"Turnstile verification error: {e}")
+        print(f"[TURNSTILE] Exception: {e}", flush=True)
         return False
 
 # Make CSRF token available to all templates

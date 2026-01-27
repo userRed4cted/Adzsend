@@ -70,7 +70,7 @@ PAGES = {
             'title': 'Adzsend',
             'description': 'Stop wasting time copy and pasting messages, time is money.',
             'image': None,  # Add image filename here, e.g., 'embed_preview.png'
-            'color': '#15d8bc',
+            'color': None, # '#121215',
         },
         'purchase': {
             'title': 'Adzsend',

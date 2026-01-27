@@ -106,7 +106,7 @@ TERMS_SECTIONS = [
     {
         "title": "APPEALS",
         "paragraphs": [
-            "We value transparency and work hard to give you context for the decisions we make. You can appeal any enforcement action we take under these terms or other policies, including terminations, suspensions or content removals through this [form](...). If you reside in the European Union, your appeal must be submitted within six months of the day the relevant decision has been notified to you.",
+            "We value transparency and work hard to give you context for the decisions we make. You can appeal any enforcement action we take under these terms or other policies, including terminations, suspensions or content removals through this [form](~/support). If you reside in the European Union, your appeal must be submitted within six months of the day the relevant decision has been notified to you.",
         ]
     },
     {

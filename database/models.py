@@ -32,9 +32,9 @@ def generate_adzsend_id():
 
 # Use persistent disk on Render, local file otherwise
 if os.environ.get('RENDER'):
-    DATABASE = '/data/marketing_panel.db'
+    DATABASE = '/data/adzsend.db'
 else:
-    DATABASE = 'marketing_panel.db'
+    DATABASE = 'adzsend.db'
 
 # Token Encryption Functions
 def _get_encryption_key():

@@ -149,19 +149,31 @@ def verify_turnstile(token, remote_ip=None):
         return False
 
     try:
+        # Build request data - only include remoteip if provided
+        # Some proxy setups can cause IP mismatch issues with Cloudflare
+        data = {
+            'secret': TURNSTILE_SECRET_KEY,
+            'response': token
+        }
+        if remote_ip:
+            data['remoteip'] = remote_ip
+
         response = requests.post(
             'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-            data={
-                'secret': TURNSTILE_SECRET_KEY,
-                'response': token,
-                'remoteip': remote_ip
-            },
+            data=data,
             timeout=10
         )
         result = response.json()
+
+        # Log failure reasons for debugging (remove in production if too verbose)
+        if not result.get('success', False):
+            error_codes = result.get('error-codes', [])
+            print(f"Turnstile verification failed: {error_codes}")
+
         return result.get('success', False)
     except Exception as e:
         # Fail closed - reject on error
+        print(f"Turnstile verification error: {e}")
         return False
 
 # Make CSRF token available to all templates
@@ -480,7 +492,7 @@ def login_page():
 
     # Verify Turnstile CAPTCHA
     turnstile_token = request.form.get('cf-turnstile-response', '')
-    if TURNSTILE_SECRET_KEY and not verify_turnstile(turnstile_token, security_get_client_ip()):
+    if TURNSTILE_SECRET_KEY and not verify_turnstile(turnstile_token):
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
         return render_template('login.html', error='CAPTCHA verification failed. Please try again.', csrf_token=csrf_token), 400
@@ -566,7 +578,7 @@ def signup_page():
 
     # Verify Turnstile CAPTCHA
     turnstile_token = request.form.get('cf-turnstile-response', '')
-    if TURNSTILE_SECRET_KEY and not verify_turnstile(turnstile_token, security_get_client_ip()):
+    if TURNSTILE_SECRET_KEY and not verify_turnstile(turnstile_token):
         csrf_token = generate_csrf_token()
         session['csrf_token'] = csrf_token
         return render_template('signup.html', error='CAPTCHA verification failed. Please try again.', csrf_token=csrf_token, email=email, tos_checked=(tos_agreed == 'true')), 400

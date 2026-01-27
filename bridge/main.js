@@ -6,7 +6,6 @@ const { checkForUpdates, downloadUpdate, installUpdate, setMainWindow } = requir
 const { cleanupGateway } = require('./src/discord');
 const { getDialogStyles, getDialogWindowOptions, escapeHtml, loadingDotsHTML, closeDialog } = require('./src/dialogStyles');
 const { API_URL } = require('./src/config');
-const http = require('http');
 const https = require('https');
 
 // Initialize store for persistent data

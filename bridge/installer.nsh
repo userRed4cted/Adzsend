@@ -28,36 +28,42 @@
 
     ; Check if already installed - show uninstall popup
     IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Adzsend Bridge.exe" 0 check_programfiles_init
-        MessageBox MB_YESNO|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to uninstall it?" IDYES uninstall_localappdata
+        MessageBox MB_YESNO|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to uninstall it?" IDYES cleanup_localappdata
         Abort
 
     check_programfiles_init:
     IfFileExists "$PROGRAMFILES\Adzsend Bridge\Adzsend Bridge.exe" 0 check_programfiles64_init
-        MessageBox MB_YESNO|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to uninstall it?" IDYES uninstall_programfiles
+        MessageBox MB_YESNO|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to uninstall it?" IDYES cleanup_programfiles
         Abort
 
     check_programfiles64_init:
     IfFileExists "$PROGRAMFILES64\Adzsend Bridge\Adzsend Bridge.exe" 0 done_check_init
-        MessageBox MB_YESNO|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to uninstall it?" IDYES uninstall_programfiles64
+        MessageBox MB_YESNO|MB_ICONQUESTION "Adzsend Bridge is already installed.$\r$\n$\r$\nWould you like to uninstall it?" IDYES cleanup_programfiles64
         Abort
 
-    uninstall_localappdata:
-        IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 abort_after_uninstall
+    cleanup_localappdata:
+        ; Try uninstaller first, then force cleanup
+        IfFileExists "$LOCALAPPDATA\Programs\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 force_cleanup_localappdata
             ExecWait '"$LOCALAPPDATA\Programs\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
-            Goto abort_after_uninstall
+            Goto done_check_init
+        force_cleanup_localappdata:
+            RMDir /r "$LOCALAPPDATA\Programs\Adzsend Bridge"
+            Goto done_check_init
 
-    uninstall_programfiles:
-        IfFileExists "$PROGRAMFILES\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 abort_after_uninstall
+    cleanup_programfiles:
+        IfFileExists "$PROGRAMFILES\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 force_cleanup_programfiles
             ExecWait '"$PROGRAMFILES\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
-            Goto abort_after_uninstall
+            Goto done_check_init
+        force_cleanup_programfiles:
+            RMDir /r "$PROGRAMFILES\Adzsend Bridge"
+            Goto done_check_init
 
-    uninstall_programfiles64:
-        IfFileExists "$PROGRAMFILES64\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 abort_after_uninstall
+    cleanup_programfiles64:
+        IfFileExists "$PROGRAMFILES64\Adzsend Bridge\Uninstall Adzsend Bridge.exe" 0 force_cleanup_programfiles64
             ExecWait '"$PROGRAMFILES64\Adzsend Bridge\Uninstall Adzsend Bridge.exe" /S'
-
-    abort_after_uninstall:
-        ; Exit installer after uninstall completes
-        Abort
+            Goto done_check_init
+        force_cleanup_programfiles64:
+            RMDir /r "$PROGRAMFILES64\Adzsend Bridge"
 
     done_check_init:
 !macroend
@@ -92,6 +98,10 @@
     RMDir /r "$LOCALAPPDATA\Adzsend Bridge"
     RMDir /r "$LOCALAPPDATA\adzsend-bridge-updater"
 
+    ; Remove electron-store config files
+    Delete "$APPDATA\adzsend-bridge\adzsend-bridge-config.json"
+    Delete "$APPDATA\Adzsend Bridge\adzsend-bridge-config.json"
+
     ; Remove from all possible install locations
     RMDir /r "$LOCALAPPDATA\Programs\Adzsend Bridge"
     RMDir /r "$PROGRAMFILES\Adzsend Bridge"
@@ -102,8 +112,12 @@
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "Adzsend Bridge"
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "adzsend-bridge"
 
-    ; Remove desktop shortcut (current user - no admin required)
+    ; Remove desktop shortcut
     Delete "$DESKTOP\Adzsend Bridge.lnk"
+
+    ; Remove Start Menu shortcuts
+    RMDir /r "$SMPROGRAMS\Adzsend Bridge"
+    Delete "$SMPROGRAMS\Adzsend Bridge.lnk"
 
     ; Remove app registry keys (current user - no admin required)
     DeleteRegKey HKCU "Software\adzsend-bridge"
@@ -113,6 +127,7 @@
     ; Remove uninstall registry entry (current user - no admin required)
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\adzsend-bridge"
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Adzsend Bridge"
+    DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\{adzsend-bridge}"
 
     ; Clean up temp files using PowerShell (NSIS RMDir doesn't support wildcards)
     nsExec::ExecToStack 'powershell -ExecutionPolicy Bypass -Command "Remove-Item -Path \"$TEMP\adzsend-bridge*\" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path \"$TEMP\Adzsend Bridge*\" -Recurse -Force -ErrorAction SilentlyContinue"'

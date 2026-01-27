@@ -278,6 +278,7 @@ class DiscordGatewayClient {
             // Then send heartbeats at regular interval
             this.heartbeatInterval = setInterval(() => {
                 if (!this.heartbeatAcked) {
+                    this.stopHeartbeat();
                     this.ws.terminate();
                     return;
                 }

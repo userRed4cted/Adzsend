@@ -2,7 +2,12 @@ from flask import Flask, render_template, redirect, url_for, session, request, j
 from flask_sock import Sock
 import os
 import secrets
+import logging
 from dotenv import load_dotenv
+
+# Set up logging for bridge WebSocket debugging
+logging.basicConfig(level=logging.INFO)
+bridge_logger = logging.getLogger('bridge')
 import http_client
 import uuid
 import sqlite3
@@ -1932,11 +1937,15 @@ def bridge_websocket(ws):
     """WebSocket endpoint for Adzsend Bridge desktop app"""
     authenticated = False
     user_id = None
+    client_ip = request.remote_addr
+
+    bridge_logger.info(f"[Bridge WS] New connection from {client_ip}")
 
     try:
         while True:
             data = ws.receive()
             if data is None:
+                bridge_logger.info(f"[Bridge WS] Connection closed by client (user_id={user_id})")
                 break
 
             message = json.loads(data)
@@ -1944,6 +1953,7 @@ def bridge_websocket(ws):
 
             if msg_type == 'auth':
                 secret_key = message.get('secret_key')
+                bridge_logger.info(f"[Bridge WS] Auth attempt from {client_ip}")
 
                 # Validate the secret key against database - returns user_id if valid
                 validated_user_id = validate_bridge_secret_key(secret_key) if secret_key else None
@@ -1956,8 +1966,10 @@ def bridge_websocket(ws):
                     # Mark bridge as online in database
                     set_bridge_online(user_id)
                     ws.send(json.dumps({'type': 'auth_success'}))
+                    bridge_logger.info(f"[Bridge WS] Auth success for user_id={user_id}")
                 else:
                     ws.send(json.dumps({'type': 'auth_failed', 'reason': 'Invalid secret key'}))
+                    bridge_logger.warning(f"[Bridge WS] Auth failed - invalid key from {client_ip}")
                     break
 
             elif msg_type == 'ping':
@@ -1970,8 +1982,8 @@ def bridge_websocket(ws):
                     pending_bridge_requests[request_id]['result'] = message
                     pending_bridge_requests[request_id]['event'].set()
 
-    except Exception:
-        pass
+    except Exception as e:
+        bridge_logger.error(f"[Bridge WS] Error for user_id={user_id}: {str(e)}")
     finally:
         # Remove from active connections
         if user_id:
@@ -1981,6 +1993,7 @@ def bridge_websocket(ws):
                 if req_data.get('result') is None:
                     req_data['result'] = {'results': [{'success': False, 'error': 'Bridge disconnected'}]}
                     req_data['event'].set()
+            bridge_logger.info(f"[Bridge WS] Disconnected user_id={user_id}")
         # Always mark bridge as offline when connection ends
         if user_id:
             set_bridge_offline(user_id)

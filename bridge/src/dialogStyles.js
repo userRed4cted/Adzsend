@@ -7,7 +7,11 @@
 const baseStyles = `
     @font-face {
         font-family: 'gg sans';
-        src: local('Segoe UI'), local('Arial');
+        src: url('../assets/fonts/ggsans-Medium.ttf') format('truetype');
+    }
+    @font-face {
+        font-family: 'gg sans Bold';
+        src: url('../assets/fonts/ggsans-Bold.ttf') format('truetype');
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -62,6 +66,7 @@ const baseStyles = `
         outline: none;
     }
     .title {
+        font-family: 'gg sans Bold';
         font-size: 1.125rem;
         margin-bottom: 0.5rem;
         color: #ffffff;

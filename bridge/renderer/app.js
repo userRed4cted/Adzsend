@@ -123,7 +123,7 @@ async function handleActivate() {
         if (!secretKey) {
             // Show error - user must use "Modify Secret Key" to enter key
             isShowingDialog = true;
-            await window.bridge.showErrorDialog('No secret key', 'Please click "Modify Secret Key" to enter your secret key.');
+            await window.bridge.showErrorDialog('No secret key', 'Click "Modify Secret Key" to enter your secret key.');
             isShowingDialog = false;
             return;
         }

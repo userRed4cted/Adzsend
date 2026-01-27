@@ -3,7 +3,7 @@ from flask_sock import Sock
 import os
 import secrets
 from dotenv import load_dotenv
-import requests
+import http_client
 import uuid
 import sqlite3
 from datetime import timedelta, datetime
@@ -336,7 +336,7 @@ def fetch_discord_user_info(discord_id):
 
     try:
         headers = {'Authorization': f'Bot {bot_token}'}
-        response = requests.get(f'{DISCORD_API_BASE}/users/{discord_id}', headers=headers, timeout=5)
+        response = http_client.get(f'{DISCORD_API_BASE}/users/{discord_id}', headers=headers, timeout=5)
 
         if response.status_code == 200:
             discord_user = response.json()
@@ -345,7 +345,7 @@ def fetch_discord_user_info(discord_id):
             return username, avatar
         else:
             return None, None
-    except requests.exceptions.Timeout:
+    except http_client.TimeoutError:
         return None, None
     except Exception as e:
         return None, None
@@ -1638,7 +1638,7 @@ def update_token():
     # Verify the token by making an API call to Discord
     test_headers = {'Authorization': new_token}
     try:
-        test_response = requests.get(f'{DISCORD_API_BASE}/users/@me', headers=test_headers, timeout=10)
+        test_response = http_client.get(f'{DISCORD_API_BASE}/users/@me', headers=test_headers, timeout=10)
 
         if test_response.status_code != 200:
             return {'error': 'Invalid Discord token. Please check your token and try again.'}, 400
@@ -1661,7 +1661,7 @@ def update_token():
 
         return {'success': True, 'message': 'Token updated successfully'}, 200
 
-    except requests.exceptions.Timeout:
+    except http_client.TimeoutError:
         return {'error': 'Discord API timeout. Please try again.'}, 500
     except Exception as e:
         return {'error': 'Failed to verify token'}, 500
@@ -2128,7 +2128,7 @@ def get_guilds():
     try:
         token = account_details['discord_token']
         headers = {'Authorization': token}
-        guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=10)
+        guilds_resp = http_client.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=10)
 
         if guilds_resp.status_code == 200:
             guilds = guilds_resp.json()
@@ -2166,7 +2166,7 @@ def get_guilds():
             return {'success': False, 'error': 'Access denied'}, 403
         else:
             return {'success': False, 'error': 'Failed to fetch guilds'}, guilds_resp.status_code
-    except requests.exceptions.Timeout:
+    except http_client.TimeoutError:
         return {'success': False, 'error': 'Request timeout'}, 500
     except Exception as e:
         return {'success': False, 'error': str(e)}, 500
@@ -2204,7 +2204,7 @@ def get_guild_channels(guild_id):
 
     try:
         # Fetch channels for this guild
-        resp = requests.get(
+        resp = http_client.get(
             f'https://discord.com/api/v10/guilds/{guild_id}/channels',
             headers=headers,
             timeout=10
@@ -2229,7 +2229,7 @@ def get_guild_channels(guild_id):
             }, 401
         else:
             return {'error': 'Failed to fetch channels'}, resp.status_code
-    except requests.exceptions.Timeout:
+    except http_client.TimeoutError:
         return {'error': 'Request timeout'}, 500
     except Exception as e:
         return {'error': str(e)}, 500
@@ -2272,7 +2272,7 @@ def refresh_guilds_channels():
 
     try:
         # Fetch guilds
-        guilds_resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=10)
+        guilds_resp = http_client.get('https://discord.com/api/v10/users/@me/guilds', headers=headers, timeout=10)
 
         if guilds_resp.status_code == 200:
             guilds = guilds_resp.json()
@@ -2287,7 +2287,7 @@ def refresh_guilds_channels():
                 }
 
                 try:
-                    channels_resp = requests.get(
+                    channels_resp = http_client.get(
                         f'https://discord.com/api/v10/guilds/{guild["id"]}/channels',
                         headers=headers,
                         timeout=5
@@ -2342,7 +2342,7 @@ def refresh_guilds_channels():
         else:
             return {'error': 'Failed to fetch guilds'}, guilds_resp.status_code
 
-    except requests.exceptions.Timeout:
+    except http_client.TimeoutError:
         return {'error': 'Request timeout'}, 500
     except Exception as e:
         return {'error': str(e)}, 500
@@ -2807,7 +2807,7 @@ def team_panel():
         user_token = get_decrypted_token(user['discord_id'])
         if user_token:
             headers = {'Authorization': user_token}
-            resp = requests.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
+            resp = http_client.get('https://discord.com/api/v10/users/@me/guilds', headers=headers)
 
             if resp.status_code == 200:
                 guilds = resp.json()
@@ -4275,7 +4275,7 @@ def handle_link_account_callback(user_id, state):
     }
 
     try:
-        token_response = requests.post(token_url, data=token_data, timeout=10)
+        token_response = http_client.post(token_url, data=token_data, timeout=10)
 
         if token_response.status_code != 200:
             return render_template('oauth_callback.html', success=False, error='Failed to get access token')
@@ -4287,7 +4287,7 @@ def handle_link_account_callback(user_id, state):
         expires_at = (datetime.now() + timedelta(seconds=expires_in)).isoformat()
 
         # Get user info from Discord
-        user_response = requests.get(
+        user_response = http_client.get(
             f'{DISCORD_API_BASE}/users/@me',
             headers={'Authorization': f'Bearer {access_token}'},
             timeout=10
@@ -4321,7 +4321,7 @@ def handle_link_account_callback(user_id, state):
         # Return a page that closes the popup and notifies the parent window
         return render_template('oauth_callback.html', success=True)
 
-    except requests.exceptions.Timeout:
+    except http_client.TimeoutError:
         return render_template('oauth_callback.html', success=False, error='Connection timeout')
     except Exception as e:
         return render_template('oauth_callback.html', success=False, error='An error occurred')
@@ -4369,7 +4369,7 @@ def discord_oauth_callback():
     }
 
     try:
-        token_response = requests.post(token_url, data=token_data, timeout=10)
+        token_response = http_client.post(token_url, data=token_data, timeout=10)
 
         if token_response.status_code != 200:
             return redirect(url_for('settings') + '?discord_error=Failed%20to%20get%20access%20token')
@@ -4381,7 +4381,7 @@ def discord_oauth_callback():
         expires_at = (datetime.now() + timedelta(seconds=expires_in)).isoformat()
 
         # Get user info from Discord
-        user_response = requests.get(
+        user_response = http_client.get(
             f'{DISCORD_API_BASE}/users/@me',
             headers={'Authorization': f'Bearer {access_token}'},
             timeout=10
@@ -4407,7 +4407,7 @@ def discord_oauth_callback():
         # Redirect back to settings with success message
         return redirect(url_for('settings') + '?discord_success=1')
 
-    except requests.exceptions.Timeout:
+    except http_client.TimeoutError:
         return redirect(url_for('settings') + '?discord_error=Connection%20timeout')
     except Exception as e:
         return redirect(url_for('settings') + '?discord_error=An%20error%20occurred')
@@ -4472,7 +4472,7 @@ def discord_verify_token():
     # Verify token against Discord API
     try:
         headers = {'Authorization': token}
-        response = requests.get(f'{DISCORD_API_BASE}/users/@me', headers=headers, timeout=10)
+        response = http_client.get(f'{DISCORD_API_BASE}/users/@me', headers=headers, timeout=10)
 
         if response.status_code == 401:
             return {'error': 'Invalid token'}, 400
@@ -4492,7 +4492,7 @@ def discord_verify_token():
 
         return {'success': True, 'message': 'Token verified successfully'}
 
-    except requests.exceptions.Timeout:
+    except http_client.TimeoutError:
         return {'error': 'Connection timeout'}, 500
     except Exception as e:
         return {'error': 'An error occurred'}, 500
@@ -4528,7 +4528,7 @@ def discord_link():
     # Verify token one more time before linking
     try:
         headers = {'Authorization': token}
-        response = requests.get(f'{DISCORD_API_BASE}/users/@me', headers=headers, timeout=10)
+        response = http_client.get(f'{DISCORD_API_BASE}/users/@me', headers=headers, timeout=10)
 
         if response.status_code != 200:
             return {'error': 'Token verification failed'}, 400
@@ -4560,7 +4560,7 @@ def discord_link():
 
         return {'success': True, 'message': 'Discord account linked successfully'}
 
-    except requests.exceptions.Timeout:
+    except http_client.TimeoutError:
         return {'error': 'Connection timeout'}, 500
     except Exception as e:
         return {'error': 'An error occurred'}, 500
@@ -4759,7 +4759,7 @@ def verify_link_account_token():
 
     # Verify token by making a request to Discord API
     try:
-        user_response = requests.get(
+        user_response = http_client.get(
             f'{DISCORD_API_BASE}/users/@me',
             headers={'Authorization': discord_token},
             timeout=10
@@ -4809,7 +4809,7 @@ def verify_link_account_token():
             'account_id': result
         }
 
-    except requests.exceptions.Timeout:
+    except http_client.TimeoutError:
         return {'error': 'Connection timeout', 'valid': False}, 200
     except Exception as e:
         return {'error': 'Verification failed', 'valid': False}, 200
@@ -4871,7 +4871,7 @@ def update_account_token():
     # Verify the token is valid by making a Discord API call
     headers = {'Authorization': new_token}
     try:
-        resp = requests.get('https://discord.com/api/v10/users/@me', headers=headers, timeout=10)
+        resp = http_client.get('https://discord.com/api/v10/users/@me', headers=headers, timeout=10)
 
         if resp.status_code != 200:
             return {'error': 'Invalid Discord token'}, 400
@@ -4913,7 +4913,7 @@ def update_account_token():
 
         return {'success': True, 'message': 'Token updated successfully'}
 
-    except requests.exceptions.Timeout:
+    except http_client.TimeoutError:
         return {'error': 'Discord API timeout'}, 500
     except Exception as e:
         return {'error': 'Failed to verify token'}, 500

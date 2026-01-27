@@ -72,9 +72,12 @@ Don't share this code or email with anyone. If you didn't request verification, 
 
     except urllib.error.HTTPError as e:
         try:
-            error_data = json.loads(e.read().decode('utf-8'))
+            raw_response = e.read().decode('utf-8')
+            print(f"[EMAIL] HTTPError raw response: {raw_response}", flush=True)
+            error_data = json.loads(raw_response)
             error_msg = error_data.get('message', f'HTTP {e.code}')
-        except Exception:
+        except Exception as parse_err:
+            print(f"[EMAIL] Parse error: {parse_err}", flush=True)
             error_msg = f'HTTP {e.code}'
         print(f"[EMAIL] HTTPError: {error_msg}", flush=True)
         return False, error_msg

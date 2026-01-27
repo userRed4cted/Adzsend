@@ -30,7 +30,11 @@ def generate_adzsend_id():
     """Generate a unique 18-digit Adzsend ID (like Discord snowflake)."""
     return ''.join([str(secrets.randbelow(10)) for _ in range(18)])
 
-DATABASE = 'marketing_panel.db'
+# Use persistent disk on Render, local file otherwise
+if os.environ.get('RENDER'):
+    DATABASE = '/data/marketing_panel.db'
+else:
+    DATABASE = 'marketing_panel.db'
 
 # Token Encryption Functions
 def _get_encryption_key():

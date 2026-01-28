@@ -30,6 +30,7 @@ BLACKLISTED_EMAIL_DOMAINS = [
     # '.ac.uk',
 
     # Temporary/Disposable email services
+    '@lnovic.com',
     '@tempmail.com',
     '@temp-mail.org',
     '@guerrillamail.com',

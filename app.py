@@ -51,7 +51,7 @@ from config import (
     BUTTONS, HOMEPAGE, NAVBAR, COLORS, PAGES, get_all_config, is_admin,
     SITE, get_page_description, get_page_embed,
     SUPPORT_HERO_TITLE, SUPPORT_FAQ_TITLE, SUPPORT_CONTACT_TEXT, FAQ_ITEMS,
-    BRIDGE_TITLE, BRIDGE_DESCRIPTION, BRIDGE_DOWNLOAD_URLS, BRIDGE_FEATURE_PILLS
+    BRIDGE_TITLE, BRIDGE_DESCRIPTION, BRIDGE_DOWNLOAD_URLS, BRIDGE_FEATURE_PILLS, BRIDGE_BACKGROUND
 )
 from config.footer import (
     FOOTER_LOGO, FOOTER_BACKGROUND, FOOTER_SECTION_TITLE_COLOR,
@@ -451,8 +451,8 @@ def home():
                          hero_description=HOMEPAGE['hero']['description'],
                          hero_cta_text=HOMEPAGE['hero']['cta_text'],
                          hero_showcase_image=HOMEPAGE['hero']['showcase_image'],
-                         # Background gradient circles
-                         background_config=HOMEPAGE.get('background', {}),
+                         # Background color
+                         background_color=HOMEPAGE.get('background_color', '#121215'),
                          # Feature pills
                          feature_pills=HOMEPAGE['feature_pills'],
                          # Why Discord section
@@ -554,6 +554,9 @@ def login_page():
             csrf_token = generate_csrf_token()
             session['csrf_token'] = csrf_token
             return render_template('login.html', error='Failed to send verification email. Please try again.', csrf_token=csrf_token), 500
+
+    # Grant access to verify page (one-time use flag)
+    session['verify_page_access_granted'] = True
 
     # Redirect to verification page (code already exists or was just created)
     return redirect(url_for('verify_code_page', purpose='login'))
@@ -671,12 +674,24 @@ def signup_page():
             session['csrf_token'] = csrf_token
             return render_template('signup.html', error='Failed to send verification email. Please try again.', csrf_token=csrf_token, email=email, tos_checked=True), 500
 
+    # Grant access to verify page (one-time use flag)
+    session['verify_page_access_granted'] = True
+
     # Redirect to verification page (code already exists or was just created)
     return redirect(url_for('verify_code_page', purpose='signup'))
 
 @app.route('/verify', methods=['GET', 'POST'])
 def verify_code_page():
     purpose = request.args.get('purpose') or request.form.get('purpose', 'login')
+
+    # SECURITY: Check for one-time access flag (set when redirected from form submission)
+    # This prevents direct URL access - page can only be reached via proper form flow
+    if request.method == 'GET' and not session.get('verify_page_access_granted'):
+        # No access flag - redirect to homepage
+        return redirect(url_for('home'))
+
+    # Access flag is cleared when: user navigates away, verification completes, or session expires
+    # This ensures the verify URL expires once the user leaves the page
 
     # SECURITY: Get email from session only - never from client input
     # This prevents attackers from verifying arbitrary emails via inspect element
@@ -742,10 +757,11 @@ def verify_code_page():
     # Get TOS timestamp before clearing session (for signup)
     tos_agreed_at = session.get('pending_signup_tos_agreed_at')
 
-    # Clear pending email from session
+    # Clear pending email and access flag from session
     session.pop('pending_signup_email', None)
     session.pop('pending_login_email', None)
     session.pop('pending_signup_tos_agreed_at', None)
+    session.pop('verify_page_access_granted', None)
 
     # Handle based on purpose
     if purpose == 'signup':
@@ -894,6 +910,15 @@ def purchase():
                          user=user,
                          user_data=user_data)
 
+@app.route('/api/clear-verify-access', methods=['POST'])
+def clear_verify_access():
+    """Clear the one-time verification page access flag when user leaves the page."""
+    session.pop('verify_page_access_granted', None)
+    session.pop('pending_signup_email', None)
+    session.pop('pending_login_email', None)
+    session.pop('pending_email_change', None)
+    return jsonify({'success': True})
+
 @app.route('/api/resend-code', methods=['POST'])
 @rate_limit('api')
 def resend_code_api():
@@ -1036,10 +1061,11 @@ def verify_code_api():
     # Get TOS timestamp before clearing session (for signup)
     tos_agreed_at_api = session.get('pending_signup_tos_agreed_at')
 
-    # Clear pending email from session
+    # Clear pending email and access flag from session
     session.pop('pending_signup_email', None)
     session.pop('pending_login_email', None)
     session.pop('pending_signup_tos_agreed_at', None)
+    session.pop('verify_page_access_granted', None)
 
     # Handle email change purpose
     if purpose == 'email_change':
@@ -1856,7 +1882,8 @@ def bridge():
         bridge_title=BRIDGE_TITLE,
         bridge_description=BRIDGE_DESCRIPTION,
         bridge_download_urls=BRIDGE_DOWNLOAD_URLS,
-        bridge_feature_pills=BRIDGE_FEATURE_PILLS
+        bridge_feature_pills=BRIDGE_FEATURE_PILLS,
+        background_config=BRIDGE_BACKGROUND
     ))
     # Prevent caching
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
@@ -2963,6 +2990,9 @@ def api_change_email():
         if not email_sent:
             return jsonify({'success': False, 'error': 'Failed to send verification email. Please try again.'}), 500
 
+        # Grant access to verify page (one-time use flag)
+        session['verify_page_access_granted'] = True
+
         # Return redirect URL to verification page
         return jsonify({
             'success': True,
@@ -2978,9 +3008,13 @@ def verify_email_change():
     if 'authenticated' not in session:
         return redirect(url_for('login_page'))
 
+    # SECURITY: Check for one-time access flag (set when redirected from email change API)
+    if not session.get('verify_page_access_granted'):
+        return redirect(url_for('dashboard'))
+
     email = request.args.get('email', '')
     if not email or 'pending_email_change' not in session:
-        return redirect(url_for('settings'))
+        return redirect(url_for('dashboard'))
 
     # Get resend status for rate limiting display
     can_resend, cooldown_seconds, attempts_remaining = get_resend_status(email, 'email_change')

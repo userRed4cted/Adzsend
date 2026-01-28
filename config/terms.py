@@ -2,8 +2,8 @@
 
 # Metadata
 TERMS_TITLE = "ADZSEND TERMS OF SERVICE"
-TERMS_EFFECTIVE_DATE = "January 26 2026"
-TERMS_LAST_UPDATED = "January 26 2026"
+TERMS_EFFECTIVE_DATE = "January 28 2026"
+TERMS_LAST_UPDATED = "January 28 2026"
 
 TERMS_SECTIONS = [
     {
@@ -37,6 +37,8 @@ TERMS_SECTIONS = [
             "You must always provide accurate information to Adzsend and maintain the accuracy of the information associated with your account. We may assume that any communications we've received from your account or the associated contact information have been made by you and that any purchases made using your account were made by you.",
 
             "If you get locked out of your account, we'll need to contact you at the email or phone number associated with your account. If your account is compromised or you no longer have access to your email account, we may not be able to restore your access to your account.",
+
+            "You must always provide accurate, complete, and truthful information and keep your account details up to date. The use of disposable, temporary, fake, missleading, or non functional email addresses is prohibited."
         ]
     },
     {

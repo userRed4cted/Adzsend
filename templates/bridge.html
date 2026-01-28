@@ -21,7 +21,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #121215;
+            background-color: {{ background_config.color if background_config else '#121215' }};
             color: #ffffff;
             font-family: 'gg sans';
             overflow: hidden;
@@ -39,11 +39,49 @@
             flex: 1;
             overflow-y: auto;
             padding-top: 60px;
-            background: #121215;
+            background: {{ background_config.color if background_config else '#121215' }};
+            position: relative;
         }
 
+        /* ==================== BACKGROUND GRADIENT CIRCLES ==================== */
+        .bg-gradient-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-gradient-top img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .bg-gradient-bottom {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-gradient-bottom img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Ensure content is above the gradient backgrounds */
         .bridge-content {
-            /* Content flows naturally, footer follows */
+            position: relative;
+            z-index: 1;
+        }
+
+        .site-footer {
+            position: relative;
+            z-index: 1;
         }
 
         /* ==================== HERO SECTION ==================== */
@@ -360,6 +398,16 @@
         {% include 'navbar.html' %}
 
         <div class="page-scroll-container">
+            <!-- Background Gradient Circles -->
+            {% if background_config %}
+            <div class="bg-gradient-top">
+                <img src="{{ url_for('static', filename=background_config.top_circle) }}" alt="" aria-hidden="true" decoding="async">
+            </div>
+            <div class="bg-gradient-bottom">
+                <img src="{{ url_for('static', filename=background_config.bottom_circle) }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+            </div>
+            {% endif %}
+
             <div class="bridge-content">
                 <!-- Hero Section -->
                 <section class="bridge-hero">
@@ -406,6 +454,39 @@
     </div>
 
     <script>
+        // Position bottom gradient so its bottom edge aligns with footer section top
+        (() => {
+            const bottomGradient = document.querySelector('.bg-gradient-bottom');
+            const footer = document.querySelector('.site-footer');
+            const scrollContainer = document.querySelector('.page-scroll-container');
+
+            if (!bottomGradient || !footer || !scrollContainer) return;
+
+            function positionBottomGradient() {
+                const img = bottomGradient.querySelector('img');
+                if (!img) return;
+
+                // Get the footer's position relative to scroll container
+                const footerTop = footer.offsetTop;
+                const imgHeight = img.offsetHeight || img.naturalHeight || 600;
+
+                // Position so bottom of gradient image is at top of footer section
+                bottomGradient.style.top = (footerTop - imgHeight) + 'px';
+            }
+
+            // Position on load and resize
+            if (bottomGradient.querySelector('img').complete) {
+                positionBottomGradient();
+            } else {
+                bottomGradient.querySelector('img').addEventListener('load', positionBottomGradient);
+            }
+            window.addEventListener('resize', positionBottomGradient);
+
+            // Also reposition after a short delay to handle layout shifts
+            setTimeout(positionBottomGradient, 100);
+            setTimeout(positionBottomGradient, 500);
+        })();
+
         // OS and architecture detection for Bridge download
         (function() {
             const container = document.getElementById('bridge-download-container');

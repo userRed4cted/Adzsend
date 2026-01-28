@@ -2173,11 +2173,8 @@ def delete_user_account_admin(user_id):
     # Delete usage tracking
     cursor.execute('DELETE FROM usage WHERE user_id = ?', (user_id,))
 
-    # Delete linked discord accounts
+    # Delete linked discord accounts (includes selected_channels data)
     cursor.execute('DELETE FROM linked_discord_accounts WHERE user_id = ?', (user_id,))
-
-    # Delete discord account channels
-    cursor.execute('DELETE FROM discord_account_channels WHERE user_id = ?', (user_id,))
 
     # Delete bridge connections
     cursor.execute('DELETE FROM bridge_connections WHERE user_id = ?', (user_id,))

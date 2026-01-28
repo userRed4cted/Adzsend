@@ -450,6 +450,12 @@
             }
         });
 
+        // SECURITY: Clear access when user navigates away from the page
+        // This prevents returning to verify page via URL after leaving
+        window.addEventListener('beforeunload', function() {
+            navigator.sendBeacon('/api/clear-verify-access', '');
+        });
+
     </script>
 </body>
 </html>

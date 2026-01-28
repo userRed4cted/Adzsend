@@ -49,7 +49,7 @@
         body {
             margin: 0;
             padding: 0;
-            background: #000000;
+            background: {{ background_color }};
             color: #ffffff;
             overflow: hidden;
             height: 100vh;
@@ -67,56 +67,13 @@
             overflow-y: auto;
             overflow-x: hidden;
             padding-top: 60px;
-            background: #000000;
+            background: {{ background_color }};
             /* Smooth scrolling optimization */
             -webkit-overflow-scrolling: touch;
             scroll-behavior: auto;
             /* GPU acceleration for smoother scroll */
             will-change: scroll-position;
             transform: translateZ(0);
-            position: relative;
-        }
-
-        /* ==================== BACKGROUND GRADIENT CIRCLES ==================== */
-        .bg-gradient-top {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .bg-gradient-top img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-
-        .bg-gradient-bottom {
-            position: absolute;
-            left: 0;
-            width: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .bg-gradient-bottom img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-
-        /* Ensure content is above the gradient backgrounds */
-        .home-hero,
-        .feature-pills {
-            position: relative;
-            z-index: 1;
-        }
-
-        .why-discord-section {
-            position: relative;
-            z-index: 1;
         }
 
         /* ==================== HERO SECTION ==================== */
@@ -448,16 +405,6 @@
         {% include 'navbar.html' %}
 
         <div class="page-scroll-container">
-            <!-- Background Gradient Circles -->
-            {% if background_config %}
-            <div class="bg-gradient-top">
-                <img src="{{ url_for('static', filename=background_config.top_circle.image) }}" alt="" aria-hidden="true" decoding="async">
-            </div>
-            <div class="bg-gradient-bottom">
-                <img src="{{ url_for('static', filename=background_config.bottom_circle.image) }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
-            </div>
-            {% endif %}
-
             <!-- Hero Section -->
             <section class="home-hero">
                 <h1 class="home-hero-title">{{ hero_title }}</h1>
@@ -478,7 +425,7 @@
                     </div>
                     <div class="feature-pill-media-container">
                         {% if pill.video %}
-                        <video class="feature-pill-video" autoplay loop muted playsinline webkit-playsinline preload="none" disablePictureInPicture data-src="{{ url_for('static', filename=pill.video) }}#t=0.001">
+                        <video class="feature-pill-video" autoplay loop muted playsinline webkit-playsinline="" preload="metadata" disablePictureInPicture data-src="{{ url_for('static', filename=pill.video) }}#t=0.001" poster="">
                         </video>
                         {% else %}
                         <img src="{{ url_for('static', filename=pill.image) }}" alt="{{ pill.title }}" class="feature-pill-image" loading="lazy" decoding="async">
@@ -530,40 +477,7 @@
     </div>
 
     <script>
-        // Position bottom gradient so its bottom edge aligns with why-discord section top
-        (() => {
-            const bottomGradient = document.querySelector('.bg-gradient-bottom');
-            const whyDiscordSection = document.querySelector('.why-discord-section');
-            const scrollContainer = document.querySelector('.page-scroll-container');
-
-            if (!bottomGradient || !whyDiscordSection || !scrollContainer) return;
-
-            function positionBottomGradient() {
-                const img = bottomGradient.querySelector('img');
-                if (!img) return;
-
-                // Get the why-discord section's position relative to scroll container
-                const sectionTop = whyDiscordSection.offsetTop;
-                const imgHeight = img.offsetHeight || img.naturalHeight || 600;
-
-                // Position so bottom of gradient image is at top of why-discord section
-                bottomGradient.style.top = (sectionTop - imgHeight) + 'px';
-            }
-
-            // Position on load and resize
-            if (bottomGradient.querySelector('img').complete) {
-                positionBottomGradient();
-            } else {
-                bottomGradient.querySelector('img').addEventListener('load', positionBottomGradient);
-            }
-            window.addEventListener('resize', positionBottomGradient);
-
-            // Also reposition after a short delay to handle layout shifts
-            setTimeout(positionBottomGradient, 100);
-            setTimeout(positionBottomGradient, 500);
-        })();
-
-        // Count-up animation for Discord stats
+        // Count-up animation for Discord stats - smooth interpolated animation
         (() => {
             const statNumbers = document.querySelectorAll('.stat-number[data-target]');
             if (statNumbers.length === 0) return;
@@ -588,16 +502,18 @@
                     if (hasAnimated) return;
                     hasAnimated = true;
 
-                    // Longer duration for smoother animation
                     const duration = 2000;
                     const startTime = performance.now();
-                    let lastDisplayValue = '';
+                    // Use fixed step count for consistent smooth animation
+                    const totalSteps = 60; // 60 visual steps over duration
+                    const stepDuration = duration / totalSteps;
+                    let currentStep = 0;
 
-                    function update(currentTime) {
-                        const elapsed = currentTime - startTime;
-                        const progress = Math.min(elapsed / duration, 1);
+                    function update() {
+                        currentStep++;
+                        const progress = Math.min(currentStep / totalSteps, 1);
 
-                        // Smoother ease-out cubic curve
+                        // Smooth ease-out curve
                         const easeOut = 1 - Math.pow(1 - progress, 3);
                         const currentValue = numericValue * easeOut;
 
@@ -606,42 +522,35 @@
                         if (hasDecimal) {
                             displayValue = currentValue.toFixed(decimalPlaces) + suffix;
                         } else {
-                            // For integers, use floor during animation for smooth counting
-                            displayValue = Math.floor(currentValue) + suffix;
+                            displayValue = Math.round(currentValue) + suffix;
                         }
 
-                        // Only update DOM if display value changed
-                        if (displayValue !== lastDisplayValue) {
-                            statNumber.textContent = displayValue;
-                            lastDisplayValue = displayValue;
-                        }
+                        statNumber.textContent = displayValue;
 
                         if (progress < 1) {
-                            requestAnimationFrame(update);
+                            setTimeout(update, stepDuration);
                         } else {
                             // Ensure final value is exact
                             statNumber.textContent = targetValue;
                         }
                     }
 
-                    requestAnimationFrame(update);
+                    update();
                 }
 
                 // Use IntersectionObserver for efficient visibility detection
-                // Trigger animation when element is at least 50% visible on screen
                 const observer = new IntersectionObserver(
                     (entries) => {
                         entries.forEach(entry => {
                             if (entry.isIntersecting) {
-                                // Start animation immediately when visible
                                 animateCount();
                                 observer.unobserve(entry.target);
                             }
                         });
                     },
                     {
-                        threshold: 0.5,  // Trigger when 50% of element is visible
-                        rootMargin: '0px'  // No margin - trigger exactly when visible on screen
+                        threshold: 0.5,
+                        rootMargin: '0px'
                     }
                 );
 
@@ -649,14 +558,14 @@
             });
         })();
 
-        // Lazy load videos - only load when near viewport (speeds up initial page load)
+        // Lazy load videos - load well before they enter viewport
         (() => {
             const videos = document.querySelectorAll('.feature-pill-video[data-src]');
             if (videos.length === 0) return;
 
             const loadedVideos = new Set();
 
-            // Load video source when it enters viewport
+            // Load video source
             function loadVideo(video) {
                 if (loadedVideos.has(video)) return;
 
@@ -665,15 +574,22 @@
 
                 loadedVideos.add(video);
 
-                // Create and add source element
-                const source = document.createElement('source');
-                source.src = src;
-                source.type = 'video/mp4';
-                video.appendChild(source);
+                // Set src directly on video element for better iOS compatibility
+                video.src = src;
+
+                // Ensure muted is set (iOS requirement)
+                video.muted = true;
 
                 // Load and play
                 video.load();
-                video.play().catch(() => {});
+
+                // Play with promise handling
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(() => {
+                        // Autoplay was prevented, will try again on interaction
+                    });
+                }
             }
 
             // Pause/resume loaded videos on tab visibility change
@@ -695,6 +611,7 @@
                 if (hasInteracted) return;
                 hasInteracted = true;
                 loadedVideos.forEach(v => {
+                    v.muted = true; // Ensure muted
                     if (v.paused) v.play().catch(() => {});
                 });
                 interactionEvents.forEach(evt => {
@@ -706,7 +623,7 @@
                 document.addEventListener(evt, onInteraction, { passive: true });
             });
 
-            // IntersectionObserver to lazy load videos when near viewport
+            // IntersectionObserver - load videos 800px before they enter viewport
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
@@ -714,8 +631,8 @@
                     }
                 });
             }, {
-                threshold: 0.1,
-                rootMargin: '200px' // Start loading 200px before it enters viewport
+                threshold: 0,
+                rootMargin: '800px' // Start loading 800px before viewport
             });
 
             videos.forEach(v => observer.observe(v));

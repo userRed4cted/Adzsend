@@ -5,6 +5,20 @@
 # ==============================================
 
 # ==========================================
+# BACKGROUND
+# ==========================================
+# Main background color and gradient circles
+
+BRIDGE_BACKGROUND = {
+    # Main background color of the bridge page
+    'color': '#000000',
+    # Top gradient circle (positioned at top of page, behind navbar)
+    'top_circle': 'TopBlurHomepageCircle.png',
+    # Bottom gradient circle (positioned at footer section)
+    'bottom_circle': 'BottomBlurHomepageCircle.png',
+}
+
+# ==========================================
 # HERO SECTION
 # ==========================================
 # Title (same style as homepage hero title)

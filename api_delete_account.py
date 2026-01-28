@@ -50,9 +50,10 @@ def delete_user_account(user_id):
                 pass
 
         # Delete from all tables where user data exists
+        # Note: discord_account_channels doesn't exist as a separate table,
+        # channel data is stored in linked_discord_accounts.selected_channels
         tables_to_delete = [
             ('linked_discord_accounts', 'user_id'),
-            ('discord_account_channels', 'user_id'),
             ('user_data', 'user_id'),
             ('usage', 'user_id'),
             ('subscriptions', 'user_id'),

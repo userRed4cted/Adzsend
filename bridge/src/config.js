@@ -9,11 +9,11 @@
 const USE_LOCAL_SERVER = false;
 
 // Server URLs (don't edit these)
-const PRODUCTION_WS_URL = 'wss://adzsend.com/bridge/ws';
+const PRODUCTION_WS_URL = 'wss://www.adzsend.com/bridge/ws';
 const DEVELOPMENT_WS_URL = 'ws://127.0.0.1:5000/bridge/ws';
 
 // API URLs for status updates
-const PRODUCTION_API_URL = 'https://adzsend.com';
+const PRODUCTION_API_URL = 'https://www.adzsend.com';
 const DEVELOPMENT_API_URL = 'http://127.0.0.1:5000';
 
 // Uses the setting above

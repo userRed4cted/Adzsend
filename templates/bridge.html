@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
     {% include 'partials/config_styles.html' %}
+    <!-- Preload hero image -->
+    <link rel="preload" href="{{ url_for('static', filename='DiscordPcImageThing.png') }}" as="image">
     <script src="{{ url_for('static', filename='custom_popup.js') }}"></script>
     {% include 'partials/base_scripts.html' %}
     <style>
@@ -365,7 +367,7 @@
                         <h1 class="bridge-hero-title">{{ bridge_title }}</h1>
                         <p class="bridge-hero-description">{{ bridge_description }}</p>
                     </div>
-                    <img src="{{ url_for('static', filename='DiscordPcImageThing.png') }}" alt="Discord PC" class="bridge-hero-image">
+                    <img src="{{ url_for('static', filename='DiscordPcImageThing.png') }}" alt="Discord PC" class="bridge-hero-image" fetchpriority="high">
                 </section>
 
                 <!-- Download Button (after hero image) -->
@@ -392,7 +394,7 @@
                             {% endif %}
                         </div>
                         <div class="bridge-feature-pill-media-container" style="background: linear-gradient({{ pill.gradient_rotation | default(135) }}deg, {{ pill.bg_gradient_start | default('#ff6bda') }}, {{ pill.bg_gradient_end | default('#ffb8ec') }});">
-                            <img src="{{ url_for('static', filename=pill.image) }}" alt="{{ pill.title }}" class="bridge-feature-pill-image" style="object-position: calc(50% + {{ pill.image_offset_x | default(0) }}px) calc(50% + {{ pill.image_offset_y | default(0) }}px);">
+                            <img src="{{ url_for('static', filename=pill.image) }}" alt="{{ pill.title }}" class="bridge-feature-pill-image" loading="lazy" decoding="async" style="object-position: calc(50% + {{ pill.image_offset_x | default(0) }}px) calc(50% + {{ pill.image_offset_y | default(0) }}px);">
                         </div>
                     </div>
                     {% endfor %}

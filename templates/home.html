@@ -36,6 +36,8 @@
     {% include 'partials/base_scripts.html' %}
     <!-- Preload critical font -->
     <link rel="preload" href="{{ url_for('static', filename='fonts/ABCGintoNord-Black-Trial.otf') }}" as="font" type="font/otf" crossorigin>
+    <!-- Preload hero image -->
+    <link rel="preload" href="{{ url_for('static', filename=hero_showcase_image) }}" as="image">
     <style>
         /* ABC Ginto Nord font */
         @font-face {
@@ -205,6 +207,12 @@
             backface-visibility: hidden;
             /* Ensure video displays on iOS */
             display: block;
+            /* Prevent accidental pause on touch */
+            user-select: none;
+            -webkit-user-select: none;
+            /* Ensure video is visible */
+            opacity: 1;
+            visibility: visible;
         }
 
         .feature-pill-image {
@@ -299,10 +307,11 @@
 
             .feature-pill-media-container {
                 order: 2;
-                padding: 0 16px 16px 16px;
-                /* Ensure centered and maintain aspect ratio on mobile */
+                /* Even padding on all sides (left, right, bottom) matching the pill padding */
+                padding: 0;
+                margin: 0 16px 16px 16px;
+                /* Width minus the margins for even gaps */
                 width: calc(100% - 32px);
-                margin: 0 auto;
                 aspect-ratio: 16 / 9;
                 flex: none;
             }
@@ -313,6 +322,9 @@
                 height: 100%;
                 min-height: 0;
                 object-fit: cover;
+                /* Ensure visibility on iOS */
+                opacity: 1;
+                visibility: visible;
             }
 
             .feature-pill-title {
@@ -352,7 +364,8 @@
             }
 
             .feature-pill-media-container {
-                padding: 0 12px 12px 12px;
+                /* Even margins on small mobile */
+                margin: 0 12px 12px 12px;
                 width: calc(100% - 24px);
             }
 
@@ -398,7 +411,7 @@
                 <p class="home-hero-description">{{ hero_description }}</p>
                 <a href="{{ url_for('signup_page') }}" class="home-hero-cta">{{ hero_cta_text }}</a>
                 <div>
-                    <img src="{{ url_for('static', filename=hero_showcase_image) }}" alt="Adzsend Showcase" class="home-showcase-image">
+                    <img src="{{ url_for('static', filename=hero_showcase_image) }}" alt="Adzsend Showcase" class="home-showcase-image" fetchpriority="high">
                 </div>
             </section>
 
@@ -412,11 +425,11 @@
                     </div>
                     <div class="feature-pill-media-container">
                         {% if pill.video %}
-                        <video class="feature-pill-video" autoplay loop muted playsinline webkit-playsinline preload="auto">
-                            <source src="{{ url_for('static', filename=pill.video) }}" type="video/mp4">
+                        <video class="feature-pill-video" autoplay loop muted playsinline webkit-playsinline preload="auto" disablePictureInPicture>
+                            <source src="{{ url_for('static', filename=pill.video) }}#t=0.001" type="video/mp4">
                         </video>
                         {% else %}
-                        <img src="{{ url_for('static', filename=pill.image) }}" alt="{{ pill.title }}" class="feature-pill-image">
+                        <img src="{{ url_for('static', filename=pill.image) }}" alt="{{ pill.title }}" class="feature-pill-image" loading="lazy" decoding="async">
                         {% endif %}
                     </div>
                 </div>
@@ -429,9 +442,9 @@
                 <div class="wumpus-container">
                     <div class="wumpus-character">
                         <div class="wumpus-leaf">
-                            <img src="{{ url_for('static', filename='WumpusLeaf.png') }}" alt="Leaf">
+                            <img src="{{ url_for('static', filename='WumpusLeaf.png') }}" alt="Leaf" loading="lazy" decoding="async">
                         </div>
-                        <img src="{{ url_for('static', filename='WumpusDiscord.png') }}" alt="Wumpus">
+                        <img src="{{ url_for('static', filename='WumpusDiscord.png') }}" alt="Wumpus" loading="lazy" decoding="async">
                     </div>
                 </div>
 
@@ -458,7 +471,7 @@
                 </div>
 
                 <!-- Large Wordmark at bottom -->
-                <img src="{{ url_for('static', filename='Wordmark.svg') }}" alt="Discord" class="discord-wordmark-bottom">
+                <img src="{{ url_for('static', filename='Wordmark.svg') }}" alt="Discord" class="discord-wordmark-bottom" loading="lazy">
             </section>
 
         </div>

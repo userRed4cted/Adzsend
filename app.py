@@ -451,6 +451,8 @@ def home():
                          hero_description=HOMEPAGE['hero']['description'],
                          hero_cta_text=HOMEPAGE['hero']['cta_text'],
                          hero_showcase_image=HOMEPAGE['hero']['showcase_image'],
+                         # Background gradient circles
+                         background_config=HOMEPAGE.get('background', {}),
                          # Feature pills
                          feature_pills=HOMEPAGE['feature_pills'],
                          # Why Discord section

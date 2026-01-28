@@ -49,7 +49,7 @@
         body {
             margin: 0;
             padding: 0;
-            background: #121215;
+            background: #000000;
             color: #ffffff;
             overflow: hidden;
             height: 100vh;
@@ -67,13 +67,56 @@
             overflow-y: auto;
             overflow-x: hidden;
             padding-top: 60px;
-            background: #121215;
+            background: #000000;
             /* Smooth scrolling optimization */
             -webkit-overflow-scrolling: touch;
             scroll-behavior: auto;
             /* GPU acceleration for smoother scroll */
             will-change: scroll-position;
             transform: translateZ(0);
+            position: relative;
+        }
+
+        /* ==================== BACKGROUND GRADIENT CIRCLES ==================== */
+        .bg-gradient-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-gradient-top img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .bg-gradient-bottom {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-gradient-bottom img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Ensure content is above the gradient backgrounds */
+        .home-hero,
+        .feature-pills {
+            position: relative;
+            z-index: 1;
+        }
+
+        .why-discord-section {
+            position: relative;
+            z-index: 1;
         }
 
         /* ==================== HERO SECTION ==================== */
@@ -405,6 +448,16 @@
         {% include 'navbar.html' %}
 
         <div class="page-scroll-container">
+            <!-- Background Gradient Circles -->
+            {% if background_config %}
+            <div class="bg-gradient-top">
+                <img src="{{ url_for('static', filename=background_config.top_circle.image) }}" alt="" aria-hidden="true" decoding="async">
+            </div>
+            <div class="bg-gradient-bottom">
+                <img src="{{ url_for('static', filename=background_config.bottom_circle.image) }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+            </div>
+            {% endif %}
+
             <!-- Hero Section -->
             <section class="home-hero">
                 <h1 class="home-hero-title">{{ hero_title }}</h1>
@@ -425,8 +478,7 @@
                     </div>
                     <div class="feature-pill-media-container">
                         {% if pill.video %}
-                        <video class="feature-pill-video" autoplay loop muted playsinline webkit-playsinline preload="auto" disablePictureInPicture>
-                            <source src="{{ url_for('static', filename=pill.video) }}#t=0.001" type="video/mp4">
+                        <video class="feature-pill-video" autoplay loop muted playsinline webkit-playsinline preload="none" disablePictureInPicture data-src="{{ url_for('static', filename=pill.video) }}#t=0.001">
                         </video>
                         {% else %}
                         <img src="{{ url_for('static', filename=pill.image) }}" alt="{{ pill.title }}" class="feature-pill-image" loading="lazy" decoding="async">
@@ -478,6 +530,39 @@
     </div>
 
     <script>
+        // Position bottom gradient so its bottom edge aligns with why-discord section top
+        (() => {
+            const bottomGradient = document.querySelector('.bg-gradient-bottom');
+            const whyDiscordSection = document.querySelector('.why-discord-section');
+            const scrollContainer = document.querySelector('.page-scroll-container');
+
+            if (!bottomGradient || !whyDiscordSection || !scrollContainer) return;
+
+            function positionBottomGradient() {
+                const img = bottomGradient.querySelector('img');
+                if (!img) return;
+
+                // Get the why-discord section's position relative to scroll container
+                const sectionTop = whyDiscordSection.offsetTop;
+                const imgHeight = img.offsetHeight || img.naturalHeight || 600;
+
+                // Position so bottom of gradient image is at top of why-discord section
+                bottomGradient.style.top = (sectionTop - imgHeight) + 'px';
+            }
+
+            // Position on load and resize
+            if (bottomGradient.querySelector('img').complete) {
+                positionBottomGradient();
+            } else {
+                bottomGradient.querySelector('img').addEventListener('load', positionBottomGradient);
+            }
+            window.addEventListener('resize', positionBottomGradient);
+
+            // Also reposition after a short delay to handle layout shifts
+            setTimeout(positionBottomGradient, 100);
+            setTimeout(positionBottomGradient, 500);
+        })();
+
         // Count-up animation for Discord stats
         (() => {
             const statNumbers = document.querySelectorAll('.stat-number[data-target]');
@@ -564,36 +649,43 @@
             });
         })();
 
-        // Video autoplay handler for iOS/mobile
+        // Lazy load videos - only load when near viewport (speeds up initial page load)
         (() => {
-            const videos = document.querySelectorAll('.feature-pill-video');
+            const videos = document.querySelectorAll('.feature-pill-video[data-src]');
             if (videos.length === 0) return;
 
-            // Function to play all videos
-            function playAllVideos() {
-                videos.forEach(v => {
-                    if (v.paused) {
-                        v.play().catch(() => {});
-                    }
-                });
+            const loadedVideos = new Set();
+
+            // Load video source when it enters viewport
+            function loadVideo(video) {
+                if (loadedVideos.has(video)) return;
+
+                const src = video.dataset.src;
+                if (!src) return;
+
+                loadedVideos.add(video);
+
+                // Create and add source element
+                const source = document.createElement('source');
+                source.src = src;
+                source.type = 'video/mp4';
+                video.appendChild(source);
+
+                // Load and play
+                video.load();
+                video.play().catch(() => {});
             }
 
-            // Pause/resume videos on tab visibility change
+            // Pause/resume loaded videos on tab visibility change
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden) {
-                    videos.forEach(v => v.pause());
+                    loadedVideos.forEach(v => v.pause());
                 } else {
-                    playAllVideos();
+                    loadedVideos.forEach(v => {
+                        if (v.paused) v.play().catch(() => {});
+                    });
                 }
             });
-
-            // Play on DOMContentLoaded
-            playAllVideos();
-
-            // Retry after short delay (iOS needs this)
-            setTimeout(playAllVideos, 100);
-            setTimeout(playAllVideos, 500);
-            setTimeout(playAllVideos, 1000);
 
             // Play on any user interaction (iOS requirement)
             const interactionEvents = ['touchstart', 'touchend', 'click', 'scroll'];
@@ -602,8 +694,9 @@
             function onInteraction() {
                 if (hasInteracted) return;
                 hasInteracted = true;
-                playAllVideos();
-                // Remove listeners after first interaction
+                loadedVideos.forEach(v => {
+                    if (v.paused) v.play().catch(() => {});
+                });
                 interactionEvents.forEach(evt => {
                     document.removeEventListener(evt, onInteraction);
                 });
@@ -613,15 +706,17 @@
                 document.addEventListener(evt, onInteraction, { passive: true });
             });
 
-            // Also use IntersectionObserver to play when visible
+            // IntersectionObserver to lazy load videos when near viewport
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
-                    const video = entry.target;
                     if (entry.isIntersecting) {
-                        video.play().catch(() => {});
+                        loadVideo(entry.target);
                     }
                 });
-            }, { threshold: 0.1 });
+            }, {
+                threshold: 0.1,
+                rootMargin: '200px' // Start loading 200px before it enters viewport
+            });
 
             videos.forEach(v => observer.observe(v));
         })();

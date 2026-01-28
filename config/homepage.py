@@ -17,6 +17,26 @@ HOMEPAGE = {
     'discord_server_url': "https://discord.gg/KWt6rvCukp",
 
     # =========================================================================
+    # BACKGROUND GRADIENT CIRCLES
+    # =========================================================================
+    # Semi-circle blur images positioned at top and bottom of the page
+    # Creates a smooth gradient effect as user scrolls
+    # Background is solid black (#000000) with these circles overlaid
+
+    'background': {
+        # Top gradient circle (positioned at top of page, behind navbar)
+        'top_circle': {
+            'image': 'TopBlurHomepageCircle.png',
+            'color': '#505CDF',  # Can use CSS filter to tint the image
+        },
+        # Bottom gradient circle (positioned at why-discord section)
+        'bottom_circle': {
+            'image': 'BottomBlurHomepageCircle.png',
+            'color': '#181749',  # Can use CSS filter to tint the image
+        },
+    },
+
+    # =========================================================================
     # HERO SECTION
     # =========================================================================
     # The main landing area at the top of the homepage

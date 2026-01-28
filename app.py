@@ -1,3 +1,7 @@
+# Gevent monkey patching - MUST be at the very top before other imports
+from gevent import monkey
+monkey.patch_all()
+
 from flask import Flask, render_template, redirect, url_for, session, request, jsonify
 from flask_sock import Sock
 import os
